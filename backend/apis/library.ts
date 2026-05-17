@@ -23,7 +23,7 @@ const library_map: Record<string, string> = {
  Chat with us 7545 Ask us
  Email us 7546Ask us
  */
-const library_api = "https://libcal.uwaterloo.ca/hours";
+const library_website = "https://libcal.uwaterloo.ca/hours";
 const libraryRouter = express();
 
 const uw = axios.create({
@@ -39,7 +39,7 @@ const uw = axios.create({
 const scrap_library_information = async () => {
   const waterloo_library_information: Record<string, TimeSlot[]> = {};
   const dates: string[] = [];
-  const $ = await cheerio.fromURL(library_api);
+  const $ = await cheerio.fromURL(library_website);
   //Gets the dates mon-fri
   $("#s-lc-w-w1-7660 thead th .s-lc-h-head-date").each(
     (index, raw_html_element) => {
