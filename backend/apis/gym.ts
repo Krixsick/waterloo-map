@@ -1,6 +1,6 @@
 import express from "express";
 import * as cheerio from "cheerio";
-import type { GymOccupy } from "../types/gym";
+import type { GymOccupy, GymFullInfo } from "../types/gym";
 const gymRouter = express.Router();
 const gym_hours_website: Record<string, string> = {
   "CIF Fitness Centre":
@@ -27,12 +27,35 @@ const DAYS = [
   "Saturday",
 ];
 
+const combine_gym_information = async () => {
+  const uw_gym_full_information: Record<string, GymFullInfo> = {};
+  try {
+    const [busynessData, hoursData] = await Promise.all([
+      scrap_gym_busyness(),
+      scrap_gym_hours(),
+    ]);
+    const allNames = new Set([
+      ...Object.keys(hoursData),
+      ...Object.keys(busynessData),
+    ]);
 
+    for (const name of allNames) {
+      uw_gym_full_information[name] = {
+        hours: hoursData[name],
+        busyness: busynessData[name],
+      };
+    }
+
+    return uw_gym_full_information;
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 const scrap_gym_busyness = async () => {
   const $ = await cheerio.fromURL(GYM_BUSYNESS_HOURS);
-  const gym_occupy :Record<string, GymOccupy>= {}
-    //Each facility is a .col with a data-facilityid attribute.
+  const gym_occupy: Record<string, GymOccupy> = {};
+  //Each facility is a .col with a data-facilityid attribute.
   $(".col[data-facilityid]").each((index, element) => {
     const gym_card = $(element);
     if (!gym_card) return;
@@ -46,7 +69,11 @@ const scrap_gym_busyness = async () => {
     const ratio = Number(canvas.attr("data-ratio")) || 0;
 
     //"Max Occupancy: 100" lives in a <p class="max-occupancy"> with the number in <strong>.
-    const maxText = gym_card.find(".max-occupancy strong").first().text().trim();
+    const maxText = gym_card
+      .find(".max-occupancy strong")
+      .first()
+      .text()
+      .trim();
     const maxOccupancy = Number(maxText);
 
     if (!name || Number.isNaN(occupancy)) return; // skip anything malformed
@@ -60,9 +87,8 @@ const scrap_gym_busyness = async () => {
       percent: Math.round(ratio * 100),
     };
   });
-
-
-}
+  return gym_occupy;
+};
 
 const scrap_one_gym_hours = async (
   url: string,
@@ -100,12 +126,14 @@ const scrap_gym_hours = async (): Promise<
   );
 };
 
-gymRouter.get("busyness", async (req, res) => {
+gymRouter.get("/", async (req, res) => {
   try {
-    const data = scrap_gym_busyness();
+    const data = await combine_gym_information();
     res.json(data);
+  } catch (error) {
+    console.log(error);
   }
-})
+});
 
 gymRouter.get("/hours", async (req, res) => {
   try {
