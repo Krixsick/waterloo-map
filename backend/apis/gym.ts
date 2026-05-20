@@ -2,6 +2,7 @@ import express from "express";
 import * as cheerio from "cheerio";
 import type { GymOccupy, GymFullInfo } from "../types/gym";
 const gymRouter = express.Router();
+
 const gym_hours_website: Record<string, string> = {
   "CIF Fitness Centre":
     "https://warrior.uwaterloo.ca/Facility/GetFacility?facilityId=b2d98ff8-e37a-42da-bf72-06b259ff1a2c",
