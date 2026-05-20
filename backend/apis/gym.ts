@@ -1,6 +1,6 @@
 import express from "express";
 import * as cheerio from "cheerio";
-
+import type { GymOccupy } from "../types/gym";
 const gymRouter = express.Router();
 const gym_hours_website: Record<string, string> = {
   "CIF Fitness Centre":
@@ -26,6 +26,43 @@ const DAYS = [
   "Friday",
   "Saturday",
 ];
+
+
+
+const scrap_gym_busyness = async () => {
+  const $ = await cheerio.fromURL(GYM_BUSYNESS_HOURS);
+  const gym_occupy :Record<string, GymOccupy>= {}
+    //Each facility is a .col with a data-facilityid attribute.
+  $(".col[data-facilityid]").each((index, element) => {
+    const gym_card = $(element);
+    if (!gym_card) return;
+
+    const name = gym_card.find("h2 strong").first().text().trim() || undefined;
+
+    //The first .occupancy-chart canvas holds the numbers as data-* attrs.
+    const canvas = gym_card.find("canvas.occupancy-chart").first() || undefined;
+    const occupancy = Number(canvas.attr("data-occupancy")) || undefined;
+    const remaining = Number(canvas.attr("data-remaining")) || undefined;
+    const ratio = Number(canvas.attr("data-ratio")) || 0;
+
+    //"Max Occupancy: 100" lives in a <p class="max-occupancy"> with the number in <strong>.
+    const maxText = gym_card.find(".max-occupancy strong").first().text().trim();
+    const maxOccupancy = Number(maxText);
+
+    if (!name || Number.isNaN(occupancy)) return; // skip anything malformed
+
+    gym_occupy[name] = {
+      name,
+      occupancy,
+      remaining,
+      maxOccupancy,
+      ratio,
+      percent: Math.round(ratio * 100),
+    };
+  });
+
+
+}
 
 const scrap_one_gym_hours = async (
   url: string,
@@ -62,6 +99,13 @@ const scrap_gym_hours = async (): Promise<
     results.filter((e): e is NonNullable<typeof e> => e !== null),
   );
 };
+
+gymRouter.get("busyness", async (req, res) => {
+  try {
+    const data = scrap_gym_busyness();
+    res.json(data);
+  }
+})
 
 gymRouter.get("/hours", async (req, res) => {
   try {
