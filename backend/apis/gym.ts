@@ -135,13 +135,13 @@ gymRouter.get("/", async (req, res) => {
   }
 });
 
-gymRouter.get("/hours", async (req, res) => {
-  try {
-    const data = await scrap_gym_hours();
-    res.json(data);
-  } catch (error) {
-    console.log(error);
-  }
-});
+// gymRouter.get("/hours", async (req, res) => {
+//   try {
+//     const data = await scrap_gym_hours();
+//     res.json(data);
+//   } catch (error) {
+//     console.log(error);
+//   }
+// });
 
 export default gymRouter;
