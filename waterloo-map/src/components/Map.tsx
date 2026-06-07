@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../styles/Map.css";
+import { fetchCampusFood } from "../api/foodApi";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -43,6 +44,15 @@ function Map() {
     });
 
     return () => map.remove();
+  }, []);
+
+  useEffect(() => {
+    async function loadFood() {
+      const food = await fetchCampusFood();
+      console.log("Campus food:", food);
+    }
+
+    loadFood();
   }, []);
 
   return <div className="map-container" ref={mapContainer}></div>;
