@@ -8,7 +8,8 @@ export type CampusFoodInfo = {
   url: string;
 };
 
-const FOOD_API_URL = import.meta.env.PUBLIC_API_URL;
+const FOOD_API_URL = import.meta.env.VITE_API_URL;
+
 export async function fetchCampusFood(): Promise<CampusFoodInfo[]> {
   const response = await fetch(`${FOOD_API_URL}/food/campus`);
 

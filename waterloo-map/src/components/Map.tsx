@@ -14,17 +14,15 @@ function Map() {
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/navigation-night-v1",
+      style: "mapbox://styles/mapbox/streets-v12",
+      // style: "mapbox://styles/mapbox/navigation-night-v1",
       center: [-80.5449, 43.4723],
       zoom: 16,
       pitch: 65,
       bearing: -25,
     });
 
-    map.addControl(
-      new mapboxgl.NavigationControl(),
-      "top-right"
-    );
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
     map.on("load", () => {
       map.addLayer({
@@ -48,8 +46,12 @@ function Map() {
 
   useEffect(() => {
     async function loadFood() {
-      const food = await fetchCampusFood();
-      console.log("Campus food:", food);
+      try {
+        const food = await fetchCampusFood();
+        console.log("Campus food:", food);
+      } catch (error) {
+        console.log(error);
+      }
     }
 
     loadFood();
