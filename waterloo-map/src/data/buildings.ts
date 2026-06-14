@@ -23,7 +23,7 @@ export const buildings: FeatureCollection<
       },
       geometry: {
         type: "Point",
-        coordinates: [-80.5429, 43.4724],
+        coordinates: [-80.5420, 43.4724],
       },
     },
     {
@@ -37,7 +37,7 @@ export const buildings: FeatureCollection<
       },
       geometry: {
         type: "Point",
-        coordinates: [-80.5431, 43.4729],
+        coordinates: [-80.5439, 43.4721],
       },
     },
     {
@@ -51,7 +51,91 @@ export const buildings: FeatureCollection<
       },
       geometry: {
         type: "Point",
-        coordinates: [-80.54, 43.4727],
+        coordinates: [-80.5398, 43.4728],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "cmh",
+        name: "Claudette Millar Hall",
+        abbreviation: "CMH",
+        category: "residence",
+        description: "Student residence.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5359, 43.47026],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "rev",
+        name: "Ron Eydt Village",
+        abbreviation: "REV",
+        category: "residence",
+        description: "Student residence.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5535, 43.4705],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "v1",
+        name: "Village 1",
+        abbreviation: "V1",
+        category: "residence",
+        description: "First-year student residence.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.550028, 43.471639],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "uwp",
+        name: "UW Place",
+        abbreviation: "UWP",
+        category: "residence",
+        description: "Suite-style student residence.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.535889, 43.471056],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "mkv",
+        name: "Mackenzie King Village",
+        abbreviation: "MKV",
+        category: "residence",
+        description: "Suite-style student residence.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.552638, 43.471627],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "clv",
+        name: "Columbia Lake Village",
+        abbreviation: "CLV",
+        category: "residence",
+        description: "Upper-year student residence apartments.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.562757, 43.471563],
       },
     },
   ],
