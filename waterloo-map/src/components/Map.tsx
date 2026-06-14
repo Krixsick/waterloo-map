@@ -14,10 +14,12 @@ function Map() {
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/streets-v12",
-      center: [-80.5449, 43.4723],
-      zoom: 16,
-      pitch: 65,
-      bearing: -25,
+      center: [-80.5440, 43.4710],
+      zoom: 15,
+      minZoom: 13,
+      maxZoom: 19,
+      pitch: 0,
+      bearing: -26,
     });
 
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
