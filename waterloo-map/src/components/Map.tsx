@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import "../styles/Map.css";
 import { fetchCampusFood } from "../api/foodApi";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -15,7 +14,6 @@ function Map() {
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/streets-v12",
-      // style: "mapbox://styles/mapbox/navigation-night-v1",
       center: [-80.5449, 43.4723],
       zoom: 16,
       pitch: 65,
@@ -57,7 +55,7 @@ function Map() {
     loadFood();
   }, []);
 
-  return <div className="map-container" ref={mapContainer}></div>;
+  return <div className="h-screen w-screen" ref={mapContainer} />;
 }
 
 export default Map;
