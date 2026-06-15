@@ -1,12 +1,19 @@
 import type { FeatureCollection, Point } from "geojson";
 
+export type BuildingCategory =
+  | "academic"
+  | "library"
+  | "gym"
+  | "student-life"
+  | "residence";
+
 export const buildings: FeatureCollection<
   Point,
   {
     id: string;
     name: string;
     abbreviation: string;
-    category: string;
+    category: BuildingCategory;
     description: string;
   }
 > = {
@@ -15,15 +22,29 @@ export const buildings: FeatureCollection<
     {
       type: "Feature",
       properties: {
-        id: "dc",
+        id: "dc-building",
         name: "Davis Centre",
         abbreviation: "DC",
-        category: "library",
-        description: "Library, study spaces, computer labs.",
+        category: "academic",
+        description: "Academic building with classrooms, offices, computer labs, and connected library space.",
       },
       geometry: {
         type: "Point",
         coordinates: [-80.5420, 43.4724],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "dc-library",
+        name: "Davis Centre Library",
+        abbreviation: "DC Library",
+        category: "library",
+        description: "Library and study space inside the Davis Centre.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.54185, 43.47225],
       },
     },
     {
