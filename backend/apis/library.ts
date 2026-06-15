@@ -2,6 +2,7 @@ import express from "express";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { type TimeSlot } from "../types/library";
+import { withCache } from "../cache";
 
 const UW_API_KEY = process.env.UW_API_KEY;
 //main waterloo libraries
@@ -72,20 +73,30 @@ const scrap_library_information = async () => {
  * Route to display information about libraries hours
  */
 libraryRouter.get("/", async (req, res) => {
-  //should store in a cache to minimize calls
   try {
-    const data = await scrap_library_information();
+    const data = await withCache("library:hours:v1", 60 * 30, () =>
+      scrap_library_information(),
+    );
 
     // console.log(data);
     res.json(data);
   } catch (error) {
     console.log(error);
+    res.status(500).json({ error: "Failed to load library hours" });
   }
 });
 
 libraryRouter.get("/food", async (req, res) => {
   try {
-    const { data } = await uw.get("/FoodServicesLocations");
+    const data = await withCache(
+      "library:food-services-locations:v1",
+      60 * 60,
+      async () => {
+        const response = await uw.get("/FoodServicesLocations");
+        return response.data;
+      },
+    );
+
     res.json(data);
   } catch (err: any) {
     console.error(

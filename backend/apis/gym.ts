@@ -1,6 +1,7 @@
 import express from "express";
 import * as cheerio from "cheerio";
 import type { GymOccupy, GymFullInfo } from "../types/gym";
+import { withCache } from "../cache";
 const gymRouter = express.Router();
 
 const gym_hours_website: Record<string, string> = {
@@ -129,10 +130,13 @@ const scrap_gym_hours = async (): Promise<
 
 gymRouter.get("/", async (req, res) => {
   try {
-    const data = await combine_gym_information();
+    const data = await withCache("gym:full-info:v1", 60 * 5, () =>
+      combine_gym_information(),
+    );
     res.json(data);
   } catch (error) {
     console.log(error);
+    res.status(500).json({ error: "Failed to load gym information" });
   }
 });
 
