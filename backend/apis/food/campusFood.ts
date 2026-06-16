@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import express from "express";
 import type { CampusFoodInfo } from "../../types/food";
+import { withCache } from "../../cache";
 const campus_food_router = express.Router();
 const waterloo_campus_food_list = {};
 
@@ -137,14 +138,23 @@ const scrap_waterloo_campus_food = async (name: string, url: string) => {
 campus_food_router.get("/", async (req, res) => {
   try {
     // 1. Create an array of pending promises
-    const scrape_promises = Object.entries(waterloo_campus_food_url).map(
-      async ([name, url]) => {
-        const data = await scrap_waterloo_campus_food(name, url);
-        return [name, data] as const; // Return as a Tuple
+    const response = await withCache(
+      "campusfood:full-info:v1",
+      60 * 5,
+      async () => {
+        const scrape_promises = Object.entries(waterloo_campus_food_url).map(
+          async ([name, url]) => {
+            const data = await scrap_waterloo_campus_food(name, url);
+            return [name, data] as const; // Return as a Tuple
+          },
+        );
+
+        const results = await Promise.all(scrape_promises);
+
+        return Object.fromEntries(results);
       },
     );
-    const results = await Promise.all(scrape_promises);
-    const response = Object.fromEntries(results);
+
     res.json(response);
   } catch (error) {
     console.log(error);
