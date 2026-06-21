@@ -8,7 +8,7 @@ export function createMap(container: HTMLDivElement) {
     zoom: 15,
     minZoom: 13,
     maxZoom: 19,
-    pitch: 0,
+    pitch: 60,
     bearing: -26,
   });
 }

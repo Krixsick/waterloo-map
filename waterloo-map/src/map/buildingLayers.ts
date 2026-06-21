@@ -1,7 +1,12 @@
 import mapboxgl from "mapbox-gl";
 import { buildings } from "../data/buildings";
 
-export function addImportantBuildingLayers(map: mapboxgl.Map) {
+type BuildingsGeoJSON = typeof buildings;
+
+export function addImportantBuildingLayers(
+  map: mapboxgl.Map,
+  buildingData: BuildingsGeoJSON = buildings
+) {
   // 3D building layer
   map.addLayer({
     id: "3d-buildings",
@@ -17,11 +22,7 @@ export function addImportantBuildingLayers(map: mapboxgl.Map) {
         ["coalesce", ["get", "height"], 10],
         0.35,
       ],
-      "fill-extrusion-base": [
-        "coalesce",
-        ["get", "min_height"],
-        0,
-      ],
+      "fill-extrusion-base": ["coalesce", ["get", "min_height"], 0],
       "fill-extrusion-opacity": 0.22,
     },
   });
@@ -29,10 +30,9 @@ export function addImportantBuildingLayers(map: mapboxgl.Map) {
   // Building data source
   map.addSource("important-buildings", {
     type: "geojson",
-    data: buildings,
+    data: buildingData,
   });
 
-  // Glow for academic/campus buildings
   map.addLayer({
     id: "campus-building-glow",
     type: "circle",
@@ -46,7 +46,6 @@ export function addImportantBuildingLayers(map: mapboxgl.Map) {
     },
   });
 
-  // Academic/campus buildings = green circles
   map.addLayer({
     id: "campus-building-circles",
     type: "circle",
@@ -61,7 +60,6 @@ export function addImportantBuildingLayers(map: mapboxgl.Map) {
     },
   });
 
-  // Create green square icon once
   if (!map.hasImage("green-square")) {
     const canvas = document.createElement("canvas");
     canvas.width = 32;
@@ -82,7 +80,6 @@ export function addImportantBuildingLayers(map: mapboxgl.Map) {
     }
   }
 
-  // Residences = green squares
   map.addLayer({
     id: "residence-building-squares",
     type: "symbol",

@@ -4,6 +4,7 @@ type BuildingProperties = {
   name?: string;
   abbreviation?: string;
   description?: string;
+  liveHours?: string;
 };
 
 const HOVER_LAYERS = [
@@ -26,21 +27,30 @@ export function addBuildingHoverPopup(map: mapboxgl.Map) {
       if (!feature) return;
 
       const geometry = feature.geometry as GeoJSON.Point;
-      const coordinates = geometry.coordinates.slice() as [
-        number,
-        number
-      ];
+      const coordinates = geometry.coordinates.slice() as [number, number];
 
       const properties = feature.properties as BuildingProperties;
 
       hoverPopup
         .setLngLat(coordinates)
         .setHTML(`
-          <div style="min-width: 160px;">
+          <div style="min-width: 180px;">
             <strong>${properties.name ?? ""}</strong>
+
             <div style="font-size: 12px; opacity: 0.7;">
               ${properties.abbreviation ?? ""}
             </div>
+
+            ${
+              properties.liveHours
+                ? `<div style="margin-top: 6px; font-size: 12px;">
+                    <strong>Hours:</strong> ${properties.liveHours}
+                  </div>`
+                : `<div style="margin-top: 6px; font-size: 12px; opacity: 0.6;">
+                    No live hours available
+                  </div>`
+            }
+
             ${
               properties.description
                 ? `<div style="margin-top: 4px; font-size: 12px;">
