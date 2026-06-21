@@ -41,8 +41,10 @@ async function withCache(key, ttlSeconds, loader) {
     try {
         const cached = await getCache(key);
         if (cached !== null) {
+            console.log(`CACHE HIT: ${key}`);
             return cached;
         }
+        console.log(`CACHE MISS: ${key}`);
     }
     catch (error) {
         console.warn(`Cache read failed for ${key}:`, error);
@@ -50,6 +52,7 @@ async function withCache(key, ttlSeconds, loader) {
     const fresh = await loader();
     try {
         await setCache(key, fresh, ttlSeconds);
+        console.log(`CACHE SET: ${key}`);
     }
     catch (error) {
         console.warn(`Cache write failed for ${key}:`, error);

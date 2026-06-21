@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const cheerio = __importStar(require("cheerio"));
 const express_1 = __importDefault(require("express"));
+const cache_1 = require("../../cache");
 const campus_food_router = express_1.default.Router();
 const waterloo_campus_food_list = {};
 const waterloo_campus_food_url = {
@@ -145,12 +146,14 @@ const scrap_waterloo_campus_food = async (name, url) => {
 campus_food_router.get("/", async (req, res) => {
     try {
         // 1. Create an array of pending promises
-        const scrape_promises = Object.entries(waterloo_campus_food_url).map(async ([name, url]) => {
-            const data = await scrap_waterloo_campus_food(name, url);
-            return [name, data]; // Return as a Tuple
+        const response = await (0, cache_1.withCache)("campusfood:full-info:v1", 60 * 5, async () => {
+            const scrape_promises = Object.entries(waterloo_campus_food_url).map(async ([name, url]) => {
+                const data = await scrap_waterloo_campus_food(name, url);
+                return [name, data]; // Return as a Tuple
+            });
+            const results = await Promise.all(scrape_promises);
+            return Object.fromEntries(results);
         });
-        const results = await Promise.all(scrape_promises);
-        const response = Object.fromEntries(results);
         res.json(response);
     }
     catch (error) {
