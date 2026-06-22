@@ -16,27 +16,32 @@ import { fetchGymInfo } from "../api/gymApi";
 import type { BuildingCategory } from "../data/buildings";
 import BuildingSearch from "./BuildingSearch";
 import MapFilters from "./MapFilters";
-import MapViewToggle from "./MapViewToggle";
+import MapControls from "./MapControls";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
+const DEFAULT_CATEGORIES: BuildingCategory[] = [
+  "academic",
+  "library",
+  "gym",
+  "student-life",
+  "residence",
+];
+
 function Map() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
+  const userLocationRef = useRef<[number, number] | null>(null);
+
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
-  const [is3D, setIs3D] = useState(true);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [is3D, setIs3D] = useState(true);
 
   const [libraryHours, setLibraryHours] = useState<any>({});
-  const [gymInfo, setGymInfo] = useState<any>({});
-  const [foodInfo, setFoodInfo] = useState<any>({});
+  const [, setGymInfo] = useState<any>({});
+  const [, setFoodInfo] = useState<any>({});
 
-  const [activeCategories, setActiveCategories] = useState<BuildingCategory[]>([
-    "academic",
-    "library",
-    "gym",
-    "student-life",
-    "residence",
-  ]);
+  const [activeCategories, setActiveCategories] =
+    useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
 
   function toggleCategory(category: BuildingCategory) {
     setActiveCategories((current) =>
@@ -44,6 +49,10 @@ function Map() {
         ? current.filter((item) => item !== category)
         : [...current, category]
     );
+  }
+
+  function resetFilters() {
+    setActiveCategories(DEFAULT_CATEGORIES);
   }
 
   function toggleView() {
@@ -58,6 +67,62 @@ function Map() {
     setIs3D(!is3D);
   }
 
+  function resetMap() {
+    if (!mapInstance) return;
+
+    mapInstance.easeTo({
+      center: [-80.544, 43.471],
+      zoom: 15,
+      pitch: 60,
+      bearing: -26,
+      duration: 1000,
+    });
+
+    setIs3D(true);
+    resetFilters();
+  }
+
+  function flyToMe() {
+    if (!mapInstance) return;
+
+    if (!navigator.geolocation) {
+      console.warn("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    if (userLocationRef.current) {
+      mapInstance.flyTo({
+        center: userLocationRef.current,
+        zoom: 16,
+        pitch: is3D ? 60 : 0,
+        bearing: -26,
+        duration: 2000,
+      });
+
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        userLocationRef.current = [
+          position.coords.longitude,
+          position.coords.latitude,
+        ];
+
+        mapInstance.flyTo({
+          center: userLocationRef.current,
+          zoom: 16,
+          pitch: is3D ? 60 : 0,
+          bearing: -26,
+          duration: 2000,
+        });
+      },
+      () => {
+        console.warn("Geolocation permission denied.");
+      }
+    );
+  }
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -68,7 +133,7 @@ function Map() {
       hideDefaultLabels(map);
       addImportantBuildingLayers(map);
       addBuildingHoverPopup(map);
-      updateBuildingFilters(map, activeCategories);
+      updateBuildingFilters(map, DEFAULT_CATEGORIES);
       setIsMapLoaded(true);
     });
 
@@ -137,9 +202,15 @@ function Map() {
       <MapFilters
         activeCategories={activeCategories}
         onToggleCategory={toggleCategory}
+        onResetFilters={resetFilters}
       />
 
-      <MapViewToggle is3D={is3D} onToggle={toggleView} />
+      <MapControls
+        is3D={is3D}
+        onReset={resetMap}
+        onToggleView={toggleView}
+        onFlyToMe={flyToMe}
+      />
 
       <div className="h-full w-full" ref={mapContainer} />
     </div>
