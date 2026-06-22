@@ -1,9 +1,10 @@
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, RotateCcw } from "lucide-react";
 import type { BuildingCategory } from "../data/buildings";
 
 type MapFiltersProps = {
   activeCategories: BuildingCategory[];
   onToggleCategory: (category: BuildingCategory) => void;
+  onResetFilters: () => void;
 };
 
 const filters: { label: string; value: BuildingCategory }[] = [
@@ -17,6 +18,7 @@ const filters: { label: string; value: BuildingCategory }[] = [
 export default function MapFilters({
   activeCategories,
   onToggleCategory,
+  onResetFilters,
 }: MapFiltersProps) {
   return (
     <div className="group absolute right-6 top-4 z-20">
@@ -32,9 +34,24 @@ export default function MapFilters({
         </span>
       </button>
 
-      <div className="invisible absolute right-0 top-14 w-48 rounded-2xl border border-slate-200 bg-white/95 p-2 opacity-0 shadow-xl backdrop-blur transition-all duration-150 group-hover:visible group-hover:opacity-100">
-        <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-          Show
+      <div className="invisible absolute right-0 top-16 w-56 rounded-2xl border border-slate-200 bg-white/95 p-3 opacity-0 shadow-xl backdrop-blur transition-all duration-150 group-hover:visible group-hover:opacity-100">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-slate-700">
+            Filters
+          </span>
+
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="group/reset relative rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Reset filters"
+          >
+            <RotateCcw size={16} />
+
+            <span className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-md transition-opacity duration-150 group-hover/reset:opacity-100">
+              Reset filters
+            </span>
+          </button>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -53,13 +70,13 @@ export default function MapFilters({
                 }`}
               >
                 <span
-                    className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${
-                        isActive
-                            ? "border-green-500 bg-green-500 text-white"
-                            : "border-slate-300 bg-white text-transparent"
-                    }`}
-                    >
-                    ✓
+                  className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] font-bold transition ${
+                    isActive
+                      ? "border-green-500 bg-green-500 text-white"
+                      : "border-slate-300 bg-white text-transparent"
+                  }`}
+                >
+                  ✓
                 </span>
 
                 {filter.label}
