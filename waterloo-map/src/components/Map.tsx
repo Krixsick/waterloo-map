@@ -18,6 +18,8 @@ import BuildingSearch from "./BuildingSearch";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 
+import { getTimeRemaining } from "../utils/timeUtils";
+
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const DEFAULT_CATEGORIES: BuildingCategory[] = [
@@ -177,12 +179,14 @@ function Map() {
       ...buildings,
       features: buildings.features.map((feature) => {
         const libraryInfo = libraryHours[feature.properties.name];
+        const liveHours = libraryInfo?.[0]?.time ?? null;
 
         return {
           ...feature,
           properties: {
             ...feature.properties,
-            liveHours: libraryInfo?.[0]?.time ?? null,
+            liveHours,
+            timeRemaining: getTimeRemaining(liveHours),
           },
         };
       }),

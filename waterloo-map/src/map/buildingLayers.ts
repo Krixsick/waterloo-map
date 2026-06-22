@@ -7,7 +7,6 @@ export function addImportantBuildingLayers(
   map: mapboxgl.Map,
   buildingData: BuildingsGeoJSON = buildings
 ) {
-  // 3D building layer
   map.addLayer({
     id: "3d-buildings",
     source: "composite",
@@ -17,17 +16,12 @@ export function addImportantBuildingLayers(
     minzoom: 15,
     paint: {
       "fill-extrusion-color": "#cbd5e1",
-      "fill-extrusion-height": [
-        "*",
-        ["coalesce", ["get", "height"], 10],
-        0.35,
-      ],
+      "fill-extrusion-height": ["*", ["coalesce", ["get", "height"], 10], 0.35],
       "fill-extrusion-base": ["coalesce", ["get", "min_height"], 0],
       "fill-extrusion-opacity": 0.22,
     },
   });
 
-  // Building data source
   map.addSource("important-buildings", {
     type: "geojson",
     data: buildingData,
@@ -60,6 +54,20 @@ export function addImportantBuildingLayers(
     },
   });
 
+  map.addLayer({
+    id: "campus-building-hover",
+    type: "circle",
+    source: "important-buildings",
+    filter: ["==", ["get", "id"], ""],
+    paint: {
+      "circle-radius": 6.5,
+      "circle-color": "#22c55e",
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 3,
+      "circle-opacity": 1,
+    },
+  });
+
   if (!map.hasImage("green-square")) {
     const canvas = document.createElement("canvas");
     canvas.width = 32;
@@ -80,6 +88,28 @@ export function addImportantBuildingLayers(
     }
   }
 
+  if (!map.hasImage("hover-square")) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 32;
+
+    const ctx = canvas.getContext("2d");
+
+    if (ctx) {
+      ctx.clearRect(0, 0, 32, 32);
+
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(5, 5, 22, 22);
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(5, 5, 22, 22);
+
+      const imageData = ctx.getImageData(0, 0, 32, 32);
+      map.addImage("hover-square", imageData);
+    }
+  }
+
   map.addLayer({
     id: "residence-building-squares",
     type: "symbol",
@@ -87,6 +117,18 @@ export function addImportantBuildingLayers(
     filter: ["==", ["get", "category"], "residence"],
     layout: {
       "icon-image": "green-square",
+      "icon-size": 0.7,
+      "icon-allow-overlap": true,
+    },
+  });
+
+  map.addLayer({
+    id: "residence-building-hover",
+    type: "symbol",
+    source: "important-buildings",
+    filter: ["==", ["get", "id"], ""],
+    layout: {
+      "icon-image": "hover-square",
       "icon-size": 0.7,
       "icon-allow-overlap": true,
     },
