@@ -35,7 +35,10 @@ function addPopupStyles() {
   document.head.appendChild(style);
 }
 
-export function addBuildingHoverPopup(map: mapboxgl.Map) {
+export function addBuildingHoverPopup(
+  map: mapboxgl.Map,
+  onBuildingClick?: (properties: BuildingProperties) => void
+) {
   addPopupStyles();
 
   const hoverPopup = new mapboxgl.Popup({
@@ -221,6 +224,15 @@ export function addBuildingHoverPopup(map: mapboxgl.Map) {
         map.setFilter("residence-building-hover", ["==", ["get", "id"], ""]);
       }
       hoverPopup.remove();
+    });
+    map.on("click", layerId, (e) => {
+      const feature = e.features?.[0];
+      if (!feature) return;
+    
+      const properties = feature.properties as BuildingProperties;
+    
+      hoverPopup.remove();
+      onBuildingClick?.(properties);
     });
   });
 }

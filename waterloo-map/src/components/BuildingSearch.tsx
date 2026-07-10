@@ -1,18 +1,28 @@
 import { useMemo, useState } from "react";
 import type mapboxgl from "mapbox-gl";
 import { Search } from "lucide-react";
-import { buildings } from "../data/buildings";
+import type { buildings as buildingsType } from "../data/buildings";
+
+type BuildingsGeoJSON = typeof defaultBuildings;
+type BuildingFeature = BuildingsGeoJSON["features"][number];
 
 type BuildingSearchProps = {
   map: mapboxgl.Map | null;
+  buildings: BuildingsGeoJSON;
+  onSelectBuilding: (building: BuildingFeature["properties"]) => void;
 };
 
-export default function BuildingSearch({ map }: BuildingSearchProps) {
+export default function BuildingSearch({
+  map,
+  buildings,
+  onSelectBuilding,
+}: BuildingSearchProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   const results = useMemo(() => {
     const search = query.toLowerCase().trim();
+
     if (!search) return [];
 
     return buildings.features.filter((feature) => {
@@ -26,7 +36,7 @@ export default function BuildingSearch({ map }: BuildingSearchProps) {
     });
   }, [query]);
 
-  function flyToBuilding(feature: (typeof buildings.features)[number]) {
+  function flyToBuilding(feature: BuildingFeature) {
     if (!map) return;
 
     map.flyTo({
@@ -36,6 +46,9 @@ export default function BuildingSearch({ map }: BuildingSearchProps) {
       bearing: -26,
       essential: true,
     });
+
+    // Open the same building details card used by marker clicks.
+    onSelectBuilding(feature.properties);
 
     setQuery("");
     setIsOpen(false);
@@ -52,23 +65,33 @@ export default function BuildingSearch({ map }: BuildingSearchProps) {
       <div className="relative">
         <div
           className={`
-            h-14 overflow-hidden rounded-full border border-slate-200 bg-white/95 shadow-lg backdrop-blur
+            h-14 overflow-hidden rounded-full border border-slate-200
+            bg-white/95 shadow-lg backdrop-blur
             transition-all duration-300 ease-out
             ${isOpen ? "w-80" : "w-14"}
           `}
         >
           <div className="relative flex h-14 items-center">
-            <Search size={22} className="absolute left-4 text-slate-600" />
+            <Search
+              size={22}
+              className="absolute left-4 text-slate-600"
+            />
 
             <input
               value={query}
               onFocus={() => setIsOpen(true)}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Search buildings..."
               className={`
-                h-full w-full bg-transparent py-3 pl-13 pr-4 text-sm text-slate-800 outline-none
-                placeholder:text-slate-400 transition-opacity duration-200
-                ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}
+                h-full w-full bg-transparent py-3 pl-13 pr-4
+                text-sm text-slate-800 outline-none
+                placeholder:text-slate-400
+                transition-opacity duration-200
+                ${
+                  isOpen
+                    ? "opacity-100"
+                    : "pointer-events-none opacity-0"
+                }
               `}
             />
           </div>
@@ -79,11 +102,13 @@ export default function BuildingSearch({ map }: BuildingSearchProps) {
             {results.map((feature) => (
               <button
                 key={feature.properties.id}
+                type="button"
                 onClick={() => flyToBuilding(feature)}
                 className="block w-full border-b border-slate-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-green-50"
               >
                 <div className="font-medium text-slate-900">
-                  {feature.properties.abbreviation} — {feature.properties.name}
+                  {feature.properties.abbreviation} —{" "}
+                  {feature.properties.name}
                 </div>
 
                 <div className="text-xs capitalize text-slate-500">

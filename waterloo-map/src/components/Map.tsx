@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -17,6 +17,7 @@ import type { BuildingCategory } from "../data/buildings";
 import BuildingSearch from "./BuildingSearch";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
+import BuildingDetailsCard from "./BuildingDetailsCard";
 
 import { getTimeRemaining } from "../utils/timeUtils";
 
@@ -37,6 +38,7 @@ function Map() {
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [is3D, setIs3D] = useState(true);
+  const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
 
   const {
     data: libraryHours = {},
@@ -64,6 +66,25 @@ function Map() {
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
 
+  const buildingsWithBackendInfo = useMemo(() => {
+  return {
+    ...buildings,
+    features: buildings.features.map((feature) => {
+      const libraryInfo = libraryHours[feature.properties.name];
+      const liveHours = libraryInfo?.[0]?.time ?? null;
+
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          liveHours,
+          timeRemaining: getTimeRemaining(liveHours),
+        },
+      };
+    }),
+  };
+}, [libraryHours]);
+    
   function toggleCategory(category: BuildingCategory) {
     setActiveCategories((current) =>
       current.includes(category)
@@ -153,7 +174,7 @@ function Map() {
     map.on("load", () => {
       hideDefaultLabels(map);
       addImportantBuildingLayers(map);
-      addBuildingHoverPopup(map);
+      addBuildingHoverPopup(map, setSelectedBuilding);
       updateBuildingFilters(map, DEFAULT_CATEGORIES);
       setIsMapLoaded(true);
     });
@@ -193,34 +214,20 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-
-    const buildingsWithBackendInfo = {
-      ...buildings,
-      features: buildings.features.map((feature) => {
-        const libraryInfo = libraryHours[feature.properties.name];
-        const liveHours = libraryInfo?.[0]?.time ?? null;
-
-        return {
-          ...feature,
-          properties: {
-            ...feature.properties,
-            liveHours,
-            timeRemaining: getTimeRemaining(liveHours),
-          },
-        };
-      }),
-    };
-
-    const source = mapInstance.getSource("important-buildings") as
-      | mapboxgl.GeoJSONSource
-      | undefined;
-
+  
+    const source = mapInstance.getSource(
+      "important-buildings"
+    ) as mapboxgl.GeoJSONSource | undefined;
+  
     source?.setData(buildingsWithBackendInfo);
-  }, [mapInstance, isMapLoaded, libraryHours]);
+  }, [mapInstance, isMapLoaded, buildingsWithBackendInfo]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-      <BuildingSearch map={mapInstance} />
+      <BuildingSearch 
+      map={mapInstance} 
+      buildings={buildingsWithBackendInfo}
+      onSelectBuilding={setSelectedBuilding}/>
 
       <MapFilters
         activeCategories={activeCategories}
@@ -233,6 +240,11 @@ function Map() {
         onReset={resetMap}
         onToggleView={toggleView}
         onFlyToMe={flyToMe}
+      />
+
+      <BuildingDetailsCard
+        building={selectedBuilding}
+        onClose={() => setSelectedBuilding(null)}
       />
 
       <div className="h-full w-full" ref={mapContainer} />
