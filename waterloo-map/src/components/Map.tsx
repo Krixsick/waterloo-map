@@ -67,24 +67,24 @@ function Map() {
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
 
   const buildingsWithBackendInfo = useMemo(() => {
-  return {
-    ...buildings,
-    features: buildings.features.map((feature) => {
-      const libraryInfo = libraryHours[feature.properties.name];
-      const liveHours = libraryInfo?.[0]?.time ?? null;
+    return {
+      ...buildings,
+      features: buildings.features.map((feature) => {
+        const libraryInfo = libraryHours[feature.properties.name];
+        const liveHours = libraryInfo?.[0]?.time ?? null;
 
-      return {
-        ...feature,
-        properties: {
-          ...feature.properties,
-          liveHours,
-          timeRemaining: getTimeRemaining(liveHours),
-        },
-      };
-    }),
-  };
-}, [libraryHours]);
-    
+        return {
+          ...feature,
+          properties: {
+            ...feature.properties,
+            liveHours,
+            timeRemaining: getTimeRemaining(liveHours),
+          },
+        };
+      }),
+    };
+  }, [libraryHours]);
+
   function toggleCategory(category: BuildingCategory) {
     setActiveCategories((current) =>
       current.includes(category)
@@ -214,20 +214,21 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-  
-    const source = mapInstance.getSource(
-      "important-buildings"
-    ) as mapboxgl.GeoJSONSource | undefined;
-  
+
+    const source = mapInstance.getSource("important-buildings") as
+      | mapboxgl.GeoJSONSource
+      | undefined;
+
     source?.setData(buildingsWithBackendInfo);
   }, [mapInstance, isMapLoaded, buildingsWithBackendInfo]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-      <BuildingSearch 
-      map={mapInstance} 
-      buildings={buildingsWithBackendInfo}
-      onSelectBuilding={setSelectedBuilding}/>
+      <BuildingSearch
+        map={mapInstance}
+        buildings={buildingsWithBackendInfo}
+        onSelectBuilding={setSelectedBuilding}
+      />
 
       <MapFilters
         activeCategories={activeCategories}
