@@ -46,23 +46,6 @@ function Map() {
     error: libraryHoursError,
   } = useLibraryHours();
 
-  const {
-    data: gymInfo = {},
-    isLoading: isGymInfoLoading,
-    error: gymInfoError,
-  } = useGymInfo();
-
-  const {
-    data: foodInfo = {},
-    isLoading: isFoodInfoLoading,
-    error: foodInfoError,
-  } = useCampusFood();
-
-  const isBackendLoading =
-    isLibraryHoursLoading || isGymInfoLoading || isFoodInfoLoading;
-
-  const backendError = libraryHoursError || gymInfoError || foodInfoError;
-
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
 
@@ -191,26 +174,6 @@ function Map() {
 
     updateBuildingFilters(mapInstance, activeCategories);
   }, [mapInstance, isMapLoaded, activeCategories]);
-
-  // useEffect(() => {
-  //   async function loadBackendData() {
-  //     try {
-  //       const [libraries, gyms, food] = await Promise.all([
-  //         fetchLibraryHours(),
-  //         fetchGymInfo(),
-  //         fetchCampusFood(),
-  //       ]);
-
-  //       setLibraryHours(libraries);
-  //       setGymInfo(gyms);
-  //       setFoodInfo(food);
-  //     } catch (error) {
-  //       console.error("Failed to load backend data:", error);
-  //     }
-  //   }
-
-  //   loadBackendData();
-  // }, []);
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;

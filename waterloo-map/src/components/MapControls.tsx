@@ -1,13 +1,9 @@
 import { LocateFixed, RotateCcw } from "lucide-react";
+import type { MapControlsProps } from "../types/map";
 
-type MapControlsProps = {
-  is3D: boolean;
-  onReset: () => void;
-  onToggleView: () => void;
-  onFlyToMe: () => void;
-};
-
-//react.
+{
+  /* Helper function used to instantiate control buttons with a consistent template */
+}
 function ControlButton({
   label,
   children,
@@ -60,23 +56,6 @@ export default function MapControls({
   onFlyToMe,
 }: MapControlsProps) {
   return (
-    // <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-3">
-    // <ControlButton label="Reset view" onClick={onReset}>
-    //   <RotateCcw size={19} />
-    // </ControlButton>
-
-    // <ControlButton
-    //   label={is3D ? "Switch to 2D" : "Switch to 3D"}
-    //   onClick={onToggleView}
-    //   isActive={is3D}
-    // >
-    //     <span className="text-sm font-bold">{is3D ? "3D" : "2D"}</span>
-    //   </ControlButton>
-
-    // <ControlButton label="Fly to me" onClick={onFlyToMe}>
-    //   <LocateFixed size={19} />
-    // </ControlButton>
-    // </div>
     <div className="absolute bottom-16 right-8">
       <div className="fab fab-flower">
         {/* a focusable div with tabIndex is necessary to work on all browsers. role="button" is necessary for accessibility */}
