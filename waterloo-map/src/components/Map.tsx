@@ -46,45 +46,28 @@ function Map() {
     error: libraryHoursError,
   } = useLibraryHours();
 
-  const {
-    data: gymInfo = {},
-    isLoading: isGymInfoLoading,
-    error: gymInfoError,
-  } = useGymInfo();
-
-  const {
-    data: foodInfo = {},
-    isLoading: isFoodInfoLoading,
-    error: foodInfoError,
-  } = useCampusFood();
-
-  const isBackendLoading =
-    isLibraryHoursLoading || isGymInfoLoading || isFoodInfoLoading;
-
-  const backendError = libraryHoursError || gymInfoError || foodInfoError;
-
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
 
   const buildingsWithBackendInfo = useMemo(() => {
-  return {
-    ...buildings,
-    features: buildings.features.map((feature) => {
-      const libraryInfo = libraryHours[feature.properties.name];
-      const liveHours = libraryInfo?.[0]?.time ?? null;
+    return {
+      ...buildings,
+      features: buildings.features.map((feature) => {
+        const libraryInfo = libraryHours[feature.properties.name];
+        const liveHours = libraryInfo?.[0]?.time ?? null;
 
-      return {
-        ...feature,
-        properties: {
-          ...feature.properties,
-          liveHours,
-          timeRemaining: getTimeRemaining(liveHours),
-        },
-      };
-    }),
-  };
-}, [libraryHours]);
-    
+        return {
+          ...feature,
+          properties: {
+            ...feature.properties,
+            liveHours,
+            timeRemaining: getTimeRemaining(liveHours),
+          },
+        };
+      }),
+    };
+  }, [libraryHours]);
+
   function toggleCategory(category: BuildingCategory) {
     setActiveCategories((current) =>
       current.includes(category)
@@ -192,42 +175,23 @@ function Map() {
     updateBuildingFilters(mapInstance, activeCategories);
   }, [mapInstance, isMapLoaded, activeCategories]);
 
-  // useEffect(() => {
-  //   async function loadBackendData() {
-  //     try {
-  //       const [libraries, gyms, food] = await Promise.all([
-  //         fetchLibraryHours(),
-  //         fetchGymInfo(),
-  //         fetchCampusFood(),
-  //       ]);
-
-  //       setLibraryHours(libraries);
-  //       setGymInfo(gyms);
-  //       setFoodInfo(food);
-  //     } catch (error) {
-  //       console.error("Failed to load backend data:", error);
-  //     }
-  //   }
-
-  //   loadBackendData();
-  // }, []);
-
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-  
-    const source = mapInstance.getSource(
-      "important-buildings"
-    ) as mapboxgl.GeoJSONSource | undefined;
-  
+
+    const source = mapInstance.getSource("important-buildings") as
+      | mapboxgl.GeoJSONSource
+      | undefined;
+
     source?.setData(buildingsWithBackendInfo);
   }, [mapInstance, isMapLoaded, buildingsWithBackendInfo]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-      <BuildingSearch 
-      map={mapInstance} 
-      buildings={buildingsWithBackendInfo}
-      onSelectBuilding={setSelectedBuilding}/>
+      <BuildingSearch
+        map={mapInstance}
+        buildings={buildingsWithBackendInfo}
+        onSelectBuilding={setSelectedBuilding}
+      />
 
       <MapFilters
         activeCategories={activeCategories}

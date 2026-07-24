@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import type mapboxgl from "mapbox-gl";
 import { Search } from "lucide-react";
 import type { buildings as buildingsType } from "../data/buildings";
 
@@ -72,10 +71,7 @@ export default function BuildingSearch({
           `}
         >
           <div className="relative flex h-14 items-center">
-            <Search
-              size={22}
-              className="absolute left-4 text-slate-600"
-            />
+            <Search size={22} className="absolute left-4 text-slate-600" />
 
             <input
               value={query}
@@ -87,11 +83,7 @@ export default function BuildingSearch({
                 text-sm text-slate-800 outline-none
                 placeholder:text-slate-400
                 transition-opacity duration-200
-                ${
-                  isOpen
-                    ? "opacity-100"
-                    : "pointer-events-none opacity-0"
-                }
+                ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}
               `}
             />
           </div>
@@ -107,8 +99,7 @@ export default function BuildingSearch({
                 className="block w-full border-b border-slate-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-green-50"
               >
                 <div className="font-medium text-slate-900">
-                  {feature.properties.abbreviation} —{" "}
-                  {feature.properties.name}
+                  {feature.properties.abbreviation} — {feature.properties.name}
                 </div>
 
                 <div className="text-xs capitalize text-slate-500">
