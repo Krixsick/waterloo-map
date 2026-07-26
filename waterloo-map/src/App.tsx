@@ -1,7 +1,12 @@
-import Map from "./components/Map";
+import Map from "./interface/Map";
+import { SideBar } from "./interface/sidebar/Sidebar";
 
 function App() {
-  return <Map />;
+  return (
+    <SideBar>
+      <Map />
+    </SideBar>
+  );
 }
 
 export default App;

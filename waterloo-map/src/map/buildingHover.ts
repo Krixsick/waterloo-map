@@ -232,6 +232,9 @@ export function addBuildingHoverPopup(
       const properties = feature.properties as BuildingProperties;
     
       hoverPopup.remove();
+      //since we send a callback function setSelectedBuilding it will use that
+      //useState hook and send the properties information back into the
+      //selectedBuilding so we can use it in map.tsx
       onBuildingClick?.(properties);
     });
   });

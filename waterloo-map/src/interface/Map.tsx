@@ -9,6 +9,8 @@ import { addImportantBuildingLayers } from "../map/buildingLayers";
 import { addBuildingHoverPopup } from "../map/buildingHover";
 import { updateBuildingFilters } from "../map/buildingFilters";
 
+import { SideBar } from "./sidebar/Sidebar";
+
 import { useCampusFood } from "../api/foodApi";
 import { useLibraryHours } from "../api/libraryApi";
 import { useGymInfo } from "../api/gymApi";
@@ -109,7 +111,7 @@ function Map() {
 
   function flyToMe() {
     if (!mapInstance) return;
-
+    //checks to see if user has location or not
     if (!navigator.geolocation) {
       console.warn("Geolocation is not supported by this browser.");
       return;
@@ -187,11 +189,11 @@ function Map() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-      <BuildingSearch
+      {/* <BuildingSearch
         map={mapInstance}
         buildings={buildingsWithBackendInfo}
         onSelectBuilding={setSelectedBuilding}
-      />
+      /> */}
 
       <MapFilters
         activeCategories={activeCategories}
@@ -206,10 +208,10 @@ function Map() {
         onFlyToMe={flyToMe}
       />
 
-      <BuildingDetailsCard
+      {/* <BuildingDetailsCard
         building={selectedBuilding}
         onClose={() => setSelectedBuilding(null)}
-      />
+      /> */}
 
       <div className="h-full w-full" ref={mapContainer} />
     </div>
