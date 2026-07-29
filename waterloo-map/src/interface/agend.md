@@ -8,6 +8,7 @@ Files:
 - `BuildingDetailsCard.tsx`: Floating details card for the selected building. Shows name, abbreviation, live hours, time remaining, and close action.
 - `MapControls.tsx`: Bottom-right map controls. Uses a DaisyUI flower FAB for reset view, 2D/3D toggle, and fly-to-me actions.
 - `MapFilters.tsx`: Filter menu for marker categories. Lets the user toggle categories and reset the active category list.
+- `loading/LoadingScreen.tsx`: Full-viewport initial splash screen. It stays visible for at least one second, waits for the interactive Mapbox surface, then fades out while auxiliary query data continues loading.
 
 Coding preferences:
 - Use TypeScript props and shared types from `../types`. Avoid `any` unless the external library type is genuinely unavailable.

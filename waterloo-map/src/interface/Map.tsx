@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 //components
 import { SearchBar } from "./searchbar/SearchBar";
+import { LoadingScreen } from "./loading/LoadingScreen";
 
 //utility functions
 import { buildings } from "../data/buildings";
@@ -44,11 +45,7 @@ function Map() {
   const [is3D, setIs3D] = useState(true);
   const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
 
-  const {
-    data: libraryHours = {},
-    isLoading: isLibraryHoursLoading,
-    error: libraryHoursError,
-  } = useLibraryHours();
+  const { data: libraryHours = {} } = useLibraryHours();
 
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
@@ -191,6 +188,8 @@ function Map() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
+      <LoadingScreen isComplete={isMapLoaded} />
+
       {/* <BuildingSearch
         map={mapInstance}
         buildings={buildingsWithBackendInfo}
