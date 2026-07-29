@@ -1,4 +1,4 @@
-import { LoaderCircle, MapPinned } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const MINIMUM_VISIBLE_MS = 1000;

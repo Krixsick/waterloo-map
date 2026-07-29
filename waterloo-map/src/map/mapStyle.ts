@@ -1,6 +1,6 @@
-import mapboxgl from "mapbox-gl";
+import type { Map as MapboxMap } from "mapbox-gl";
 
-export function hideDefaultLabels(map: mapboxgl.Map) {
+export function hideDefaultLabels(map: MapboxMap) {
   const layers = map.getStyle().layers;
 
   layers?.forEach((layer) => {

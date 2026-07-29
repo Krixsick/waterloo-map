@@ -1,8 +1,8 @@
-import type mapboxgl from "mapbox-gl";
+import type { Map as MapboxMap } from "mapbox-gl";
 import type { BuildingCategory } from "../data/buildings";
 
 export function updateBuildingFilters(
-    map: mapboxgl.Map,
+    map: MapboxMap,
     activeCategories: BuildingCategory[]
   ) {
     const nonResidenceCategories = activeCategories.filter(

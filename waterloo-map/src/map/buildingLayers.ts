@@ -1,10 +1,10 @@
-import mapboxgl from "mapbox-gl";
+import type { Map as MapboxMap } from "mapbox-gl";
 import { buildings } from "../data/buildings";
 
 type BuildingsGeoJSON = typeof buildings;
 
 export function addImportantBuildingLayers(
-  map: mapboxgl.Map,
+  map: MapboxMap,
   buildingData: BuildingsGeoJSON = buildings
 ) {
   map.addLayer({

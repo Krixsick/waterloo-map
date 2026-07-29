@@ -21,7 +21,7 @@ export default function MapFilters({
   onResetFilters,
 }: MapFiltersProps) {
   return (
-    <div className="group absolute right-6 top-4 z-20">
+    <div className="group absolute right-3 top-20 z-20 sm:right-6 sm:top-4">
       <button
         type="button"
         className="relative flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg transition hover:bg-slate-50"

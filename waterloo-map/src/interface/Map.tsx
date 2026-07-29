@@ -16,13 +16,10 @@ import { updateBuildingFilters } from "../map/buildingFilters";
 
 //apis
 import { useLibraryHours } from "../api/libraryApi";
-import { useGymInfo } from "../api/gymApi";
 
 import type { BuildingCategory } from "../data/buildings";
-import BuildingSearch from "./BuildingSearch";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
-import BuildingDetailsCard from "./BuildingDetailsCard";
 
 import { getTimeRemaining } from "../utils/timeUtils";
 
@@ -43,7 +40,6 @@ function Map() {
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [is3D, setIs3D] = useState(true);
-  const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
 
   const { data: libraryHours = {} } = useLibraryHours();
 
@@ -158,7 +154,7 @@ function Map() {
     map.on("load", () => {
       hideDefaultLabels(map);
       addImportantBuildingLayers(map);
-      addBuildingHoverPopup(map, setSelectedBuilding);
+      addBuildingHoverPopup(map);
       updateBuildingFilters(map, DEFAULT_CATEGORIES);
       setIsMapLoaded(true);
     });
@@ -187,15 +183,13 @@ function Map() {
   }, [mapInstance, isMapLoaded, buildingsWithBackendInfo]);
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div className="relative h-screen w-full overflow-hidden">
       <LoadingScreen isComplete={isMapLoaded} />
 
-      {/* <BuildingSearch
+      <SearchBar
         map={mapInstance}
         buildings={buildingsWithBackendInfo}
-        onSelectBuilding={setSelectedBuilding}
-      /> */}
-      <SearchBar></SearchBar>
+      />
       <MapFilters
         activeCategories={activeCategories}
         onToggleCategory={toggleCategory}
@@ -208,11 +202,6 @@ function Map() {
         onToggleView={toggleView}
         onFlyToMe={flyToMe}
       />
-
-      {/* <BuildingDetailsCard
-        building={selectedBuilding}
-        onClose={() => setSelectedBuilding(null)}
-      /> */}
 
       <div className="h-full w-full" ref={mapContainer} />
     </div>
