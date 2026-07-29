@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
+//components
+import { SearchBar } from "./searchbar/SearchBar";
+
+//utility functions
 import { buildings } from "../data/buildings";
 import { createMap } from "../map/createMap";
 import { hideDefaultLabels } from "../map/mapStyle";
@@ -9,9 +13,7 @@ import { addImportantBuildingLayers } from "../map/buildingLayers";
 import { addBuildingHoverPopup } from "../map/buildingHover";
 import { updateBuildingFilters } from "../map/buildingFilters";
 
-import { SideBar } from "./sidebar/Sidebar";
-
-import { useCampusFood } from "../api/foodApi";
+//apis
 import { useLibraryHours } from "../api/libraryApi";
 import { useGymInfo } from "../api/gymApi";
 
@@ -194,7 +196,7 @@ function Map() {
         buildings={buildingsWithBackendInfo}
         onSelectBuilding={setSelectedBuilding}
       /> */}
-
+      <SearchBar></SearchBar>
       <MapFilters
         activeCategories={activeCategories}
         onToggleCategory={toggleCategory}
