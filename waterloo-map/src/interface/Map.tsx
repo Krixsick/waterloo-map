@@ -5,6 +5,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 //components
 import { SearchBar } from "./searchbar/SearchBar";
 import { LoadingScreen } from "./loading/LoadingScreen";
+import TransitDetailsCard from "./TransitDetailsCard";
 
 //utility functions
 import { buildings } from "../data/buildings";
@@ -26,6 +27,7 @@ import { useTransitStops, useTransitVehicles } from "../api/transitApi";
 import type { BuildingCategory } from "../data/buildings";
 import type {
   TransitStatus,
+  TransitSelection,
   TransitStop,
   TransitVehicle,
 } from "../types/transit";
@@ -54,6 +56,8 @@ function Map() {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [is3D, setIs3D] = useState(true);
   const [showTransit, setShowTransit] = useState(false);
+  const [selectedTransit, setSelectedTransit] =
+    useState<TransitSelection | null>(null);
 
   const { data: libraryHours = {} } = useLibraryHours();
   const {
@@ -84,6 +88,17 @@ function Map() {
     transitStatus = "loading";
   }
   if (isTransitError && isTransitStopsError) transitStatus = "error";
+
+  const currentTransitSelection =
+    selectedTransit?.type === "vehicle"
+      ? {
+          type: "vehicle" as const,
+          vehicle:
+            transitVehicles.find(
+              (vehicle) => vehicle.id === selectedTransit.vehicle.id,
+            ) ?? selectedTransit.vehicle,
+        }
+      : selectedTransit;
 
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
@@ -118,6 +133,12 @@ function Map() {
   function resetFilters() {
     setActiveCategories(DEFAULT_CATEGORIES);
     setShowTransit(false);
+    setSelectedTransit(null);
+  }
+
+  function toggleTransit() {
+    if (showTransit) setSelectedTransit(null);
+    setShowTransit((current) => !current);
   }
 
   function toggleView() {
@@ -198,7 +219,11 @@ function Map() {
       hideDefaultLabels(map);
       addImportantBuildingLayers(map);
       addBuildingHoverPopup(map);
-      addTransitLayers(map);
+      addTransitLayers(map, {
+        onSelectStop: (stop) => setSelectedTransit({ type: "stop", stop }),
+        onSelectVehicle: (vehicle) =>
+          setSelectedTransit({ type: "vehicle", vehicle }),
+      });
       updateBuildingFilters(map, DEFAULT_CATEGORIES);
       setIsMapLoaded(true);
     });
@@ -244,12 +269,16 @@ function Map() {
         map={mapInstance}
         buildings={buildingsWithBackendInfo}
       />
+      <TransitDetailsCard
+        selection={currentTransitSelection}
+        onClose={() => setSelectedTransit(null)}
+      />
       <MapFilters
         activeCategories={activeCategories}
         onToggleCategory={toggleCategory}
         onResetFilters={resetFilters}
         showTransit={showTransit}
-        onToggleTransit={() => setShowTransit((current) => !current)}
+        onToggleTransit={toggleTransit}
         transitStopCount={transitStops.length}
         transitVehicleCount={transitVehicles.length}
         transitStatus={transitStatus}

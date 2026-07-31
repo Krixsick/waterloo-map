@@ -19,13 +19,6 @@ body,
   height: 100%;
 }
 
-.transit-popup .mapboxgl-popup-content {
-  border: 1px solid rgb(226 232 240);
-  border-radius: 8px;
-  padding: 0;
-  box-shadow: 0 12px 28px rgb(15 23 42 / 18%);
-}
-
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

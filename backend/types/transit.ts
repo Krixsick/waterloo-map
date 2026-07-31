@@ -13,6 +13,12 @@ export type TransitResponse<T> = {
   feeds: TransitFeedStatus[];
 };
 
+export type TransitItemResponse<T> = {
+  data: T | null;
+  generatedAt: string;
+  feeds: TransitFeedStatus[];
+};
+
 export type TransitVehicle = {
   id: string;
   mode: TransitMode;
@@ -23,12 +29,14 @@ export type TransitVehicle = {
   longitude: number;
   bearing: number | null;
   stopId: string | null;
+  currentStopSequence: number | null;
   currentStatus: string | null;
   updatedAt: string | null;
 };
 
 export type TransitStop = {
   id: string;
+  stopId: string;
   mode: TransitMode;
   name: string;
   latitude: number;
@@ -43,12 +51,43 @@ export type TransitArrival = {
   tripId: string | null;
   vehicleId: string | null;
   stopId: string;
+  stopSequence: number | null;
   arrivalAt: string | null;
   departureAt: string | null;
   arrivalDelaySeconds: number | null;
   departureDelaySeconds: number | null;
   scheduleRelationship: string | null;
   updatedAt: string | null;
+};
+
+export type TransitDeparture = {
+  id: string;
+  mode: TransitMode;
+  routeId: string;
+  tripId: string;
+  stopId: string;
+  headsign: string | null;
+  scheduledAt: string | null;
+  predictedAt: string | null;
+  isRealtime: boolean;
+};
+
+export type TransitTripStop = {
+  stopId: string;
+  name: string;
+  sequence: number;
+  scheduledAt: string | null;
+  predictedAt: string | null;
+  isRealtime: boolean;
+};
+
+export type TransitTripDetail = {
+  mode: TransitMode;
+  routeId: string;
+  tripId: string;
+  headsign: string | null;
+  directionId: number | null;
+  nextStops: TransitTripStop[];
 };
 
 export type TransitAlert = {

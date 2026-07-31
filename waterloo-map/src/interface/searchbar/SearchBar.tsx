@@ -83,7 +83,8 @@ export function SearchBar({ map, buildings }: SearchBarProps) {
     }
 
     document.addEventListener("pointerdown", closeOnOutsideClick);
-    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+    return () =>
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
   }, []);
 
   function selectBuilding(feature: BuildingFeature) {
@@ -152,7 +153,7 @@ export function SearchBar({ map, buildings }: SearchBarProps) {
   return (
     <div
       ref={containerRef}
-      className="absolute left-3 right-3 top-3 z-30 sm:left-5 sm:right-auto sm:w-[25rem]"
+      className="absolute left-3 right-3 top-3 z-1 sm:left-5 sm:right-auto sm:w-[25rem]"
     >
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.18)]">
         <form
@@ -223,9 +224,7 @@ export function SearchBar({ map, buildings }: SearchBarProps) {
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => selectBuilding(feature)}
                   className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                    activeIndex === index
-                      ? "bg-slate-100"
-                      : "hover:bg-slate-50"
+                    activeIndex === index ? "bg-slate-100" : "hover:bg-slate-50"
                   }`}
                 >
                   <span

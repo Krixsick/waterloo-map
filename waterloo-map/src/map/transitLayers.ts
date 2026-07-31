@@ -1,4 +1,4 @@
-import mapboxgl from "mapbox-gl";
+import type { Expression, GeoJSONSource, Map } from "mapbox-gl";
 import type { FeatureCollection, Point } from "geojson";
 
 import type { TransitStop, TransitVehicle } from "../types/transit";
@@ -7,7 +7,7 @@ const STOP_SOURCE_ID = "transit-stops";
 const STOP_MARKER_LAYER_ID = "transit-stop-markers";
 const VEHICLE_SOURCE_ID = "transit-vehicles";
 const MARKER_LAYER_ID = "transit-vehicle-markers";
-const modeColor: mapboxgl.Expression = [
+const modeColor: Expression = [
   "match",
   ["get", "mode"],
   "bus",
@@ -17,8 +17,13 @@ const modeColor: mapboxgl.Expression = [
   "#475569",
 ];
 
-type StopProperties = Pick<TransitStop, "id" | "mode" | "name"> & {
+type StopProperties = Pick<TransitStop, "id" | "stopId" | "mode" | "name"> & {
   routeIds: string;
+};
+
+type TransitLayerHandlers = {
+  onSelectStop: (stop: TransitStop) => void;
+  onSelectVehicle: (vehicle: TransitVehicle) => void;
 };
 
 function stopsToGeoJson(
@@ -47,47 +52,10 @@ function vehiclesToGeoJson(
   };
 }
 
-function stopPopupContent(stop: StopProperties) {
-  const content = document.createElement("div");
-  content.className = "min-w-48 p-3 text-slate-800";
-
-  const title = document.createElement("strong");
-  title.className = "block pr-5 text-sm font-semibold";
-  title.textContent = stop.name;
-
-  const details = document.createElement("p");
-  details.className = "mt-1 text-xs text-slate-500";
-  const transitType = stop.mode === "ion" ? "ION station" : "Bus stop";
-  const routes = stop.mode === "ion" ? `ION ${stop.routeIds}` : `Routes ${stop.routeIds}`;
-  details.textContent = stop.routeIds
-    ? `${transitType} · ${routes}`
-    : transitType;
-
-  content.append(title, details);
-  return content;
-}
-
-function popupContent(vehicle: TransitVehicle) {
-  const content = document.createElement("div");
-  content.className = "min-w-48 p-3 text-slate-800";
-
-  const title = document.createElement("strong");
-  title.className = "block pr-5 text-sm font-semibold";
-  title.textContent = vehicle.routeId
-    ? `${vehicle.mode === "ion" ? "ION" : "Bus"} route ${vehicle.routeId}`
-    : vehicle.mode === "ion"
-      ? "ION vehicle"
-      : "GRT bus";
-
-  const details = document.createElement("p");
-  details.className = "mt-1 text-xs capitalize text-slate-500";
-  details.textContent = vehicle.currentStatus?.replaceAll("-", " ") ?? "Live vehicle";
-
-  content.append(title, details);
-  return content;
-}
-
-export function addTransitLayers(map: mapboxgl.Map) {
+export function addTransitLayers(
+  map: Map,
+  handlers: TransitLayerHandlers,
+) {
   map.addSource(STOP_SOURCE_ID, {
     type: "geojson",
     data: stopsToGeoJson([]),
@@ -177,11 +145,15 @@ export function addTransitLayers(map: mapboxgl.Map) {
   map.on("click", STOP_MARKER_LAYER_ID, (event) => {
     const feature = event.features?.[0];
     if (!feature || feature.geometry.type !== "Point") return;
+    const [longitude, latitude] = feature.geometry.coordinates;
+    const properties = feature.properties as StopProperties;
 
-    new mapboxgl.Popup({ offset: 12, className: "transit-popup" })
-      .setLngLat(feature.geometry.coordinates as [number, number])
-      .setDOMContent(stopPopupContent(feature.properties as StopProperties))
-      .addTo(map);
+    handlers.onSelectStop({
+      ...properties,
+      latitude,
+      longitude,
+      routeIds: properties.routeIds ? properties.routeIds.split(", ") : [],
+    });
   });
 
   map.on("mouseenter", MARKER_LAYER_ID, () => {
@@ -193,27 +165,29 @@ export function addTransitLayers(map: mapboxgl.Map) {
   map.on("click", MARKER_LAYER_ID, (event) => {
     const feature = event.features?.[0];
     if (!feature || feature.geometry.type !== "Point") return;
+    const [longitude, latitude] = feature.geometry.coordinates;
 
-    new mapboxgl.Popup({ offset: 18, className: "transit-popup" })
-      .setLngLat(feature.geometry.coordinates as [number, number])
-      .setDOMContent(popupContent(feature.properties as TransitVehicle))
-      .addTo(map);
+    handlers.onSelectVehicle({
+      ...(feature.properties as TransitVehicle),
+      latitude,
+      longitude,
+    });
   });
 }
 
-export function updateTransitStops(map: mapboxgl.Map, stops: TransitStop[]) {
+export function updateTransitStops(map: Map, stops: TransitStop[]) {
   const source = map.getSource(STOP_SOURCE_ID) as
-    | mapboxgl.GeoJSONSource
+    | GeoJSONSource
     | undefined;
   source?.setData(stopsToGeoJson(stops));
 }
 
 export function updateTransitVehicles(
-  map: mapboxgl.Map,
+  map: Map,
   vehicles: TransitVehicle[],
 ) {
   const source = map.getSource(VEHICLE_SOURCE_ID) as
-    | mapboxgl.GeoJSONSource
+    | GeoJSONSource
     | undefined;
   source?.setData(vehiclesToGeoJson(vehicles));
 }

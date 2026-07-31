@@ -10,7 +10,7 @@ Files:
 - `libraryApi.ts`: Fetches library hours from `${VITE_API_URL}/library/hours` and exposes `useLibraryHours()` with the `["library-hours"]` query key.
 - `foodApi.ts`: Fetches campus food data from `${VITE_API_URL}/food/campus` and exposes `useCampusFood()` with the `["campus-food"]` query key.
 - `gymApi.ts`: Fetches gym occupancy/details from `${VITE_API_URL}/gym` and exposes `useGymInfo()` with the `["gym"]` query key.
-- `transitApi.ts`: Reuses one typed request helper for scheduled campus stops, live vehicles, stop arrivals, and alerts. TanStack Query keeps static stops fresh for six hours and polls vehicles/arrivals every 15 seconds while enabled.
+- `transitApi.ts`: Reuses typed list/item request helpers for scheduled stops, live vehicles, merged departures, vehicle trip details, raw arrivals, and alerts. Departure and trip-detail hooks refresh every 15 seconds while selected.
 
 Coding preferences:
 - Use TypeScript for request helpers, hook return values, and API response shapes. Prefer shared types from `../types` over inline `any`.

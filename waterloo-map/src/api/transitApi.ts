@@ -4,8 +4,11 @@ import axios from "axios";
 import type {
   TransitAlert,
   TransitArrival,
+  TransitDeparture,
+  TransitItemResponse,
   TransitResponse,
   TransitStop,
+  TransitTripDetail,
   TransitVehicle,
 } from "../types/transit";
 
@@ -16,6 +19,17 @@ async function getTransit<T>(
   params?: Record<string, string | number>,
 ) {
   const response = await axios.get<TransitResponse<T>>(
+    `${API_URL}/transit/${path}`,
+    { params },
+  );
+  return response.data;
+}
+
+async function getTransitItem<T>(
+  path: string,
+  params: Record<string, string | number>,
+) {
+  const response = await axios.get<TransitItemResponse<T>>(
     `${API_URL}/transit/${path}`,
     { params },
   );
@@ -36,6 +50,41 @@ export function useTransitVehicles(enabled: boolean) {
     queryKey: ["transit", "vehicles"],
     queryFn: () => getTransit<TransitVehicle>("vehicles"),
     enabled,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useTransitDepartures(stopId: string | null) {
+  return useQuery({
+    queryKey: ["transit", "departures", stopId],
+    queryFn: () =>
+      getTransit<TransitDeparture>("departures", { stopId: stopId! }),
+    enabled: Boolean(stopId),
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useTransitTripDetails(vehicle: TransitVehicle | null) {
+  return useQuery({
+    queryKey: [
+      "transit",
+      "trip",
+      vehicle?.mode,
+      vehicle?.tripId,
+      vehicle?.currentStopSequence,
+    ],
+    queryFn: () =>
+      getTransitItem<TransitTripDetail>("trip", {
+        mode: vehicle!.mode,
+        tripId: vehicle!.tripId!,
+        ...(vehicle!.currentStopSequence === null
+          ? {}
+          : { currentStopSequence: vehicle!.currentStopSequence }),
+        ...(vehicle!.stopId ? { currentStopId: vehicle!.stopId } : {}),
+      }),
+    enabled: Boolean(vehicle?.tripId),
     staleTime: 10_000,
     refetchInterval: 15_000,
   });

@@ -199,6 +199,9 @@ function normalizeVehicle(
     longitude,
     bearing: numberValue(fieldValue(position, "bearing")),
     stopId: textValue(vehicle?.stopId),
+    currentStopSequence: numberValue(
+      fieldValue(vehicle, "currentStopSequence"),
+    ),
     currentStatus: enumValue(
       VEHICLE_STATUS,
       fieldValue(vehicle, "currentStatus"),
@@ -210,20 +213,25 @@ function normalizeVehicle(
 function normalizeArrivals(
   entity: FeedEntity,
   mode: TransitMode,
-  stopId: string,
+  requestedStopId?: string,
 ): TransitArrival[] {
   const update = entity.tripUpdate;
   if (!update) return [];
 
   return (update.stopTimeUpdate ?? [])
-    .filter((stop) => stop.stopId === stopId)
-    .map((stop) => ({
+    .filter((stop) => !requestedStopId || stop.stopId === requestedStopId)
+    .flatMap((stop) => {
+      const stopId = textValue(stop.stopId);
+      if (!stopId) return [];
+
+      return [{
       id: `${mode}:${entity.id}:${stop.stopId}`,
       mode,
       routeId: textValue(update.trip.routeId),
       tripId: textValue(update.trip.tripId),
       vehicleId: textValue(update.vehicle?.id),
       stopId,
+      stopSequence: numberValue(fieldValue(stop, "stopSequence")),
       arrivalAt: isoTime(fieldValue(stop.arrival, "time")),
       departureAt: isoTime(fieldValue(stop.departure, "time")),
       arrivalDelaySeconds: numberValue(fieldValue(stop.arrival, "delay")),
@@ -233,7 +241,8 @@ function normalizeArrivals(
         fieldValue(stop, "scheduleRelationship"),
       ),
       updatedAt: isoTime(fieldValue(update, "timestamp")),
-    }));
+      } satisfies TransitArrival];
+    });
 }
 
 function normalizeAlert(entity: FeedEntity): TransitAlert | null {
@@ -269,7 +278,7 @@ function result<T>(data: T[], feeds: TransitFeedStatus[]): TransitResponse<T> {
   return { data, feeds, generatedAt: new Date().toISOString() };
 }
 
-export function hasAvailableFeed<T>(response: TransitResponse<T>) {
+export function hasAvailableFeed(response: { feeds: TransitFeedStatus[] }) {
   return response.feeds.some((feed) => !feed.error);
 }
 
@@ -307,6 +316,33 @@ export function getTransitArrivals(stopId: string) {
 
     return result(arrivals, statuses);
   });
+}
+
+export function getTransitTripArrivals(mode: TransitMode, tripId: string) {
+  return withMemoryCache(
+    `grt:trip-arrivals:${mode}:${tripId}:v1`,
+    CACHE_SECONDS,
+    async () => {
+      const { loaded, statuses } = await loadModeFeeds("trips");
+      const arrivals = loaded
+        .filter(
+          ({ mode: feedMode, feed }) =>
+            feedMode === mode && !feedStatus(feedMode, feed).isStale,
+        )
+        .flatMap(({ mode: feedMode, feed }) =>
+          feed.entity.flatMap((entity) =>
+            entity.tripUpdate?.trip.tripId === tripId
+              ? normalizeArrivals(entity, feedMode)
+              : [],
+          ),
+        );
+
+      return result(
+        arrivals,
+        statuses.filter((status) => status.mode === mode),
+      );
+    },
+  );
 }
 
 export function getTransitAlerts() {
