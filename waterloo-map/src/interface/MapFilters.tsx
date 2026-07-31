@@ -1,7 +1,19 @@
-import { useState } from "react";
-import { BusFront, RotateCcw, SlidersHorizontal } from "lucide-react";
+import {
+  BookOpen,
+  BusFront,
+  Check,
+  Dumbbell,
+  GraduationCap,
+  House,
+  RotateCcw,
+  TrainFront,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+
 import type { BuildingCategory } from "../data/buildings";
-import type { TransitStatus } from "../types/transit";
+import type { TransitMode, TransitStatus } from "../types/transit";
 
 type MapFiltersProps = {
   activeCategories: BuildingCategory[];
@@ -9,17 +21,44 @@ type MapFiltersProps = {
   onResetFilters: () => void;
   showTransit: boolean;
   onToggleTransit: () => void;
+  activeTransitModes: TransitMode[];
+  onToggleTransitMode: (mode: TransitMode) => void;
   transitStopCount: number;
   transitVehicleCount: number;
   transitStatus: TransitStatus;
+  onClose: () => void;
 };
 
-const filters: { label: string; value: BuildingCategory }[] = [
-  { label: "Academic", value: "academic" },
-  { label: "Libraries", value: "library" },
-  { label: "Gyms", value: "gym" },
-  { label: "Student Life", value: "student-life" },
-  { label: "Residences", value: "residence" },
+const filters: {
+  label: string;
+  value: BuildingCategory;
+  icon: LucideIcon;
+}[] = [
+  { label: "Academic", value: "academic", icon: GraduationCap },
+  { label: "Libraries", value: "library", icon: BookOpen },
+  { label: "Gyms", value: "gym", icon: Dumbbell },
+  { label: "Student Life", value: "student-life", icon: Users },
+  { label: "Residences", value: "residence", icon: House },
+];
+
+const transitModes: {
+  label: string;
+  value: TransitMode;
+  icon: LucideIcon;
+  activeClass: string;
+}[] = [
+  {
+    label: "Bus",
+    value: "bus",
+    icon: BusFront,
+    activeClass: "border-blue-200 bg-blue-50 text-blue-800",
+  },
+  {
+    label: "ION",
+    value: "ion",
+    icon: TrainFront,
+    activeClass: "border-pink-200 bg-pink-50 text-pink-800",
+  },
 ];
 
 export default function MapFilters({
@@ -28,12 +67,13 @@ export default function MapFilters({
   onResetFilters,
   showTransit,
   onToggleTransit,
+  activeTransitModes,
+  onToggleTransitMode,
   transitStopCount,
   transitVehicleCount,
   transitStatus,
+  onClose,
 }: MapFiltersProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const activeCount = activeCategories.length + Number(showTransit);
   const transitMessage =
     transitStatus === "error"
       ? "Unavailable"
@@ -44,120 +84,158 @@ export default function MapFilters({
           : `${transitStopCount} stops · ${transitVehicleCount} live`;
 
   return (
-    <div className="group absolute right-3 top-20 z-20 sm:right-6 sm:top-4">
-      <button
-        type="button"
-        onClick={() => setIsOpen((current) => !current)}
-        className="relative flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg transition hover:bg-slate-50"
-        aria-label="Map filters"
-        aria-expanded={isOpen}
-      >
-        <SlidersHorizontal size={22} />
+    <div className="flex h-full flex-col overflow-y-auto px-4 py-5">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Map filters</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Show or hide map items</p>
+        </div>
 
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-green-500 px-1 text-[11px] font-bold text-white">
-          {activeCount}
-        </span>
-      </button>
-
-      <div
-        className={`absolute right-0 top-16 w-56 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur transition-all duration-150 group-hover:visible group-hover:opacity-100 ${
-          isOpen ? "visible opacity-100" : "invisible opacity-0"
-        }`}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-slate-700">
-            Filters
-          </span>
-
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onResetFilters}
-            className="group/reset relative rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            className="flex size-9 cursor-pointer items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
             aria-label="Reset filters"
+            title="Reset filters"
           >
-            <RotateCcw size={16} />
-
-            <span className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-[11px] text-white opacity-0 shadow-md transition-opacity duration-150 group-hover/reset:opacity-100">
-              Reset filters
-            </span>
+            <RotateCcw size={17} />
           </button>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          {filters.map((filter) => {
-            const isActive = activeCategories.includes(filter.value);
-
-            return (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => onToggleCategory(filter.value)}
-                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium transition ${
-                  isActive
-                    ? "bg-green-50 text-green-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] font-bold transition ${
-                    isActive
-                      ? "border-green-500 bg-green-500 text-white"
-                      : "border-slate-300 bg-white text-transparent"
-                  }`}
-                >
-                  ✓
-                </span>
-
-                {filter.label}
-              </button>
-            );
-          })}
-
-          <div className="my-1 border-t border-slate-200" />
-
           <button
             type="button"
-            onClick={onToggleTransit}
-            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition ${
-              showTransit
-                ? "bg-blue-50 text-blue-700"
-                : "text-slate-600 hover:bg-slate-50"
-            }`}
+            onClick={onClose}
+            className="flex size-9 cursor-pointer items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Close map filters"
+            title="Close filters"
           >
-            <span
-              className={`flex h-5 w-5 items-center justify-center rounded-md border ${
-                showTransit
-                  ? "border-blue-600 bg-blue-600 text-white"
-                  : "border-slate-300 bg-white text-slate-500"
-              }`}
-            >
-              <BusFront size={13} />
-            </span>
-
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs font-medium">Transit</span>
-              {showTransit && (
-                <span
-                  className={`block text-[10px] ${
-                    transitStatus === "error"
-                      ? "text-red-600"
-                      : transitStatus === "partial"
-                        ? "text-amber-600"
-                        : "text-slate-500"
-                  }`}
-                >
-                  {transitMessage}
-                </span>
-              )}
-            </span>
-
-            <span className="flex gap-1" aria-hidden="true">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
-              <span className="h-2.5 w-2.5 rounded-full bg-pink-600" />
-            </span>
+            <X size={19} />
           </button>
         </div>
       </div>
+
+      <section className="py-5">
+        <h3 className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
+          Places
+        </h3>
+        <div className="space-y-1">
+          {filters.map(({ label, value, icon: Icon }) => {
+            const isActive = activeCategories.includes(value);
+
+            return (
+              <label
+                key={value}
+                className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2 outline-none transition focus-within:ring-2 focus-within:ring-green-600/40 ${
+                  isActive
+                    ? "bg-green-50 text-green-800"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={() => onToggleCategory(value)}
+                  className="sr-only"
+                />
+                <Icon size={20} aria-hidden="true" />
+                <span className="min-w-0 flex-1 text-sm font-medium">
+                  {label}
+                </span>
+                <span
+                  className={`flex size-5 items-center justify-center rounded border ${
+                    isActive
+                      ? "border-green-600 bg-green-600 text-white"
+                      : "border-slate-300 bg-white text-transparent"
+                  }`}
+                  aria-hidden="true"
+                >
+                  <Check size={14} strokeWidth={3} />
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="border-t border-slate-200 pt-5">
+        <h3 className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
+          Transportation
+        </h3>
+        <label
+          className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-blue-600/40 ${
+            showTransit
+              ? "bg-blue-50 text-blue-800"
+              : "text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={showTransit}
+            onChange={onToggleTransit}
+            className="sr-only"
+          />
+          <BusFront size={20} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Live transit</span>
+            <span
+              className={`block text-xs ${
+                transitStatus === "error"
+                  ? "text-red-600"
+                  : transitStatus === "partial"
+                    ? "text-amber-600"
+                    : "text-slate-500"
+              }`}
+            >
+              {showTransit ? transitMessage : "Stops and vehicles"}
+            </span>
+          </span>
+          <span
+            className={`flex size-5 items-center justify-center rounded border ${
+              showTransit
+                ? "border-blue-600 bg-blue-600 text-white"
+                : "border-slate-300 bg-white text-transparent"
+            }`}
+            aria-hidden="true"
+          >
+            <Check size={14} strokeWidth={3} />
+          </span>
+        </label>
+
+        {showTransit && (
+          <fieldset className="mt-3 px-2">
+            <legend className="mb-2 text-xs font-medium text-slate-500">
+              Transit modes
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              {transitModes.map(
+                ({ label, value, icon: Icon, activeClass }) => {
+                  const isActive = activeTransitModes.includes(value);
+
+                  return (
+                    <label
+                      key={value}
+                      className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-sm font-medium outline-none transition focus-within:ring-2 focus-within:ring-slate-500/30 ${
+                        isActive
+                          ? activeClass
+                          : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        onChange={() => onToggleTransitMode(value)}
+                        className="sr-only"
+                      />
+                      <Icon size={17} aria-hidden="true" />
+                      <span className="flex-1">{label}</span>
+                      {isActive && <Check size={14} aria-hidden="true" />}
+                    </label>
+                  );
+                },
+              )}
+            </div>
+          </fieldset>
+        )}
+      </section>
     </div>
   );
 }

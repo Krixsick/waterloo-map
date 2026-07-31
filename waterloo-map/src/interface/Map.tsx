@@ -6,6 +6,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { SearchBar } from "./searchbar/SearchBar";
 import { LoadingScreen } from "./loading/LoadingScreen";
 import TransitDetailsCard from "./TransitDetailsCard";
+import { SideBar } from "./sidebar/Sidebar";
 
 //utility functions
 import { buildings } from "../data/buildings";
@@ -26,6 +27,7 @@ import { useTransitStops, useTransitVehicles } from "../api/transitApi";
 
 import type { BuildingCategory } from "../data/buildings";
 import type {
+  TransitMode,
   TransitStatus,
   TransitSelection,
   TransitStop,
@@ -47,6 +49,7 @@ const DEFAULT_CATEGORIES: BuildingCategory[] = [
 ];
 const NO_TRANSIT_VEHICLES: TransitVehicle[] = [];
 const NO_TRANSIT_STOPS: TransitStop[] = [];
+const DEFAULT_TRANSIT_MODES: TransitMode[] = ["bus", "ion"];
 
 function Map() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -56,6 +59,8 @@ function Map() {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [is3D, setIs3D] = useState(true);
   const [showTransit, setShowTransit] = useState(false);
+  const [activeTransitModes, setActiveTransitModes] =
+    useState<TransitMode[]>(DEFAULT_TRANSIT_MODES);
   const [selectedTransit, setSelectedTransit] =
     useState<TransitSelection | null>(null);
 
@@ -72,12 +77,25 @@ function Map() {
   } = useTransitStops(showTransit);
   const transitVehicles = transitResponse?.data ?? NO_TRANSIT_VEHICLES;
   const transitStops = transitStopsResponse?.data ?? NO_TRANSIT_STOPS;
+  const visibleTransitVehicles = useMemo(
+    () =>
+      transitVehicles.filter((vehicle) =>
+        activeTransitModes.includes(vehicle.mode),
+      ),
+    [activeTransitModes, transitVehicles],
+  );
+  const visibleTransitStops = useMemo(
+    () =>
+      transitStops.filter((stop) => activeTransitModes.includes(stop.mode)),
+    [activeTransitModes, transitStops],
+  );
   const hasTransitFeedProblem = [
     ...(transitResponse?.feeds ?? []),
     ...(transitStopsResponse?.feeds ?? []),
   ].some((feed) => feed.isStale || feed.error);
-  const hasTransitData = transitStops.length > 0 || transitVehicles.length > 0;
-  let transitStatus: TransitStatus = transitVehicles.length
+  const hasTransitData =
+    visibleTransitStops.length > 0 || visibleTransitVehicles.length > 0;
+  let transitStatus: TransitStatus = visibleTransitVehicles.length
     ? "live"
     : "scheduled";
 
@@ -94,7 +112,7 @@ function Map() {
       ? {
           type: "vehicle" as const,
           vehicle:
-            transitVehicles.find(
+            visibleTransitVehicles.find(
               (vehicle) => vehicle.id === selectedTransit.vehicle.id,
             ) ?? selectedTransit.vehicle,
         }
@@ -132,6 +150,7 @@ function Map() {
 
   function resetFilters() {
     setActiveCategories(DEFAULT_CATEGORIES);
+    setActiveTransitModes(DEFAULT_TRANSIT_MODES);
     setShowTransit(false);
     setSelectedTransit(null);
   }
@@ -139,6 +158,24 @@ function Map() {
   function toggleTransit() {
     if (showTransit) setSelectedTransit(null);
     setShowTransit((current) => !current);
+  }
+
+  function toggleTransitMode(mode: TransitMode) {
+    const selectedMode =
+      selectedTransit?.type === "vehicle"
+        ? selectedTransit.vehicle.mode
+        : selectedTransit?.type === "stop"
+          ? selectedTransit.stop.mode
+          : null;
+
+    if (activeTransitModes.includes(mode) && selectedMode === mode) {
+      setSelectedTransit(null);
+    }
+    setActiveTransitModes((current) =>
+      current.includes(mode)
+        ? current.filter((item) => item !== mode)
+        : [...current, mode],
+    );
   }
 
   function toggleView() {
@@ -253,46 +290,57 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-    updateTransitVehicles(mapInstance, showTransit ? transitVehicles : []);
-  }, [mapInstance, isMapLoaded, showTransit, transitVehicles]);
+    updateTransitVehicles(
+      mapInstance,
+      showTransit ? visibleTransitVehicles : [],
+    );
+  }, [mapInstance, isMapLoaded, showTransit, visibleTransitVehicles]);
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-    updateTransitStops(mapInstance, showTransit ? transitStops : []);
-  }, [mapInstance, isMapLoaded, showTransit, transitStops]);
+    updateTransitStops(mapInstance, showTransit ? visibleTransitStops : []);
+  }, [mapInstance, isMapLoaded, showTransit, visibleTransitStops]);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
-      <LoadingScreen isComplete={isMapLoaded} />
+    <SideBar
+      renderMenuPanel={(closeMenu) => (
+        <MapFilters
+          activeCategories={activeCategories}
+          onToggleCategory={toggleCategory}
+          onResetFilters={resetFilters}
+          showTransit={showTransit}
+          onToggleTransit={toggleTransit}
+          activeTransitModes={activeTransitModes}
+          onToggleTransitMode={toggleTransitMode}
+          transitStopCount={visibleTransitStops.length}
+          transitVehicleCount={visibleTransitVehicles.length}
+          transitStatus={transitStatus}
+          onClose={closeMenu}
+        />
+      )}
+    >
+      <div className="relative h-screen w-full overflow-hidden">
+        <LoadingScreen isComplete={isMapLoaded} />
 
-      <SearchBar
-        map={mapInstance}
-        buildings={buildingsWithBackendInfo}
-      />
-      <TransitDetailsCard
-        selection={currentTransitSelection}
-        onClose={() => setSelectedTransit(null)}
-      />
-      <MapFilters
-        activeCategories={activeCategories}
-        onToggleCategory={toggleCategory}
-        onResetFilters={resetFilters}
-        showTransit={showTransit}
-        onToggleTransit={toggleTransit}
-        transitStopCount={transitStops.length}
-        transitVehicleCount={transitVehicles.length}
-        transitStatus={transitStatus}
-      />
+        <SearchBar
+          map={mapInstance}
+          buildings={buildingsWithBackendInfo}
+        />
+        <TransitDetailsCard
+          selection={currentTransitSelection}
+          onClose={() => setSelectedTransit(null)}
+        />
 
-      <MapControls
-        is3D={is3D}
-        onReset={resetMap}
-        onToggleView={toggleView}
-        onFlyToMe={flyToMe}
-      />
+        <MapControls
+          is3D={is3D}
+          onReset={resetMap}
+          onToggleView={toggleView}
+          onFlyToMe={flyToMe}
+        />
 
-      <div className="h-full w-full" ref={mapContainer} />
-    </div>
+        <div className="h-full w-full" ref={mapContainer} />
+      </div>
+    </SideBar>
   );
 }
 

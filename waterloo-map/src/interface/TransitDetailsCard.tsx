@@ -40,6 +40,26 @@ function clockTime(value: string | null) {
   }).format(new Date(value));
 }
 
+function directionLabel(trip: {
+  directionId: number | null;
+  nextStops: TransitTripStop[];
+}) {
+  const namedDirection = trip.nextStops
+    .map((stop) =>
+      stop.name.match(/\b(northbound|southbound|eastbound|westbound)\b/i),
+    )
+    .find(Boolean)?.[1];
+
+  if (namedDirection) {
+    return (
+      namedDirection[0].toUpperCase() + namedDirection.slice(1).toLowerCase()
+    );
+  }
+  if (trip.directionId === 0) return "Outbound";
+  if (trip.directionId === 1) return "Inbound";
+  return "Not provided";
+}
+
 function ModeIcon({ mode }: { mode: TransitMode }) {
   return mode === "ion" ? <TrainFront size={18} /> : <BusFront size={18} />;
 }
@@ -129,7 +149,8 @@ function DepartureRow({ departure }: { departure: TransitDeparture }) {
           {destination(departure.headsign, departure.routeId)}
         </p>
         <p className="mt-0.5 text-xs text-slate-500">
-          {departure.isRealtime ? "Live prediction" : "Scheduled"}
+          {departure.mode === "ion" ? "ION" : "Bus"} ·{" "}
+          {departure.isRealtime ? "Predicted arrival" : "Scheduled arrival"}
         </p>
       </div>
       <div className="shrink-0 text-right">
@@ -190,7 +211,7 @@ function TripStopRow({ stop }: { stop: TransitTripStop }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-slate-800">{stop.name}</p>
         <p className="mt-0.5 text-xs text-slate-500">
-          {stop.isRealtime ? "Live prediction" : "Scheduled"}
+          {stop.isRealtime ? "Predicted arrival" : "Scheduled arrival"}
         </p>
       </div>
       <div className="shrink-0 text-right">
@@ -215,32 +236,56 @@ function VehicleDetails({
   const trip = data?.data;
   const label = vehicle.mode === "ion" ? "ION" : "Bus";
   const status = vehicle.currentStatus?.replaceAll("-", " ") ?? "live vehicle";
-  const subtitle = trip?.headsign
-    ? `Towards ${destination(trip.headsign, trip.routeId)} - ${status}`
-    : status;
+  const vehicleDestination = trip
+    ? destination(trip.headsign, trip.routeId)
+    : null;
 
   return (
     <Panel
       title={`${label} ${vehicle.routeId ?? ""}`.trim()}
-      subtitle={subtitle}
+      subtitle={status[0].toUpperCase() + status.slice(1)}
       mode={vehicle.mode}
       onClose={onClose}
     >
-      <div className="px-4 pt-4 text-xs font-semibold uppercase text-slate-500">
-        Next stops
-      </div>
       {isPending ? (
         <LoadingRows />
       ) : isError || !trip ? (
         <p className="p-4 text-sm text-red-600">Trip information unavailable.</p>
-      ) : trip.nextStops.length ? (
-        <ul className="px-4 pb-2">
-          {trip.nextStops.map((stop) => (
-            <TripStopRow key={`${stop.stopId}:${stop.sequence}`} stop={stop} />
-          ))}
-        </ul>
       ) : (
-        <p className="p-4 text-sm text-slate-500">No remaining stops found.</p>
+        <>
+          <dl className="grid grid-cols-2 gap-4 border-b border-slate-200 p-4">
+            <div className="min-w-0">
+              <dt className="text-xs font-medium text-slate-500">Destination</dt>
+              <dd className="mt-1 truncate text-sm font-semibold text-slate-900">
+                {vehicleDestination}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs font-medium text-slate-500">Direction</dt>
+              <dd className="mt-1 text-sm font-semibold text-slate-900">
+                {directionLabel(trip)}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="px-4 pt-4 text-xs font-semibold uppercase text-slate-500">
+            Next three stops
+          </div>
+          {trip.nextStops.length ? (
+            <ul className="px-4 pb-2">
+              {trip.nextStops.map((stop) => (
+                <TripStopRow
+                  key={`${stop.stopId}:${stop.sequence}`}
+                  stop={stop}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="p-4 text-sm text-slate-500">
+              No remaining stops found.
+            </p>
+          )}
+        </>
       )}
     </Panel>
   );
