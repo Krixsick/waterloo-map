@@ -1,9 +1,8 @@
 import GtfsRealtimeBindings from "gtfs-realtime-bindings";
-import axios from "axios";
-import https from "node:https";
 import "dotenv/config";
 
 import { withMemoryCache } from "../cache";
+import { fetchGrtBuffer } from "./grtClient";
 import type {
   TransitAlert,
   TransitArrival,
@@ -14,14 +13,7 @@ import type {
 } from "../types/transit";
 
 const STALE_AFTER_MS = 90_000;
-const FEED_TIMEOUT_MS = 12_000;
 const CACHE_SECONDS = 10;
-
-// GRT's legacy DH configuration is rejected at Node's default OpenSSL level.
-const grtHttpsAgent = new https.Agent({
-  ciphers: "DEFAULT@SECLEVEL=1",
-  minVersion: "TLSv1.2",
-});
 
 const FEEDS = [
   {
@@ -137,14 +129,7 @@ function unique(values: (string | null)[]) {
 }
 
 async function fetchFeed(url: string): Promise<FeedMessage> {
-  const response = await axios.get<ArrayBuffer>(url, {
-    headers: { Accept: "application/x-protobuf" },
-    httpsAgent: grtHttpsAgent,
-    responseType: "arraybuffer",
-    timeout: FEED_TIMEOUT_MS,
-  });
-
-  const bytes = new Uint8Array(response.data);
+  const bytes = await fetchGrtBuffer(url, "application/x-protobuf");
   return GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(bytes);
 }
 

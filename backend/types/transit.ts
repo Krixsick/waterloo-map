@@ -27,6 +27,15 @@ export type TransitVehicle = {
   updatedAt: string | null;
 };
 
+export type TransitStop = {
+  id: string;
+  mode: TransitMode;
+  name: string;
+  latitude: number;
+  longitude: number;
+  routeIds: string[];
+};
+
 export type TransitArrival = {
   id: string;
   mode: TransitMode;
