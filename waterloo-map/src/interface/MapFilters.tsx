@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BusFront, RotateCcw, SlidersHorizontal } from "lucide-react";
 import type { BuildingCategory } from "../data/buildings";
+import type { TransitStatus } from "../types/transit";
 
 type MapFiltersProps = {
   activeCategories: BuildingCategory[];
@@ -8,8 +9,9 @@ type MapFiltersProps = {
   onResetFilters: () => void;
   showTransit: boolean;
   onToggleTransit: () => void;
+  transitStopCount: number;
   transitVehicleCount: number;
-  transitStatus: "loading" | "live" | "stale" | "error";
+  transitStatus: TransitStatus;
 };
 
 const filters: { label: string; value: BuildingCategory }[] = [
@@ -26,6 +28,7 @@ export default function MapFilters({
   onResetFilters,
   showTransit,
   onToggleTransit,
+  transitStopCount,
   transitVehicleCount,
   transitStatus,
 }: MapFiltersProps) {
@@ -36,9 +39,9 @@ export default function MapFilters({
       ? "Unavailable"
       : transitStatus === "loading"
         ? "Loading"
-        : transitStatus === "stale"
-          ? `${transitVehicleCount} last known`
-          : `${transitVehicleCount} live`;
+        : transitStatus === "scheduled"
+          ? `${transitStopCount} stops`
+          : `${transitStopCount} stops · ${transitVehicleCount} live`;
 
   return (
     <div className="group absolute right-3 top-20 z-20 sm:right-6 sm:top-4">
@@ -132,13 +135,13 @@ export default function MapFilters({
             </span>
 
             <span className="min-w-0 flex-1">
-              <span className="block text-xs font-medium">Live transit</span>
+              <span className="block text-xs font-medium">Transit</span>
               {showTransit && (
                 <span
                   className={`block text-[10px] ${
                     transitStatus === "error"
                       ? "text-red-600"
-                      : transitStatus === "stale"
+                      : transitStatus === "partial"
                         ? "text-amber-600"
                         : "text-slate-500"
                   }`}

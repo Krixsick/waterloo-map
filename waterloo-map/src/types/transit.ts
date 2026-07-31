@@ -1,4 +1,10 @@
 export type TransitMode = "bus" | "ion";
+export type TransitStatus =
+  | "loading"
+  | "live"
+  | "partial"
+  | "scheduled"
+  | "error";
 
 export type TransitFeedStatus = {
   mode: TransitMode | "all";
@@ -25,6 +31,15 @@ export type TransitVehicle = {
   stopId: string | null;
   currentStatus: string | null;
   updatedAt: string | null;
+};
+
+export type TransitStop = {
+  id: string;
+  mode: TransitMode;
+  name: string;
+  latitude: number;
+  longitude: number;
+  routeIds: string[];
 };
 
 export type TransitArrival = {

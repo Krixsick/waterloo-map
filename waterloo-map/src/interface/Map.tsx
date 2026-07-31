@@ -13,14 +13,22 @@ import { hideDefaultLabels } from "../map/mapStyle";
 import { addImportantBuildingLayers } from "../map/buildingLayers";
 import { addBuildingHoverPopup } from "../map/buildingHover";
 import { updateBuildingFilters } from "../map/buildingFilters";
-import { addTransitLayers, updateTransitVehicles } from "../map/transitLayers";
+import {
+  addTransitLayers,
+  updateTransitStops,
+  updateTransitVehicles,
+} from "../map/transitLayers";
 
 //apis
 import { useLibraryHours } from "../api/libraryApi";
-import { useTransitVehicles } from "../api/transitApi";
+import { useTransitStops, useTransitVehicles } from "../api/transitApi";
 
 import type { BuildingCategory } from "../data/buildings";
-import type { TransitVehicle } from "../types/transit";
+import type {
+  TransitStatus,
+  TransitStop,
+  TransitVehicle,
+} from "../types/transit";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 
@@ -36,6 +44,7 @@ const DEFAULT_CATEGORIES: BuildingCategory[] = [
   "residence",
 ];
 const NO_TRANSIT_VEHICLES: TransitVehicle[] = [];
+const NO_TRANSIT_STOPS: TransitStop[] = [];
 
 function Map() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -52,10 +61,29 @@ function Map() {
     isError: isTransitError,
     isPending: isTransitPending,
   } = useTransitVehicles(showTransit);
+  const {
+    data: transitStopsResponse,
+    isError: isTransitStopsError,
+    isPending: isTransitStopsPending,
+  } = useTransitStops(showTransit);
   const transitVehicles = transitResponse?.data ?? NO_TRANSIT_VEHICLES;
-  const isTransitStale = Boolean(
-    transitResponse?.feeds.every((feed) => feed.isStale),
-  );
+  const transitStops = transitStopsResponse?.data ?? NO_TRANSIT_STOPS;
+  const hasTransitFeedProblem = [
+    ...(transitResponse?.feeds ?? []),
+    ...(transitStopsResponse?.feeds ?? []),
+  ].some((feed) => feed.isStale || feed.error);
+  const hasTransitData = transitStops.length > 0 || transitVehicles.length > 0;
+  let transitStatus: TransitStatus = transitVehicles.length
+    ? "live"
+    : "scheduled";
+
+  if (hasTransitFeedProblem || isTransitError || isTransitStopsError) {
+    transitStatus = "partial";
+  }
+  if (!hasTransitData && (isTransitPending || isTransitStopsPending)) {
+    transitStatus = "loading";
+  }
+  if (isTransitError && isTransitStopsError) transitStatus = "error";
 
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
@@ -203,6 +231,11 @@ function Map() {
     updateTransitVehicles(mapInstance, showTransit ? transitVehicles : []);
   }, [mapInstance, isMapLoaded, showTransit, transitVehicles]);
 
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) return;
+    updateTransitStops(mapInstance, showTransit ? transitStops : []);
+  }, [mapInstance, isMapLoaded, showTransit, transitStops]);
+
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <LoadingScreen isComplete={isMapLoaded} />
@@ -217,16 +250,9 @@ function Map() {
         onResetFilters={resetFilters}
         showTransit={showTransit}
         onToggleTransit={() => setShowTransit((current) => !current)}
+        transitStopCount={transitStops.length}
         transitVehicleCount={transitVehicles.length}
-        transitStatus={
-          isTransitError
-            ? "error"
-            : isTransitPending
-              ? "loading"
-              : isTransitStale
-                ? "stale"
-                : "live"
-        }
+        transitStatus={transitStatus}
       />
 
       <MapControls

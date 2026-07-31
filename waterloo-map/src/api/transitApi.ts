@@ -5,17 +5,30 @@ import type {
   TransitAlert,
   TransitArrival,
   TransitResponse,
+  TransitStop,
   TransitVehicle,
 } from "../types/transit";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-async function getTransit<T>(path: string, params?: Record<string, string>) {
+async function getTransit<T>(
+  path: string,
+  params?: Record<string, string | number>,
+) {
   const response = await axios.get<TransitResponse<T>>(
     `${API_URL}/transit/${path}`,
     { params },
   );
   return response.data;
+}
+
+export function useTransitStops(enabled: boolean) {
+  return useQuery({
+    queryKey: ["transit", "stops", "uw-campus"],
+    queryFn: () => getTransit<TransitStop>("stops"),
+    enabled,
+    staleTime: 6 * 60 * 60 * 1000,
+  });
 }
 
 export function useTransitVehicles(enabled: boolean) {

@@ -8,7 +8,7 @@ Files:
 - `buildingLayers.ts`: Adds the 3D building extrusion layer, the `important-buildings` GeoJSON source, green circle/glow marker layers, hover marker layer, and square residence marker images/layers.
 - `buildingFilters.ts`: Applies category filters to building marker layers. Handles residence markers separately because residences use square symbol layers while most categories use circle layers.
 - `buildingHover.ts`: Adds popup CSS and Mapbox mouse/click handlers for building markers. Updates hover layers, shows the popup HTML, changes cursor state, and calls the selected-building callback.
-- `transitLayers.ts`: Owns the transit GeoJSON source, blue bus and pink ION marker layers, route labels, source updates, and vehicle popup interaction.
+- `transitLayers.ts`: Owns separate scheduled-stop and live-vehicle GeoJSON sources. Bus stops are small blue markers, ION stations are larger pink markers with labels, and live vehicles are larger labeled markers; stop and vehicle clicks open their own popups.
 
 Coding preferences:
 - Use TypeScript and Mapbox types where practical. Keep layer/source IDs stable and easy to search.

@@ -8,7 +8,7 @@ Files:
 - `gym.ts`: Types for gym occupancy/details, including `GymOccupy` and `GymFullInfo`.
 - `library.ts`: Types for library opening-hour data, including `TimeSlot`.
 - `map.ts`: Shared map component props, currently `MapControlsProps`.
-- `transit.ts`: Normalized GRT vehicles, stop arrivals, alerts, and feed-status response types shared by API hooks and Mapbox helpers.
+- `transit.ts`: Normalized GRT scheduled stops, live vehicles, stop arrivals, alerts, and feed-status response types shared by API hooks and Mapbox helpers.
 
 Coding preferences:
 - Use TypeScript types/interfaces instead of `any`. Model nullable backend values explicitly with `null` or optional fields.
