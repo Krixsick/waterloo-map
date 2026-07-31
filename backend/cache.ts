@@ -1,6 +1,8 @@
 import Memcached from "memcached";
 
 let client: Memcached | null = null;
+const memoryCache = new Map<string, { expiresAt: number; value: unknown }>();
+const inFlight = new Map<string, Promise<unknown>>();
 
 function getClient() {
   client ??= new Memcached(process.env.MEMCACHED_URL ?? "localhost:11211");
@@ -63,4 +65,29 @@ export async function withCache<T>(
   }
 
   return fresh;
+}
+
+export async function withMemoryCache<T>(
+  key: string,
+  ttlSeconds: number,
+  loader: () => Promise<T>,
+): Promise<T> {
+  const cached = memoryCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value as T;
+
+  const activeRequest = inFlight.get(key);
+  if (activeRequest) return activeRequest as Promise<T>;
+
+  const request = loader()
+    .then((value) => {
+      memoryCache.set(key, {
+        value,
+        expiresAt: Date.now() + ttlSeconds * 1000,
+      });
+      return value;
+    })
+    .finally(() => inFlight.delete(key));
+
+  inFlight.set(key, request);
+  return request;
 }
