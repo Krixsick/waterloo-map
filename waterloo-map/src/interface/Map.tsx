@@ -13,11 +13,14 @@ import { hideDefaultLabels } from "../map/mapStyle";
 import { addImportantBuildingLayers } from "../map/buildingLayers";
 import { addBuildingHoverPopup } from "../map/buildingHover";
 import { updateBuildingFilters } from "../map/buildingFilters";
+import { addTransitLayers, updateTransitVehicles } from "../map/transitLayers";
 
 //apis
 import { useLibraryHours } from "../api/libraryApi";
+import { useTransitVehicles } from "../api/transitApi";
 
 import type { BuildingCategory } from "../data/buildings";
+import type { TransitVehicle } from "../types/transit";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 
@@ -32,6 +35,7 @@ const DEFAULT_CATEGORIES: BuildingCategory[] = [
   "student-life",
   "residence",
 ];
+const NO_TRANSIT_VEHICLES: TransitVehicle[] = [];
 
 function Map() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -40,8 +44,18 @@ function Map() {
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [is3D, setIs3D] = useState(true);
+  const [showTransit, setShowTransit] = useState(false);
 
   const { data: libraryHours = {} } = useLibraryHours();
+  const {
+    data: transitResponse,
+    isError: isTransitError,
+    isPending: isTransitPending,
+  } = useTransitVehicles(showTransit);
+  const transitVehicles = transitResponse?.data ?? NO_TRANSIT_VEHICLES;
+  const isTransitStale = Boolean(
+    transitResponse?.feeds.every((feed) => feed.isStale),
+  );
 
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
@@ -75,6 +89,7 @@ function Map() {
 
   function resetFilters() {
     setActiveCategories(DEFAULT_CATEGORIES);
+    setShowTransit(false);
   }
 
   function toggleView() {
@@ -155,6 +170,7 @@ function Map() {
       hideDefaultLabels(map);
       addImportantBuildingLayers(map);
       addBuildingHoverPopup(map);
+      addTransitLayers(map);
       updateBuildingFilters(map, DEFAULT_CATEGORIES);
       setIsMapLoaded(true);
     });
@@ -182,6 +198,11 @@ function Map() {
     source?.setData(buildingsWithBackendInfo);
   }, [mapInstance, isMapLoaded, buildingsWithBackendInfo]);
 
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) return;
+    updateTransitVehicles(mapInstance, showTransit ? transitVehicles : []);
+  }, [mapInstance, isMapLoaded, showTransit, transitVehicles]);
+
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <LoadingScreen isComplete={isMapLoaded} />
@@ -194,6 +215,18 @@ function Map() {
         activeCategories={activeCategories}
         onToggleCategory={toggleCategory}
         onResetFilters={resetFilters}
+        showTransit={showTransit}
+        onToggleTransit={() => setShowTransit((current) => !current)}
+        transitVehicleCount={transitVehicles.length}
+        transitStatus={
+          isTransitError
+            ? "error"
+            : isTransitPending
+              ? "loading"
+              : isTransitStale
+                ? "stale"
+                : "live"
+        }
       />
 
       <MapControls
