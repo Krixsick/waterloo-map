@@ -9,49 +9,32 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const items = [{ label: "Menu", icon: Menu }];
+type AppSidebarProps = {
+  isMenuOpen: boolean;
+  onToggleMenu: () => void;
+};
 
-export function AppSidebar() {
+export function AppSidebar({ isMenuOpen, onToggleMenu }: AppSidebarProps) {
   return (
-    <Sidebar collapsible="none" className="w-16 border-r">
-      <SidebarContent>
-        <SidebarGroup>
+    <Sidebar collapsible="none" className="z-30 w-16 shrink-0 border-r">
+      <SidebarContent className="items-center py-3">
+        <SidebarGroup className="w-full p-2">
           <SidebarMenu>
-            {items.map(({ label, icon: Icon }) => (
-              <SidebarMenuItem key={label}>
-                <SidebarMenuButton
-                  aria-label={label}
-                  className="size-12 justify-center p-0 cursor-pointer"
-                >
-                  <div className="drawer">
-                    <input
-                      id="my-drawer-1"
-                      type="checkbox"
-                      className="drawer-toggle"
-                    />
-                    <div className="drawer-content flex justify-center">
-                      {/* Page content here */}
-                      <label htmlFor="my-drawer-1" className="drawer-button">
-                        <Icon className="size-6!" />
-                      </label>
-                    </div>
-                    <div className="drawer-side">
-                      <label
-                        htmlFor="my-drawer-1"
-                        aria-label="close sidebar"
-                        className="drawer-overlay"
-                      ></label>
-                      <ul className="menu bg-white min-h-full w-80 p-4">
-                        {/* Sidebar content here */}
-                        <li>
-                          <a>More Coming</a>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                type="button"
+                aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                aria-controls="map-menu-panel"
+                aria-expanded={isMenuOpen}
+                title="Menu"
+                isActive={isMenuOpen}
+                onClick={onToggleMenu}
+                className="size-12 cursor-pointer justify-center p-0 data-active:bg-green-50 data-active:text-green-700"
+              >
+                <Menu className="size-6!" />
+                <span className="sr-only">Menu</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

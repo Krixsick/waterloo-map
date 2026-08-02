@@ -25,5 +25,5 @@ dist-ssr
 
 .env
 .env.local
-
+.env.development
 *[Aa]gent*.md

@@ -5,6 +5,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 //components
 import { SearchBar } from "./searchbar/SearchBar";
 import { LoadingScreen } from "./loading/LoadingScreen";
+import TransitDetailsCard from "./TransitDetailsCard";
+import { SideBar } from "./sidebar/Sidebar";
 
 //utility functions
 import { buildings } from "../data/buildings";
@@ -13,11 +15,24 @@ import { hideDefaultLabels } from "../map/mapStyle";
 import { addImportantBuildingLayers } from "../map/buildingLayers";
 import { addBuildingHoverPopup } from "../map/buildingHover";
 import { updateBuildingFilters } from "../map/buildingFilters";
+import {
+  addTransitLayers,
+  updateTransitStops,
+  updateTransitVehicles,
+} from "../map/transitLayers";
 
 //apis
 import { useLibraryHours } from "../api/libraryApi";
+import { useTransitStops, useTransitVehicles } from "../api/transitApi";
 
 import type { BuildingCategory } from "../data/buildings";
+import type {
+  TransitMode,
+  TransitStatus,
+  TransitSelection,
+  TransitStop,
+  TransitVehicle,
+} from "../types/transit";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 
@@ -32,6 +47,9 @@ const DEFAULT_CATEGORIES: BuildingCategory[] = [
   "student-life",
   "residence",
 ];
+const NO_TRANSIT_VEHICLES: TransitVehicle[] = [];
+const NO_TRANSIT_STOPS: TransitStop[] = [];
+const DEFAULT_TRANSIT_MODES: TransitMode[] = ["bus", "ion"];
 
 function Map() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -40,8 +58,65 @@ function Map() {
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [is3D, setIs3D] = useState(true);
+  const [showTransit, setShowTransit] = useState(false);
+  const [activeTransitModes, setActiveTransitModes] =
+    useState<TransitMode[]>(DEFAULT_TRANSIT_MODES);
+  const [selectedTransit, setSelectedTransit] =
+    useState<TransitSelection | null>(null);
 
   const { data: libraryHours = {} } = useLibraryHours();
+  const {
+    data: transitResponse,
+    isError: isTransitError,
+    isPending: isTransitPending,
+  } = useTransitVehicles(showTransit);
+  const {
+    data: transitStopsResponse,
+    isError: isTransitStopsError,
+    isPending: isTransitStopsPending,
+  } = useTransitStops(showTransit);
+  const transitVehicles = transitResponse?.data ?? NO_TRANSIT_VEHICLES;
+  const transitStops = transitStopsResponse?.data ?? NO_TRANSIT_STOPS;
+  const visibleTransitVehicles = useMemo(
+    () =>
+      transitVehicles.filter((vehicle) =>
+        activeTransitModes.includes(vehicle.mode),
+      ),
+    [activeTransitModes, transitVehicles],
+  );
+  const visibleTransitStops = useMemo(
+    () =>
+      transitStops.filter((stop) => activeTransitModes.includes(stop.mode)),
+    [activeTransitModes, transitStops],
+  );
+  const hasTransitFeedProblem = [
+    ...(transitResponse?.feeds ?? []),
+    ...(transitStopsResponse?.feeds ?? []),
+  ].some((feed) => feed.isStale || feed.error);
+  const hasTransitData =
+    visibleTransitStops.length > 0 || visibleTransitVehicles.length > 0;
+  let transitStatus: TransitStatus = visibleTransitVehicles.length
+    ? "live"
+    : "scheduled";
+
+  if (hasTransitFeedProblem || isTransitError || isTransitStopsError) {
+    transitStatus = "partial";
+  }
+  if (!hasTransitData && (isTransitPending || isTransitStopsPending)) {
+    transitStatus = "loading";
+  }
+  if (isTransitError && isTransitStopsError) transitStatus = "error";
+
+  const currentTransitSelection =
+    selectedTransit?.type === "vehicle"
+      ? {
+          type: "vehicle" as const,
+          vehicle:
+            visibleTransitVehicles.find(
+              (vehicle) => vehicle.id === selectedTransit.vehicle.id,
+            ) ?? selectedTransit.vehicle,
+        }
+      : selectedTransit;
 
   const [activeCategories, setActiveCategories] =
     useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
@@ -75,6 +150,32 @@ function Map() {
 
   function resetFilters() {
     setActiveCategories(DEFAULT_CATEGORIES);
+    setActiveTransitModes(DEFAULT_TRANSIT_MODES);
+    setShowTransit(false);
+    setSelectedTransit(null);
+  }
+
+  function toggleTransit() {
+    if (showTransit) setSelectedTransit(null);
+    setShowTransit((current) => !current);
+  }
+
+  function toggleTransitMode(mode: TransitMode) {
+    const selectedMode =
+      selectedTransit?.type === "vehicle"
+        ? selectedTransit.vehicle.mode
+        : selectedTransit?.type === "stop"
+          ? selectedTransit.stop.mode
+          : null;
+
+    if (activeTransitModes.includes(mode) && selectedMode === mode) {
+      setSelectedTransit(null);
+    }
+    setActiveTransitModes((current) =>
+      current.includes(mode)
+        ? current.filter((item) => item !== mode)
+        : [...current, mode],
+    );
   }
 
   function toggleView() {
@@ -155,6 +256,11 @@ function Map() {
       hideDefaultLabels(map);
       addImportantBuildingLayers(map);
       addBuildingHoverPopup(map);
+      addTransitLayers(map, {
+        onSelectStop: (stop) => setSelectedTransit({ type: "stop", stop }),
+        onSelectVehicle: (vehicle) =>
+          setSelectedTransit({ type: "vehicle", vehicle }),
+      });
       updateBuildingFilters(map, DEFAULT_CATEGORIES);
       setIsMapLoaded(true);
     });
@@ -182,29 +288,59 @@ function Map() {
     source?.setData(buildingsWithBackendInfo);
   }, [mapInstance, isMapLoaded, buildingsWithBackendInfo]);
 
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) return;
+    updateTransitVehicles(
+      mapInstance,
+      showTransit ? visibleTransitVehicles : [],
+    );
+  }, [mapInstance, isMapLoaded, showTransit, visibleTransitVehicles]);
+
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) return;
+    updateTransitStops(mapInstance, showTransit ? visibleTransitStops : []);
+  }, [mapInstance, isMapLoaded, showTransit, visibleTransitStops]);
+
   return (
-    <div className="relative h-screen w-full overflow-hidden">
-      <LoadingScreen isComplete={isMapLoaded} />
+    <SideBar
+      renderMenuPanel={(closeMenu) => (
+        <MapFilters
+          activeCategories={activeCategories}
+          onToggleCategory={toggleCategory}
+          onResetFilters={resetFilters}
+          showTransit={showTransit}
+          onToggleTransit={toggleTransit}
+          activeTransitModes={activeTransitModes}
+          onToggleTransitMode={toggleTransitMode}
+          transitStopCount={visibleTransitStops.length}
+          transitVehicleCount={visibleTransitVehicles.length}
+          transitStatus={transitStatus}
+          onClose={closeMenu}
+        />
+      )}
+    >
+      <div className="relative h-screen w-full overflow-hidden">
+        <LoadingScreen isComplete={isMapLoaded} />
 
-      <SearchBar
-        map={mapInstance}
-        buildings={buildingsWithBackendInfo}
-      />
-      <MapFilters
-        activeCategories={activeCategories}
-        onToggleCategory={toggleCategory}
-        onResetFilters={resetFilters}
-      />
+        <SearchBar
+          map={mapInstance}
+          buildings={buildingsWithBackendInfo}
+        />
+        <TransitDetailsCard
+          selection={currentTransitSelection}
+          onClose={() => setSelectedTransit(null)}
+        />
 
-      <MapControls
-        is3D={is3D}
-        onReset={resetMap}
-        onToggleView={toggleView}
-        onFlyToMe={flyToMe}
-      />
+        <MapControls
+          is3D={is3D}
+          onReset={resetMap}
+          onToggleView={toggleView}
+          onFlyToMe={flyToMe}
+        />
 
-      <div className="h-full w-full" ref={mapContainer} />
-    </div>
+        <div className="h-full w-full" ref={mapContainer} />
+      </div>
+    </SideBar>
   );
 }
 
