@@ -5,6 +5,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 //components
 import { SearchBar } from "./searchbar/SearchBar";
 import { LoadingScreen } from "./loading/LoadingScreen";
+import BuildingDetailsCard from "./BuildingDetailsCard";
 import TransitDetailsCard from "./TransitDetailsCard";
 import { SideBar } from "./sidebar/Sidebar";
 
@@ -25,7 +26,10 @@ import {
 import { useLibraryHours } from "../api/libraryApi";
 import { useTransitStops, useTransitVehicles } from "../api/transitApi";
 
-import type { BuildingCategory } from "../data/buildings";
+import type {
+  BuildingCategory,
+  BuildingFeature,
+} from "../data/buildings";
 import type {
   TransitMode,
   TransitStatus,
@@ -58,6 +62,9 @@ function Map() {
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [is3D, setIs3D] = useState(true);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(
+    null,
+  );
   const [showTransit, setShowTransit] = useState(false);
   const [activeTransitModes, setActiveTransitModes] =
     useState<TransitMode[]>(DEFAULT_TRANSIT_MODES);
@@ -139,6 +146,33 @@ function Map() {
       }),
     };
   }, [libraryHours]);
+  const selectedBuilding = useMemo(
+    () =>
+      buildingsWithBackendInfo.features.find(
+        ({ properties }) => properties.id === selectedBuildingId,
+      ) ?? null,
+    [buildingsWithBackendInfo, selectedBuildingId],
+  );
+
+  function flyToBuilding(building: BuildingFeature) {
+    if (!mapInstance) return;
+    const [longitude, latitude] = building.geometry.coordinates;
+
+    mapInstance.flyTo({
+      center: [longitude, latitude],
+      zoom: 17,
+      pitch: is3D ? 60 : 0,
+      bearing: -26,
+      duration: 1600,
+      essential: true,
+    });
+  }
+
+  function selectBuilding(building: BuildingFeature) {
+    setSelectedBuildingId(building.properties.id);
+    setSelectedTransit(null);
+    flyToBuilding(building);
+  }
 
   function toggleCategory(category: BuildingCategory) {
     setActiveCategories((current) =>
@@ -152,6 +186,7 @@ function Map() {
     setActiveCategories(DEFAULT_CATEGORIES);
     setActiveTransitModes(DEFAULT_TRANSIT_MODES);
     setShowTransit(false);
+    setSelectedBuildingId(null);
     setSelectedTransit(null);
   }
 
@@ -255,11 +290,20 @@ function Map() {
     map.on("load", () => {
       hideDefaultLabels(map);
       addImportantBuildingLayers(map);
-      addBuildingHoverPopup(map);
+      addBuildingHoverPopup(map, ({ id }) => {
+        if (!id) return;
+        setSelectedBuildingId(id);
+        setSelectedTransit(null);
+      });
       addTransitLayers(map, {
-        onSelectStop: (stop) => setSelectedTransit({ type: "stop", stop }),
-        onSelectVehicle: (vehicle) =>
-          setSelectedTransit({ type: "vehicle", vehicle }),
+        onSelectStop: (stop) => {
+          setSelectedBuildingId(null);
+          setSelectedTransit({ type: "stop", stop });
+        },
+        onSelectVehicle: (vehicle) => {
+          setSelectedBuildingId(null);
+          setSelectedTransit({ type: "vehicle", vehicle });
+        },
       });
       updateBuildingFilters(map, DEFAULT_CATEGORIES);
       setIsMapLoaded(true);
@@ -323,8 +367,15 @@ function Map() {
         <LoadingScreen isComplete={isMapLoaded} />
 
         <SearchBar
-          map={mapInstance}
           buildings={buildingsWithBackendInfo}
+          onSelectBuilding={selectBuilding}
+        />
+        <BuildingDetailsCard
+          building={selectedBuilding}
+          onClose={() => setSelectedBuildingId(null)}
+          onRecenter={() => {
+            if (selectedBuilding) flyToBuilding(selectedBuilding);
+          }}
         />
         <TransitDetailsCard
           selection={currentTransitSelection}

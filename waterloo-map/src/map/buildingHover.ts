@@ -1,13 +1,5 @@
 import mapboxgl from "mapbox-gl";
-
-type BuildingProperties = {
-  id?: string;
-  name?: string;
-  abbreviation?: string;
-  description?: string;
-  liveHours?: string;
-  timeRemaining?: string;
-};
+import type { BuildingProperties } from "../data/buildings";
 
 const HOVER_LAYERS = [
   "campus-building-circles",
@@ -37,7 +29,7 @@ function addPopupStyles() {
 
 export function addBuildingHoverPopup(
   map: mapboxgl.Map,
-  onBuildingClick?: (properties: BuildingProperties) => void
+  onBuildingClick?: (properties: BuildingProperties) => void,
 ) {
   addPopupStyles();
 

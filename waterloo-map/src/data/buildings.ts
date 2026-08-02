@@ -1,4 +1,4 @@
-import type { FeatureCollection, Point } from "geojson";
+import type { Feature, FeatureCollection, Point } from "geojson";
 
 export type BuildingCategory =
   | "academic"
@@ -7,16 +7,20 @@ export type BuildingCategory =
   | "student-life"
   | "residence";
 
-export const buildings: FeatureCollection<
-  Point,
-  {
-    id: string;
-    name: string;
-    abbreviation: string;
-    category: BuildingCategory;
-    description: string;
-  }
-> = {
+export type BuildingProperties = {
+  id: string;
+  name: string;
+  abbreviation: string;
+  category: BuildingCategory;
+  description: string;
+  liveHours?: string | null;
+  timeRemaining?: string | null;
+};
+
+export type BuildingFeature = Feature<Point, BuildingProperties>;
+export type BuildingsGeoJSON = FeatureCollection<Point, BuildingProperties>;
+
+export const buildings: BuildingsGeoJSON = {
   type: "FeatureCollection",
   features: [
     {
