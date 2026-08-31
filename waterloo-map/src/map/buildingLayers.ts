@@ -1,6 +1,34 @@
-import type { Map as MapboxMap } from "mapbox-gl";
+import type { Expression, Map as MapboxMap } from "mapbox-gl";
 import { buildings } from "../data/buildings";
 import type { BuildingsGeoJSON } from "../data/buildings";
+
+const buildingColor: Expression = [
+  "match",
+  ["get", "category"],
+  "academic",
+  "#0284c7",
+  "library",
+  "#d97706",
+  "gym",
+  "#e11d48",
+  "student-life",
+  "#0d9488",
+  "#16a34a",
+];
+
+const buildingStrokeColor: Expression = [
+  "match",
+  ["get", "category"],
+  "academic",
+  "#7dd3fc",
+  "library",
+  "#fcd34d",
+  "gym",
+  "#fda4af",
+  "student-life",
+  "#5eead4",
+  "#86efac",
+];
 
 export function addImportantBuildingLayers(
   map: MapboxMap,
@@ -33,7 +61,7 @@ export function addImportantBuildingLayers(
     filter: ["!=", ["get", "category"], "residence"],
     paint: {
       "circle-radius": 14,
-      "circle-color": "#22c55e",
+      "circle-color": buildingColor,
       "circle-opacity": 0.22,
       "circle-blur": 0.8,
     },
@@ -46,9 +74,9 @@ export function addImportantBuildingLayers(
     filter: ["!=", ["get", "category"], "residence"],
     paint: {
       "circle-radius": 6,
-      "circle-color": "#22c55e",
+      "circle-color": buildingColor,
       "circle-opacity": 0.95,
-      "circle-stroke-color": "#86efac",
+      "circle-stroke-color": buildingStrokeColor,
       "circle-stroke-width": 2,
     },
   });
@@ -60,7 +88,7 @@ export function addImportantBuildingLayers(
     filter: ["==", ["get", "id"], ""],
     paint: {
       "circle-radius": 6.5,
-      "circle-color": "#22c55e",
+      "circle-color": buildingColor,
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 3,
       "circle-opacity": 1,
@@ -130,6 +158,30 @@ export function addImportantBuildingLayers(
       "icon-image": "hover-square",
       "icon-size": 0.7,
       "icon-allow-overlap": true,
+    },
+  });
+
+  map.addLayer({
+    id: "campus-building-labels",
+    type: "symbol",
+    source: "important-buildings",
+    minzoom: 15.25,
+    layout: {
+      "text-field": ["get", "name"],
+      "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Regular"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 15.25, 10, 18, 12],
+      "text-max-width": 12,
+      "text-variable-anchor": ["top", "bottom", "left", "right"],
+      "text-radial-offset": 1.1,
+      "text-justify": "auto",
+      "text-padding": 4,
+      "text-optional": true,
+    },
+    paint: {
+      "text-color": buildingColor,
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 1.75,
+      "text-halo-blur": 0.5,
     },
   });
 }

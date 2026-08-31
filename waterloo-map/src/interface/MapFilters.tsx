@@ -1,6 +1,7 @@
 import {
   BookOpen,
   BusFront,
+  CalendarDays,
   Check,
   Dumbbell,
   GraduationCap,
@@ -26,6 +27,11 @@ type MapFiltersProps = {
   transitStopCount: number;
   transitVehicleCount: number;
   transitStatus: TransitStatus;
+  showEvents: boolean;
+  onToggleEvents: () => void;
+  eventCount: number;
+  eventsLoading: boolean;
+  eventsError: boolean;
   onClose: () => void;
 };
 
@@ -33,12 +39,44 @@ const filters: {
   label: string;
   value: BuildingCategory;
   icon: LucideIcon;
+  activeClass: string;
+  checkClass: string;
 }[] = [
-  { label: "Academic", value: "academic", icon: GraduationCap },
-  { label: "Libraries", value: "library", icon: BookOpen },
-  { label: "Gyms", value: "gym", icon: Dumbbell },
-  { label: "Student Life", value: "student-life", icon: Users },
-  { label: "Residences", value: "residence", icon: House },
+  {
+    label: "Academic",
+    value: "academic",
+    icon: GraduationCap,
+    activeClass: "bg-sky-50 text-sky-800",
+    checkClass: "border-sky-600 bg-sky-600",
+  },
+  {
+    label: "Libraries",
+    value: "library",
+    icon: BookOpen,
+    activeClass: "bg-amber-50 text-amber-800",
+    checkClass: "border-amber-600 bg-amber-600",
+  },
+  {
+    label: "Gyms",
+    value: "gym",
+    icon: Dumbbell,
+    activeClass: "bg-rose-50 text-rose-800",
+    checkClass: "border-rose-600 bg-rose-600",
+  },
+  {
+    label: "Student Life",
+    value: "student-life",
+    icon: Users,
+    activeClass: "bg-teal-50 text-teal-800",
+    checkClass: "border-teal-600 bg-teal-600",
+  },
+  {
+    label: "Residences",
+    value: "residence",
+    icon: House,
+    activeClass: "bg-emerald-50 text-emerald-800",
+    checkClass: "border-emerald-600 bg-emerald-600",
+  },
 ];
 
 const transitModes: {
@@ -72,6 +110,11 @@ export default function MapFilters({
   transitStopCount,
   transitVehicleCount,
   transitStatus,
+  showEvents,
+  onToggleEvents,
+  eventCount,
+  eventsLoading,
+  eventsError,
   onClose,
 }: MapFiltersProps) {
   const transitMessage =
@@ -118,42 +161,91 @@ export default function MapFilters({
           Places
         </h3>
         <div className="space-y-1">
-          {filters.map(({ label, value, icon: Icon }) => {
-            const isActive = activeCategories.includes(value);
+          {filters.map(
+            ({ label, value, icon: Icon, activeClass, checkClass }) => {
+              const isActive = activeCategories.includes(value);
 
-            return (
-              <label
-                key={value}
-                className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2 outline-none transition focus-within:ring-2 focus-within:ring-green-600/40 ${
-                  isActive
-                    ? "bg-green-50 text-green-800"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={isActive}
-                  onChange={() => onToggleCategory(value)}
-                  className="sr-only"
-                />
-                <Icon size={20} aria-hidden="true" />
-                <span className="min-w-0 flex-1 text-sm font-medium">
-                  {label}
-                </span>
-                <span
-                  className={`flex size-5 items-center justify-center rounded border ${
+              return (
+                <label
+                  key={value}
+                  className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2 outline-none transition focus-within:ring-2 focus-within:ring-slate-500/30 ${
                     isActive
-                      ? "border-green-600 bg-green-600 text-white"
-                      : "border-slate-300 bg-white text-transparent"
+                      ? activeClass
+                      : "text-slate-700 hover:bg-slate-50"
                   }`}
-                  aria-hidden="true"
                 >
-                  <Check size={14} strokeWidth={3} />
-                </span>
-              </label>
-            );
-          })}
+                  <input
+                    type="checkbox"
+                    checked={isActive}
+                    onChange={() => onToggleCategory(value)}
+                    className="sr-only"
+                  />
+                  <Icon size={20} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 text-sm font-medium">
+                    {label}
+                  </span>
+                  <span
+                    className={`flex size-5 items-center justify-center rounded border ${
+                      isActive
+                        ? `${checkClass} text-white`
+                        : "border-slate-300 bg-white text-transparent"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <Check size={14} strokeWidth={3} />
+                  </span>
+                </label>
+              );
+            },
+          )}
         </div>
+      </section>
+
+      <section className="border-t border-slate-200 py-5">
+        <h3 className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
+          Explore
+        </h3>
+        <label
+          className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-violet-600/40 ${
+            showEvents
+              ? "bg-violet-50 text-violet-800"
+              : "text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={showEvents}
+            onChange={onToggleEvents}
+            className="sr-only"
+          />
+          <CalendarDays size={20} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Campus events</span>
+            <span
+              className={`block text-xs ${
+                eventsError ? "text-red-600" : "text-slate-500"
+              }`}
+            >
+              {!showEvents
+                ? "Upcoming events at Waterloo"
+                : eventsLoading
+                  ? "Loading events"
+                  : eventsError
+                    ? "Events unavailable"
+                    : `${eventCount} ${eventCount === 1 ? "event" : "events"} on map`}
+            </span>
+          </span>
+          <span
+            className={`flex size-5 items-center justify-center rounded border ${
+              showEvents
+                ? "border-violet-600 bg-violet-600 text-white"
+                : "border-slate-300 bg-white text-transparent"
+            }`}
+            aria-hidden="true"
+          >
+            <Check size={14} strokeWidth={3} />
+          </span>
+        </label>
       </section>
 
       <section className="border-t border-slate-200 pt-5">

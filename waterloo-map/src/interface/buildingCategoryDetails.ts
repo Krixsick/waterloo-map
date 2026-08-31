@@ -37,7 +37,7 @@ export const buildingCategoryDetails: Record<
   "student-life": {
     icon: Users,
     label: "Student life",
-    styles: "bg-violet-100 text-violet-700",
+    styles: "bg-teal-100 text-teal-700",
   },
   residence: {
     icon: Home,

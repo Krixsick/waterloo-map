@@ -2,6 +2,7 @@ import type { Expression, GeoJSONSource, Map } from "mapbox-gl";
 import type { FeatureCollection, Point } from "geojson";
 
 import type { TransitStop, TransitVehicle } from "../types/transit";
+import { getActiveEventLayerIds } from "./eventLayers";
 
 const STOP_SOURCE_ID = "transit-stops";
 const STOP_MARKER_LAYER_ID = "transit-stop-markers";
@@ -25,6 +26,14 @@ type TransitLayerHandlers = {
   onSelectStop: (stop: TransitStop) => void;
   onSelectVehicle: (vehicle: TransitVehicle) => void;
 };
+
+function isEventOverlayAtPoint(map: Map, point: [number, number]) {
+  const eventLayers = getActiveEventLayerIds(map);
+  return (
+    eventLayers.length > 0 &&
+    map.queryRenderedFeatures(point, { layers: eventLayers }).length > 0
+  );
+}
 
 function stopsToGeoJson(
   stops: TransitStop[],
@@ -143,6 +152,7 @@ export function addTransitLayers(
     map.getCanvas().style.cursor = "";
   });
   map.on("click", STOP_MARKER_LAYER_ID, (event) => {
+    if (isEventOverlayAtPoint(map, [event.point.x, event.point.y])) return;
     const feature = event.features?.[0];
     if (!feature || feature.geometry.type !== "Point") return;
     const [longitude, latitude] = feature.geometry.coordinates;
@@ -163,6 +173,7 @@ export function addTransitLayers(
     map.getCanvas().style.cursor = "";
   });
   map.on("click", MARKER_LAYER_ID, (event) => {
+    if (isEventOverlayAtPoint(map, [event.point.x, event.point.y])) return;
     const feature = event.features?.[0];
     if (!feature || feature.geometry.type !== "Point") return;
     const [longitude, latitude] = feature.geometry.coordinates;

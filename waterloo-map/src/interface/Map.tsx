@@ -6,6 +6,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { SearchBar } from "./searchbar/SearchBar";
 import { LoadingScreen } from "./loading/LoadingScreen";
 import BuildingDetailsCard from "./BuildingDetailsCard";
+import EventDetailsCard from "./EventDetailsCard";
 import TransitDetailsCard from "./TransitDetailsCard";
 import { SideBar } from "./sidebar/Sidebar";
 
@@ -21,9 +22,11 @@ import {
   updateTransitStops,
   updateTransitVehicles,
 } from "../map/transitLayers";
+import { addEventLayers, updateEventMarkers } from "../map/eventLayers";
 
 //apis
 import { useLibraryHours } from "../api/libraryApi";
+import { useWaterlooEvents } from "../api/events";
 import { useTransitStops, useTransitVehicles } from "../api/transitApi";
 
 import type {
@@ -41,6 +44,7 @@ import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 
 import { getTimeRemaining } from "../utils/timeUtils";
+import { mapEventsToCampus } from "../utils/eventLocations";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -66,12 +70,19 @@ function Map() {
     null,
   );
   const [showTransit, setShowTransit] = useState(false);
+  const [showEvents, setShowEvents] = useState(false);
   const [activeTransitModes, setActiveTransitModes] =
     useState<TransitMode[]>(DEFAULT_TRANSIT_MODES);
   const [selectedTransit, setSelectedTransit] =
     useState<TransitSelection | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
   const { data: libraryHours = {} } = useLibraryHours();
+  const {
+    data: eventsResponse,
+    isError: isEventsError,
+    isPending: isEventsPending,
+  } = useWaterlooEvents(showEvents);
   const {
     data: transitResponse,
     isError: isTransitError,
@@ -84,6 +95,15 @@ function Map() {
   } = useTransitStops(showTransit);
   const transitVehicles = transitResponse?.data ?? NO_TRANSIT_VEHICLES;
   const transitStops = transitStopsResponse?.data ?? NO_TRANSIT_STOPS;
+  const mappedEvents = useMemo(
+    () => mapEventsToCampus(eventsResponse?.events ?? [], buildings),
+    [eventsResponse?.events],
+  );
+  const selectedEvent = useMemo(
+    () =>
+      mappedEvents.find((event) => event.id === selectedEventId) ?? null,
+    [mappedEvents, selectedEventId],
+  );
   const visibleTransitVehicles = useMemo(
     () =>
       transitVehicles.filter((vehicle) =>
@@ -109,7 +129,7 @@ function Map() {
   if (hasTransitFeedProblem || isTransitError || isTransitStopsError) {
     transitStatus = "partial";
   }
-  if (!hasTransitData && (isTransitPending || isTransitStopsPending)) {
+  if (isTransitStopsPending || (!hasTransitData && isTransitPending)) {
     transitStatus = "loading";
   }
   if (isTransitError && isTransitStopsError) transitStatus = "error";
@@ -171,7 +191,20 @@ function Map() {
   function selectBuilding(building: BuildingFeature) {
     setSelectedBuildingId(building.properties.id);
     setSelectedTransit(null);
+    setSelectedEventId(null);
     flyToBuilding(building);
+  }
+
+  function flyToEvent(event: (typeof mappedEvents)[number]) {
+    if (!mapInstance) return;
+    mapInstance.flyTo({
+      center: [event.coordinates.longitude, event.coordinates.latitude],
+      zoom: Math.max(mapInstance.getZoom(), 17.25),
+      pitch: is3D ? 48 : 0,
+      bearing: -20,
+      duration: 1200,
+      essential: true,
+    });
   }
 
   function toggleCategory(category: BuildingCategory) {
@@ -186,13 +219,20 @@ function Map() {
     setActiveCategories(DEFAULT_CATEGORIES);
     setActiveTransitModes(DEFAULT_TRANSIT_MODES);
     setShowTransit(false);
+    setShowEvents(false);
     setSelectedBuildingId(null);
     setSelectedTransit(null);
+    setSelectedEventId(null);
   }
 
   function toggleTransit() {
     if (showTransit) setSelectedTransit(null);
     setShowTransit((current) => !current);
+  }
+
+  function toggleEvents() {
+    if (showEvents) setSelectedEventId(null);
+    setShowEvents((current) => !current);
   }
 
   function toggleTransitMode(mode: TransitMode) {
@@ -294,15 +334,30 @@ function Map() {
         if (!id) return;
         setSelectedBuildingId(id);
         setSelectedTransit(null);
+        setSelectedEventId(null);
       });
       addTransitLayers(map, {
         onSelectStop: (stop) => {
           setSelectedBuildingId(null);
+          setSelectedEventId(null);
           setSelectedTransit({ type: "stop", stop });
         },
         onSelectVehicle: (vehicle) => {
           setSelectedBuildingId(null);
+          setSelectedEventId(null);
           setSelectedTransit({ type: "vehicle", vehicle });
+        },
+      });
+      addEventLayers(map, {
+        onSelectEvent: (eventId) => {
+          setSelectedBuildingId(null);
+          setSelectedTransit(null);
+          setSelectedEventId(eventId);
+        },
+        onClearSelection: () => {
+          setSelectedBuildingId(null);
+          setSelectedTransit(null);
+          setSelectedEventId(null);
         },
       });
       updateBuildingFilters(map, DEFAULT_CATEGORIES);
@@ -345,6 +400,11 @@ function Map() {
     updateTransitStops(mapInstance, showTransit ? visibleTransitStops : []);
   }, [mapInstance, isMapLoaded, showTransit, visibleTransitStops]);
 
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) return;
+    updateEventMarkers(mapInstance, showEvents ? mappedEvents : []);
+  }, [mapInstance, isMapLoaded, mappedEvents, showEvents]);
+
   return (
     <SideBar
       renderMenuPanel={(closeMenu) => (
@@ -359,6 +419,11 @@ function Map() {
           transitStopCount={visibleTransitStops.length}
           transitVehicleCount={visibleTransitVehicles.length}
           transitStatus={transitStatus}
+          showEvents={showEvents}
+          onToggleEvents={toggleEvents}
+          eventCount={mappedEvents.length}
+          eventsLoading={showEvents && isEventsPending}
+          eventsError={showEvents && isEventsError}
           onClose={closeMenu}
         />
       )}
@@ -375,6 +440,13 @@ function Map() {
           onClose={() => setSelectedBuildingId(null)}
           onRecenter={() => {
             if (selectedBuilding) flyToBuilding(selectedBuilding);
+          }}
+        />
+        <EventDetailsCard
+          event={selectedEvent}
+          onClose={() => setSelectedEventId(null)}
+          onRecenter={() => {
+            if (selectedEvent) flyToEvent(selectedEvent);
           }}
         />
         <TransitDetailsCard
