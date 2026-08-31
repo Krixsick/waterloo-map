@@ -53,3 +53,16 @@ export interface WaterlooEvent {
   mapURL: string | null;
   coordinates: { latitude: number; longitude: number } | null;
 }
+
+export interface WaterlooEventsResponse {
+  events: WaterlooEvent[];
+  source: string;
+  totalCount: number | null;
+  fetchedCount: number;
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export type MappedWaterlooEvent = WaterlooEvent & {
+  coordinates: { latitude: number; longitude: number };
+};

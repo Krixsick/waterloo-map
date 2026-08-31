@@ -1,13 +1,6 @@
 import mapboxgl from "mapbox-gl";
-
-type BuildingProperties = {
-  id?: string;
-  name?: string;
-  abbreviation?: string;
-  description?: string;
-  liveHours?: string;
-  timeRemaining?: string;
-};
+import type { BuildingProperties } from "../data/buildings";
+import { getActiveEventLayerIds } from "./eventLayers";
 
 const HOVER_LAYERS = [
   "campus-building-circles",
@@ -37,7 +30,7 @@ function addPopupStyles() {
 
 export function addBuildingHoverPopup(
   map: mapboxgl.Map,
-  onBuildingClick?: (properties: BuildingProperties) => void
+  onBuildingClick?: (properties: BuildingProperties) => void,
 ) {
   addPopupStyles();
 
@@ -50,6 +43,14 @@ export function addBuildingHoverPopup(
 
   HOVER_LAYERS.forEach((layerId) => {
     map.on("mouseenter", layerId, (e) => {
+      const eventLayers = getActiveEventLayerIds(map);
+      if (
+        eventLayers.length &&
+        map.queryRenderedFeatures(e.point, { layers: eventLayers }).length
+      ) {
+        return;
+      }
+
       map.getCanvas().style.cursor = "pointer";
 
       const feature = e.features?.[0];
@@ -226,11 +227,19 @@ export function addBuildingHoverPopup(
       hoverPopup.remove();
     });
     map.on("click", layerId, (e) => {
+      const eventLayers = getActiveEventLayerIds(map);
+      if (
+        eventLayers.length &&
+        map.queryRenderedFeatures(e.point, { layers: eventLayers }).length
+      ) {
+        return;
+      }
+
       const feature = e.features?.[0];
       if (!feature) return;
-    
+
       const properties = feature.properties as BuildingProperties;
-    
+
       hoverPopup.remove();
       //since we send a callback function setSelectedBuilding it will use that
       //useState hook and send the properties information back into the

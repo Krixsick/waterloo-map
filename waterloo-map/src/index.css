@@ -19,6 +19,17 @@ body,
   height: 100%;
 }
 
+.uw-event-popup .mapboxgl-popup-content {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.uw-event-popup .mapboxgl-popup-tip {
+  border-top-color: #fff;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

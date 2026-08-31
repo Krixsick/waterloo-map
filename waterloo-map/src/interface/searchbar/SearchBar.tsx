@@ -1,60 +1,17 @@
-import {
-  BookOpen,
-  Building2,
-  Dumbbell,
-  Home,
-  Search,
-  Users,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Map as MapboxMap } from "mapbox-gl";
 import type {
-  BuildingCategory,
-  buildings as buildingData,
+  BuildingFeature,
+  BuildingsGeoJSON,
 } from "../../data/buildings";
-
-type BuildingsGeoJSON = typeof buildingData;
-type BuildingFeature = BuildingsGeoJSON["features"][number];
+import { buildingCategoryDetails } from "../buildingCategoryDetails";
 
 type SearchBarProps = {
-  map: MapboxMap | null;
   buildings: BuildingsGeoJSON;
+  onSelectBuilding: (building: BuildingFeature) => void;
 };
 
-const categoryDetails: Record<
-  BuildingCategory,
-  { icon: LucideIcon; label: string; styles: string }
-> = {
-  academic: {
-    icon: Building2,
-    label: "Academic",
-    styles: "bg-sky-100 text-sky-700",
-  },
-  library: {
-    icon: BookOpen,
-    label: "Library",
-    styles: "bg-amber-100 text-amber-700",
-  },
-  gym: {
-    icon: Dumbbell,
-    label: "Gym",
-    styles: "bg-rose-100 text-rose-700",
-  },
-  "student-life": {
-    icon: Users,
-    label: "Student life",
-    styles: "bg-violet-100 text-violet-700",
-  },
-  residence: {
-    icon: Home,
-    label: "Residence",
-    styles: "bg-emerald-100 text-emerald-700",
-  },
-};
-
-export function SearchBar({ map, buildings }: SearchBarProps) {
+export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -88,16 +45,7 @@ export function SearchBar({ map, buildings }: SearchBarProps) {
   }, []);
 
   function selectBuilding(feature: BuildingFeature) {
-    const [longitude, latitude] = feature.geometry.coordinates;
-
-    map?.flyTo({
-      center: [longitude, latitude],
-      zoom: 17,
-      pitch: 0,
-      bearing: -26,
-      essential: true,
-    });
-
+    onSelectBuilding(feature);
     setQuery(feature.properties.name);
     setIsOpen(false);
     setActiveIndex(-1);
@@ -212,7 +160,8 @@ export function SearchBar({ map, buildings }: SearchBarProps) {
             </p>
 
             {results.map((feature, index) => {
-              const category = categoryDetails[feature.properties.category];
+              const category =
+                buildingCategoryDetails[feature.properties.category];
               const Icon = category.icon;
 
               return (
