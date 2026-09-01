@@ -44,7 +44,7 @@ export function LoadingScreen({ isComplete }: LoadingScreenProps) {
       }`}
     >
       <div className="flex items-center gap-3">
-        <span className="font-heading text-3xl font-semibold tracking-normal sm:text-4xl">
+        <span className="font-title text-3xl font-semibold tracking-tight sm:text-4xl">
           WaterlooMap
         </span>
       </div>

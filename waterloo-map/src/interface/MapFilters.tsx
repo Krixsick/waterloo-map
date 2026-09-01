@@ -130,8 +130,12 @@ export default function MapFilters({
     <div className="flex h-full flex-col overflow-y-auto px-4 py-5">
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">Map filters</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Show or hide map items</p>
+          <h2 className="font-title text-base font-semibold text-slate-900">
+            Map filters
+          </h2>
+          <p className="text-ui-meta mt-0.5 text-slate-500">
+            Show or hide map items
+          </p>
         </div>
 
         <div className="flex items-center gap-1">
@@ -157,7 +161,7 @@ export default function MapFilters({
       </div>
 
       <section className="py-5">
-        <h3 className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
+        <h3 className="text-ui-label mb-2 px-2 text-slate-500">
           Places
         </h3>
         <div className="space-y-1">
@@ -181,7 +185,7 @@ export default function MapFilters({
                     className="sr-only"
                   />
                   <Icon size={20} aria-hidden="true" />
-                  <span className="min-w-0 flex-1 text-sm font-medium">
+                  <span className="font-title min-w-0 flex-1 text-sm font-medium">
                     {label}
                   </span>
                   <span
@@ -202,7 +206,7 @@ export default function MapFilters({
       </section>
 
       <section className="border-t border-slate-200 py-5">
-        <h3 className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
+        <h3 className="text-ui-label mb-2 px-2 text-slate-500">
           Explore
         </h3>
         <label
@@ -220,9 +224,9 @@ export default function MapFilters({
           />
           <CalendarDays size={20} aria-hidden="true" />
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium">Campus events</span>
+            <span className="font-title block text-sm font-medium">Campus events</span>
             <span
-              className={`block text-xs ${
+              className={`text-ui-meta block ${
                 eventsError ? "text-red-600" : "text-slate-500"
               }`}
             >
@@ -249,7 +253,7 @@ export default function MapFilters({
       </section>
 
       <section className="border-t border-slate-200 pt-5">
-        <h3 className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
+        <h3 className="text-ui-label mb-2 px-2 text-slate-500">
           Transportation
         </h3>
         <label
@@ -267,9 +271,9 @@ export default function MapFilters({
           />
           <BusFront size={20} aria-hidden="true" />
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium">Live transit</span>
+            <span className="font-title block text-sm font-medium">Live transit</span>
             <span
-              className={`block text-xs ${
+              className={`text-ui-meta block ${
                 transitStatus === "error"
                   ? "text-red-600"
                   : transitStatus === "partial"
@@ -294,7 +298,7 @@ export default function MapFilters({
 
         {showTransit && (
           <fieldset className="mt-3 px-2">
-            <legend className="mb-2 text-xs font-medium text-slate-500">
+            <legend className="text-ui-label mb-2 text-slate-500">
               Transit modes
             </legend>
             <div className="grid grid-cols-2 gap-2">
@@ -305,7 +309,7 @@ export default function MapFilters({
                   return (
                     <label
                       key={value}
-                      className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-sm font-medium outline-none transition focus-within:ring-2 focus-within:ring-slate-500/30 ${
+                      className={`font-title flex min-h-10 cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-sm font-medium outline-none transition focus-within:ring-2 focus-within:ring-slate-500/30 ${
                         isActive
                           ? activeClass
                           : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"

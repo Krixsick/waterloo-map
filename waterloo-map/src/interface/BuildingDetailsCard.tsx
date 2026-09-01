@@ -66,7 +66,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-w-20 cursor-pointer flex-col items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-[#135f49] transition-colors hover:bg-emerald-50"
+      className="text-ui-action flex min-w-20 cursor-pointer flex-col items-center gap-1.5 rounded-md px-3 py-2 text-[#135f49] transition-colors hover:bg-emerald-50"
     >
       <span className="flex size-10 items-center justify-center rounded-full bg-emerald-100">
         <Icon className="size-5" />
@@ -120,10 +120,10 @@ export default function BuildingDetailsCard({
           </span>
 
           <div className="min-w-0 flex-1">
-            <h2 className="font-heading text-xl font-semibold text-slate-950">
+            <h2 className="text-ui-title text-slate-950">
               {properties.name}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="text-ui-subtitle mt-1 text-slate-500">
               {properties.abbreviation} · {category.label}
             </p>
           </div>
@@ -139,7 +139,7 @@ export default function BuildingDetailsCard({
           </button>
         </div>
 
-        <p className="mt-4 text-sm leading-6 text-slate-600">
+        <p className="text-ui-body mt-4 text-slate-600">
           {properties.description}
         </p>
       </header>
@@ -161,14 +161,14 @@ export default function BuildingDetailsCard({
         <div className="flex gap-4 py-4">
           <Clock3 className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
           <div>
-            <dt className="text-xs font-medium uppercase text-slate-500">
+            <dt className="text-ui-label text-slate-500">
               Today's hours
             </dt>
-            <dd className="mt-1 text-sm font-medium text-slate-800">
+            <dd className="text-ui-value mt-1 text-slate-800">
               {properties.liveHours ?? "Hours unavailable"}
             </dd>
             {properties.timeRemaining && (
-              <p className="mt-1 text-xs text-emerald-700">
+              <p className="text-ui-meta mt-1 text-emerald-700">
                 {properties.timeRemaining}
               </p>
             )}
@@ -179,24 +179,24 @@ export default function BuildingDetailsCard({
           <div className="flex gap-4 py-4">
             <Activity className="mt-0.5 size-5 shrink-0 text-amber-600" />
             <div className="min-w-0 flex-1">
-              <dt className="text-xs font-medium uppercase text-slate-500">
+              <dt className="text-ui-label text-slate-500">
                 Live occupancy
               </dt>
 
               {libraryOccupancyLoading ? (
-                <dd className="mt-1 text-sm text-slate-600">
+                <dd className="text-ui-body mt-1 text-slate-600">
                   Checking how busy it is…
                 </dd>
               ) : occupancyUnavailable ? (
                 <dd className="mt-1">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-ui-body text-slate-600">
                     Live occupancy is unavailable right now.
                   </p>
                   <a
                     href={libraryOccupancySource}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900"
+                    className="text-ui-action mt-3 inline-flex items-center gap-1 text-amber-700 hover:text-amber-900"
                   >
                     Check Waterloo occupancy
                     <ExternalLink className="size-3.5" />
@@ -205,12 +205,12 @@ export default function BuildingDetailsCard({
               ) : (
                 <dd className="mt-2">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-semibold text-slate-900">
+                  <span className="text-ui-value text-slate-900">
                       {occupancyLabels[libraryOccupancy.level]}
                     </span>
                     {libraryOccupancy.percentage !== null &&
                       libraryOccupancy.isOpen && (
-                        <span className="text-xs font-medium text-slate-500">
+                        <span className="text-ui-meta font-medium text-slate-500">
                           {libraryOccupancy.percentage}% full
                         </span>
                       )}
@@ -233,14 +233,14 @@ export default function BuildingDetailsCard({
                       </div>
                     )}
 
-                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                  <p className="text-ui-meta mt-2 text-slate-500">
                     Estimated from anonymous device activity.
                   </p>
 
                   {libraryOccupancy.zones.length > 0 &&
                     libraryOccupancy.isOpen && (
                       <details className="mt-3 rounded-md border border-slate-200 bg-slate-50">
-                        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700">
+                        <summary className="text-ui-action cursor-pointer px-3 py-2 text-slate-700">
                           View floor details
                         </summary>
                         <div className="divide-y divide-slate-200 border-t border-slate-200 px-3">
@@ -249,10 +249,10 @@ export default function BuildingDetailsCard({
                               key={zone.id}
                               className="flex items-center justify-between gap-3 py-2"
                             >
-                              <span className="text-xs leading-4 text-slate-700">
+                              <span className="text-ui-meta text-slate-700">
                                 {zone.name}
                               </span>
-                              <span className="shrink-0 text-xs font-medium text-slate-500">
+                              <span className="text-ui-meta shrink-0 font-medium text-slate-500">
                                 {zoneSummary(zone)}
                               </span>
                             </div>
@@ -265,7 +265,7 @@ export default function BuildingDetailsCard({
                     href={libraryOccupancySource}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900"
+                    className="text-ui-action mt-3 inline-flex items-center gap-1 text-amber-700 hover:text-amber-900"
                   >
                     Live data by Waitz
                     <ExternalLink className="size-3.5" />
@@ -279,13 +279,13 @@ export default function BuildingDetailsCard({
         <div className="flex gap-4 py-4">
           <MapPin className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
           <div>
-            <dt className="text-xs font-medium uppercase text-slate-500">
+            <dt className="text-ui-label text-slate-500">
               Location
             </dt>
-            <dd className="mt-1 text-sm text-slate-800">
+            <dd className="text-ui-value mt-1 text-slate-800">
               University of Waterloo campus
             </dd>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="text-ui-meta mt-1 text-slate-500">
               {latitude.toFixed(5)}, {longitude.toFixed(5)}
             </p>
           </div>
@@ -294,10 +294,12 @@ export default function BuildingDetailsCard({
         <div className="flex gap-4 py-4">
           <Info className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
           <div>
-            <dt className="text-xs font-medium uppercase text-slate-500">
-              Place type
+            <dt className="text-ui-label text-slate-500">
+              Location type
             </dt>
-            <dd className="mt-1 text-sm text-slate-800">{category.label}</dd>
+            <dd className="text-ui-value mt-1 text-slate-800">
+              {category.label}
+            </dd>
           </div>
         </div>
       </dl>

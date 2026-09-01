@@ -32,7 +32,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-w-20 cursor-pointer flex-col items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-50"
+      className="text-ui-action flex min-w-20 cursor-pointer flex-col items-center gap-1.5 rounded-md px-3 py-2 text-violet-700 transition-colors hover:bg-violet-50"
     >
       <span className="flex size-10 items-center justify-center rounded-full bg-violet-100">
         <Icon className="size-5" />
@@ -74,10 +74,10 @@ export default function EventDetailsCard({
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+            <p className="text-ui-label text-violet-600">
               Campus event
             </p>
-            <h2 className="font-heading mt-1 text-xl font-semibold text-slate-950">
+            <h2 className="text-ui-title mt-1 text-slate-950">
               {event.name}
             </h2>
           </div>
@@ -94,7 +94,7 @@ export default function EventDetailsCard({
         </div>
 
         {description && (
-          <p className="mt-4 line-clamp-5 text-sm leading-6 text-slate-600">
+          <p className="text-ui-body mt-4 line-clamp-5 text-slate-600">
             {description}
           </p>
         )}
@@ -120,8 +120,8 @@ export default function EventDetailsCard({
         <div className="flex gap-4 py-4">
           <CalendarDays className="mt-0.5 size-5 shrink-0 text-violet-600" />
           <div>
-            <dt className="text-xs font-medium uppercase text-slate-500">Date</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-800">
+            <dt className="text-ui-label text-slate-500">Date</dt>
+            <dd className="text-ui-value mt-1 text-slate-800">
               {event.date ?? "Date to be announced"}
             </dd>
           </div>
@@ -131,8 +131,10 @@ export default function EventDetailsCard({
           <div className="flex gap-4 py-4">
             <Clock3 className="mt-0.5 size-5 shrink-0 text-violet-600" />
             <div>
-              <dt className="text-xs font-medium uppercase text-slate-500">Time</dt>
-              <dd className="mt-1 text-sm text-slate-800">{event.time}</dd>
+              <dt className="text-ui-label text-slate-500">Time</dt>
+              <dd className="text-ui-value mt-1 text-slate-800">
+                {event.time}
+              </dd>
             </div>
           </div>
         )}
@@ -140,8 +142,8 @@ export default function EventDetailsCard({
         <div className="flex gap-4 py-4">
           <MapPin className="mt-0.5 size-5 shrink-0 text-violet-600" />
           <div>
-            <dt className="text-xs font-medium uppercase text-slate-500">Location</dt>
-            <dd className="mt-1 text-sm text-slate-800">
+            <dt className="text-ui-label text-slate-500">Location</dt>
+            <dd className="text-ui-value mt-1 text-slate-800">
               {event.location || "University of Waterloo"}
             </dd>
           </div>
@@ -151,8 +153,8 @@ export default function EventDetailsCard({
           <div className="flex gap-4 py-4">
             <Ticket className="mt-0.5 size-5 shrink-0 text-violet-600" />
             <div>
-              <dt className="text-xs font-medium uppercase text-slate-500">Entry</dt>
-              <dd className="mt-1 text-sm text-slate-800">
+              <dt className="text-ui-label text-slate-500">Entry</dt>
+              <dd className="text-ui-value mt-1 text-slate-800">
                 {[event.cost, event.registration ? "Registration required" : null]
                   .filter(Boolean)
                   .join(" · ")}
@@ -165,8 +167,10 @@ export default function EventDetailsCard({
           <div className="flex gap-4 py-4">
             <UserRound className="mt-0.5 size-5 shrink-0 text-violet-600" />
             <div>
-              <dt className="text-xs font-medium uppercase text-slate-500">Organizer</dt>
-              <dd className="mt-1 text-sm text-slate-800">{event.organizer}</dd>
+              <dt className="text-ui-label text-slate-500">Organizer</dt>
+              <dd className="text-ui-value mt-1 text-slate-800">
+                {event.organizer}
+              </dd>
             </div>
           </div>
         )}

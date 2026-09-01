@@ -4,19 +4,24 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/nunito-sans";
 
+@import "@fontsource/figtree/400.css";
+@import "@fontsource/figtree/500.css";
+@import "@fontsource/figtree/600.css";
+@import "@fontsource/figtree/700.css";
+
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+
+@import "@fontsource/fredoka/400.css";
+@import "@fontsource/fredoka/500.css";
+@import "@fontsource/fredoka/600.css";
+
 @custom-variant dark (&:is(.dark *));
 @plugin "daisyui";
 
 * {
   box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  width: 100%;
-  height: 100%;
 }
 
 .uw-event-popup .mapboxgl-popup-content {
@@ -31,6 +36,10 @@ body,
 }
 
 :root {
+  --font-title: "Figtree", sans-serif;
+  --font-label: "JetBrains Mono", monospace;
+  --font-body: "Fredoka", sans-serif;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -100,8 +109,11 @@ body,
 }
 
 @theme inline {
-  --font-sans: 'Inter Variable', sans-serif;
-  --font-heading: 'Nunito Sans Variable', sans-serif;
+  --font-sans: var(--font-title);
+  --font-title: var(--font-title);
+  --font-label: var(--font-label);
+  --font-body: var(--font-body);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -146,10 +158,105 @@ body,
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
   }
-  html {
-    @apply font-sans;
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    margin: 0;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer components {
+  /* ==========================================
+     TYPOGRAPHY SYSTEM
+
+     FIGTREE
+     - Default application font
+     - Titles
+     - Search
+     - Navigation
+     - Buttons
+     - Values
+     - Metadata
+     - Interactive UI
+
+     JETBRAINS MONO
+     - Section labels
+     - Categories / small data headings
+
+     FREDOKA
+     - Descriptive prose only
+     ========================================== */
+
+  /* Major card/entity title */
+  .text-ui-title {
+    font-family: var(--font-title);
+    font-size: 1.125rem;
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Secondary title / entity metadata */
+  .text-ui-subtitle {
+    font-family: var(--font-title);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+
+  /* Small categorical/section label */
+  .text-ui-label {
+    font-family: var(--font-label);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* Descriptive prose — FREDOKA */
+  .text-ui-body {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    font-weight: 400;
+  }
+
+  /* Important information/value — FIGTREE */
+  .text-ui-value {
+    font-family: var(--font-title);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    font-weight: 500;
+  }
+
+  /* Supporting information — FIGTREE */
+  .text-ui-meta {
+    font-family: var(--font-title);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    font-weight: 400;
+  }
+
+  /* Buttons and interactive controls — FIGTREE */
+  .text-ui-action {
+    font-family: var(--font-title);
+    font-size: 0.875rem;
+    line-height: 1;
+    font-weight: 500;
   }
 }
