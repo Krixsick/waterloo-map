@@ -133,7 +133,7 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
             aria-label="Search Waterloo campus"
             aria-controls="campus-search-results"
             aria-expanded={isOpen}
-            className="h-full min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-500"
+            className="font-title h-full min-w-0 flex-1 bg-transparent text-base font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-500"
           />
 
           {query && (
@@ -155,7 +155,7 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
             aria-label={query ? "Search results" : "Campus places"}
             className="max-h-[min(25rem,calc(100vh-6rem))] overflow-y-auto border-t border-slate-100 px-2 pb-2"
           >
-            <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase text-slate-500">
+            <p className="text-ui-label px-3 pb-1 pt-3 text-slate-500">
               {query ? "Search results" : "Campus places"}
             </p>
 
@@ -183,10 +183,10 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-900">
+                    <span className="font-title block truncate text-sm font-semibold text-slate-900">
                       {feature.properties.name}
                     </span>
-                    <span className="block truncate text-xs text-slate-500">
+                    <span className="text-ui-meta block truncate text-slate-500">
                       {feature.properties.abbreviation} · {category.label}
                     </span>
                   </span>
@@ -195,7 +195,7 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
             })}
 
             {query && !results.length && (
-              <p className="px-3 py-6 text-center text-sm text-slate-500">
+              <p className="font-title px-3 py-6 text-center text-sm text-slate-500">
                 No campus places found
               </p>
             )}

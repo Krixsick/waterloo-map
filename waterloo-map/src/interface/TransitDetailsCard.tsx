@@ -67,7 +67,7 @@ function ModeIcon({ mode }: { mode: TransitMode }) {
 function RouteBadge({ mode, routeId }: { mode: TransitMode; routeId: string }) {
   return (
     <span
-      className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md px-2 text-xs font-bold text-white ${
+      className={`font-title flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md px-2 text-xs font-bold text-white ${
         mode === "ion" ? "bg-pink-600" : "bg-blue-600"
       }`}
     >
@@ -101,10 +101,10 @@ function Panel({
         </span>
 
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold text-slate-900">
+          <h2 className="text-ui-title truncate text-slate-900">
             {title}
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>
+          <p className="text-ui-meta mt-0.5 text-slate-500">{subtitle}</p>
         </div>
 
         <button
@@ -145,19 +145,19 @@ function DepartureRow({ departure }: { departure: TransitDeparture }) {
     <li className="flex items-center gap-3 border-b border-slate-100 py-3 last:border-b-0">
       <RouteBadge mode={departure.mode} routeId={departure.routeId} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-slate-800">
+        <p className="text-ui-value truncate text-slate-800">
           {destination(departure.headsign, departure.routeId)}
         </p>
-        <p className="mt-0.5 text-xs text-slate-500">
+        <p className="text-ui-meta mt-0.5 text-slate-500">
           {departure.mode === "ion" ? "ION" : "Bus"} ·{" "}
           {departure.isRealtime ? "Predicted arrival" : "Scheduled arrival"}
         </p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-sm font-semibold text-slate-900">
+        <p className="text-ui-value font-semibold text-slate-900">
           {departureTime(time)}
         </p>
-        <p className="text-[11px] text-slate-500">{clockTime(time)}</p>
+        <p className="font-title text-[11px] text-slate-500">{clockTime(time)}</p>
       </div>
     </li>
   );
@@ -182,13 +182,13 @@ function StopDetails({
       mode={stop.mode}
       onClose={onClose}
     >
-      <div className="px-4 pt-4 text-xs font-semibold uppercase text-slate-500">
+      <div className="text-ui-label px-4 pt-4 text-slate-500">
         Upcoming departures
       </div>
       {isPending ? (
         <LoadingRows />
       ) : isError ? (
-        <p className="p-4 text-sm text-red-600">Departure information unavailable.</p>
+        <p className="font-title p-4 text-sm text-red-600">Departure information unavailable.</p>
       ) : departures.length ? (
         <ul className="px-4 pb-2">
           {departures.map((departure) => (
@@ -196,7 +196,7 @@ function StopDetails({
           ))}
         </ul>
       ) : (
-        <p className="p-4 text-sm text-slate-500">No upcoming departures found.</p>
+        <p className="font-title p-4 text-sm text-slate-500">No upcoming departures found.</p>
       )}
     </Panel>
   );
@@ -209,13 +209,13 @@ function TripStopRow({ stop }: { stop: TransitTripStop }) {
     <li className="flex items-center gap-3 border-b border-slate-100 py-3 last:border-b-0">
       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-slate-300" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-slate-800">{stop.name}</p>
-        <p className="mt-0.5 text-xs text-slate-500">
+        <p className="text-ui-value truncate text-slate-800">{stop.name}</p>
+        <p className="text-ui-meta mt-0.5 text-slate-500">
           {stop.isRealtime ? "Predicted arrival" : "Scheduled arrival"}
         </p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-sm font-semibold text-slate-900">
+        <p className="text-ui-value font-semibold text-slate-900">
           {departureTime(time)}
         </p>
         <p className="text-[11px] text-slate-500">{clockTime(time)}</p>
@@ -250,25 +250,25 @@ function VehicleDetails({
       {isPending ? (
         <LoadingRows />
       ) : isError || !trip ? (
-        <p className="p-4 text-sm text-red-600">Trip information unavailable.</p>
+        <p className="font-title p-4 text-sm text-red-600">Trip information unavailable.</p>
       ) : (
         <>
           <dl className="grid grid-cols-2 gap-4 border-b border-slate-200 p-4">
             <div className="min-w-0">
-              <dt className="text-xs font-medium text-slate-500">Destination</dt>
-              <dd className="mt-1 truncate text-sm font-semibold text-slate-900">
+              <dt className="text-ui-label text-slate-500">Destination</dt>
+              <dd className="text-ui-value mt-1 truncate font-semibold text-slate-900">
                 {vehicleDestination}
               </dd>
             </div>
             <div className="min-w-0">
-              <dt className="text-xs font-medium text-slate-500">Direction</dt>
-              <dd className="mt-1 text-sm font-semibold text-slate-900">
+              <dt className="text-ui-label text-slate-500">Direction</dt>
+              <dd className="text-ui-value mt-1 font-semibold text-slate-900">
                 {directionLabel(trip)}
               </dd>
             </div>
           </dl>
 
-          <div className="px-4 pt-4 text-xs font-semibold uppercase text-slate-500">
+          <div className="text-ui-label px-4 pt-4 text-slate-500">
             Next three stops
           </div>
           {trip.nextStops.length ? (
@@ -281,7 +281,7 @@ function VehicleDetails({
               ))}
             </ul>
           ) : (
-            <p className="p-4 text-sm text-slate-500">
+            <p className="font-title p-4 text-sm text-slate-500">
               No remaining stops found.
             </p>
           )}

@@ -7,25 +7,300 @@ const HOVER_LAYERS = [
   "residence-building-squares",
 ];
 
+const POPUP_CLASS = "uw-hover-popup";
+const POPUP_STYLE_ID = "uw-hover-popup-styles";
+
 function addPopupStyles() {
-  if (document.getElementById("uw-hover-popup-styles")) return;
+  if (document.getElementById(POPUP_STYLE_ID)) return;
 
   const style = document.createElement("style");
-  style.id = "uw-hover-popup-styles";
+  style.id = POPUP_STYLE_ID;
+
   style.innerHTML = `
-    .uw-hover-popup .mapboxgl-popup-content {
+    .${POPUP_CLASS} .mapboxgl-popup-content {
       padding: 0;
       background: transparent;
       box-shadow: none;
       border-radius: 0;
     }
 
-    .uw-hover-popup .mapboxgl-popup-tip {
+    .${POPUP_CLASS} .mapboxgl-popup-tip {
       border-top-color: rgba(255, 255, 255, 0.78) !important;
+    }
+
+    .uw-hover-card {
+      width: 200px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+      color: #0f172a;
+      font-family: "Figtree", sans-serif;
+    }
+
+    .uw-hover-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .uw-hover-info {
+      min-width: 0;
+    }
+
+    .uw-hover-name {
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .uw-hover-abbreviation {
+      margin-top: 2px;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .uw-hover-status {
+      flex-shrink: 0;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .uw-hover-status-open {
+      background: rgba(34, 197, 94, 0.12);
+      color: #16a34a;
+    }
+
+    .uw-hover-status-closed {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+    }
+
+    .uw-hover-hours {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .uw-hover-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .uw-hover-meta-row + .uw-hover-meta-row {
+      margin-top: 2px;
+    }
+
+    .uw-hover-meta-icon {
+      flex-shrink: 0;
+      width: 13px;
+      height: 13px;
+      color: #64748b;
+    }
+
+    .uw-hover-meta-text {
+      color: #475569;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.35;
     }
   `;
 
   document.head.appendChild(style);
+}
+
+function clockIcon() {
+  return `
+    <svg
+      class="uw-hover-meta-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9"></circle>
+      <polyline points="12 7 12 12 15 14"></polyline>
+    </svg>
+  `;
+}
+
+function hourglassIcon() {
+  return `
+    <svg
+      class="uw-hover-meta-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 2h12"></path>
+      <path d="M6 22h12"></path>
+      <path d="M8 2v6a4 4 0 0 0 8 0V2"></path>
+      <path d="M16 22v-6a4 4 0 0 0-8 0v6"></path>
+    </svg>
+  `;
+}
+
+function getOpenStatus(liveHours: string | null | undefined) {
+  if (!liveHours) return null;
+
+  const normalized = liveHours.trim().toLowerCase();
+
+  if (normalized === "closed") {
+    return {
+      label: "Closed",
+      className: "uw-hover-status uw-hover-status-closed",
+    };
+  }
+
+  return {
+    label: "Open",
+    className: "uw-hover-status uw-hover-status-open",
+  };
+}
+
+function buildHoursSection(properties: BuildingProperties) {
+  if (!properties.liveHours) return "";
+
+  return `
+    <div class="uw-hover-hours">
+      <div class="uw-hover-meta-row">
+        ${clockIcon()}
+
+        <div class="uw-hover-meta-text">
+          ${properties.liveHours}
+        </div>
+      </div>
+
+      ${
+        properties.timeRemaining
+          ? `
+            <div class="uw-hover-meta-row">
+              ${hourglassIcon()}
+
+              <div class="uw-hover-meta-text">
+                ${properties.timeRemaining}
+              </div>
+            </div>
+          `
+          : ""
+      }
+    </div>
+  `;
+}
+
+function buildPopupHTML(properties: BuildingProperties) {
+  const status = getOpenStatus(properties.liveHours);
+
+  return `
+    <div class="uw-hover-card">
+      <div class="uw-hover-header">
+        <div class="uw-hover-info">
+          <div class="uw-hover-name">
+            ${properties.name ?? ""}
+          </div>
+
+          ${
+            properties.abbreviation
+              ? `
+                <div class="uw-hover-abbreviation">
+                  ${properties.abbreviation}
+                </div>
+              `
+              : ""
+          }
+        </div>
+
+        ${
+          status
+            ? `
+              <div class="${status.className}">
+                ${status.label}
+              </div>
+            `
+            : ""
+        }
+      </div>
+
+      ${buildHoursSection(properties)}
+    </div>
+  `;
+}
+
+function clearBuildingHover(map: mapboxgl.Map) {
+  if (map.getLayer("campus-building-hover")) {
+    map.setFilter("campus-building-hover", [
+      "==",
+      ["get", "id"],
+      "",
+    ]);
+  }
+
+  if (map.getLayer("residence-building-hover")) {
+    map.setFilter("residence-building-hover", [
+      "==",
+      ["get", "id"],
+      "",
+    ]);
+  }
+}
+
+function setBuildingHover(
+  map: mapboxgl.Map,
+  layerId: string,
+  buildingId: string,
+) {
+  if (
+    layerId === "campus-building-circles" &&
+    map.getLayer("campus-building-hover")
+  ) {
+    map.setFilter("campus-building-hover", [
+      "==",
+      ["get", "id"],
+      buildingId,
+    ]);
+  }
+
+  if (
+    layerId === "residence-building-squares" &&
+    map.getLayer("residence-building-hover")
+  ) {
+    map.setFilter("residence-building-hover", [
+      "==",
+      ["get", "id"],
+      buildingId,
+    ]);
+  }
+}
+
+function isHoveringEvent(
+  map: mapboxgl.Map,
+  point: mapboxgl.PointLike,
+) {
+  const eventLayers = getActiveEventLayerIds(map);
+
+  if (!eventLayers.length) return false;
+
+  return (
+    map.queryRenderedFeatures(point, {
+      layers: eventLayers,
+    }).length > 0
+  );
 }
 
 export function addBuildingHoverPopup(
@@ -38,212 +313,56 @@ export function addBuildingHoverPopup(
     closeButton: false,
     closeOnClick: false,
     offset: 18,
-    className: "uw-hover-popup",
+    className: POPUP_CLASS,
   });
 
   HOVER_LAYERS.forEach((layerId) => {
-    map.on("mouseenter", layerId, (e) => {
-      const eventLayers = getActiveEventLayerIds(map);
-      if (
-        eventLayers.length &&
-        map.queryRenderedFeatures(e.point, { layers: eventLayers }).length
-      ) {
-        return;
-      }
+    map.on("mouseenter", layerId, (event) => {
+      if (isHoveringEvent(map, event.point)) return;
 
-      map.getCanvas().style.cursor = "pointer";
-
-      const feature = e.features?.[0];
+      const feature = event.features?.[0];
       if (!feature) return;
 
       const geometry = feature.geometry as GeoJSON.Point;
-      const coordinates = geometry.coordinates.slice() as [number, number];
+      const coordinates = geometry.coordinates.slice() as [
+        number,
+        number,
+      ];
       const properties = feature.properties as BuildingProperties;
 
-      if (layerId === "campus-building-circles") {
-        map.setFilter("campus-building-hover", ["==", ["get", "id"], properties.id]);
-      }
-      if (layerId === "residence-building-squares") {
-        map.setFilter("residence-building-hover", ["==", ["get", "id"], properties.id]);
-      }
+      map.getCanvas().style.cursor = "pointer";
+
+      setBuildingHover(
+        map,
+        layerId,
+        properties.id,
+      );
 
       hoverPopup
         .setLngLat(coordinates)
-        .setHTML(`
-          <div style="
-            width: 200px;
-            padding: 12px 14px;
-            border-radius: 18px;
-            border: 1px solid rgba(255,255,255,0.5);
-            background: rgba(255,255,255,0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 12px 28px rgba(15,23,42,.14);
-            color: #0f172a;
-            font-family: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-          ">
-        
-            <div style="
-              display:flex;
-              justify-content:space-between;
-              align-items:flex-start;
-              gap:10px;
-            ">
-        
-              <div style="min-width:0;">
-        
-                <div style="
-                  font-size:14px;
-                  font-weight:600;
-                  line-height:1.2;
-                  color:#0f172a;
-                ">
-                  ${properties.name ?? ""}
-                </div>
-        
-                <div style="
-                  margin-top:2px;
-                  font-size:12px;
-                  font-weight:500;
-                  color:#64748b;
-                ">
-                  ${properties.abbreviation ?? ""}
-                </div>
-        
-              </div>
-        
-              <div style="
-                flex-shrink:0;
-                padding:3px 8px;
-                border-radius:999px;
-                background:rgba(34,197,94,.12);
-                color:#16a34a;
-                font-size:12px;
-                font-weight:600;
-              ">
-                Open
-              </div>
-        
-            </div>
-        
-            ${
-              properties.liveHours
-                ? `
-                <div style="
-                  margin-top:10px;
-                  padding-top:10px;
-                  border-top:1px solid rgba(148,163,184,.2);
-                ">
-        
-                  <div style="
-                    display:flex;
-                    align-items:center;
-                    gap:7px;
-                  ">
-        
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#64748b"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      style="flex-shrink:0;"
-                    >
-                      <circle cx="12" cy="12" r="9"></circle>
-                      <polyline points="12 7 12 12 15 14"></polyline>
-                    </svg>
-        
-                    <div style="
-                      font-size:11px;
-                      font-weight:500;
-                      color:#475569;
-                    ">
-                      ${properties.liveHours}
-                    </div>
-        
-                  </div>
-        
-                  ${
-                    properties.timeRemaining
-                      ? `
-                      <div style="
-                        display:flex;
-                        align-items:center;
-                        gap:7px;
-                        margin-top:1px;
-                      ">
-        
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#64748b"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          style="flex-shrink:0;"
-                        >
-                          <path d="M6 2h12"></path>
-                          <path d="M6 22h12"></path>
-                          <path d="M8 2v6a4 4 0 0 0 8 0V2"></path>
-                          <path d="M16 22v-6a4 4 0 0 0-8 0v6"></path>
-                        </svg>
-        
-                        <div style="
-                          font-size:11px;
-                          font-weight:500;
-                          color:#475569;
-                        ">
-                          ${properties.timeRemaining}
-                        </div>
-        
-                      </div>
-                      `
-                      : ""
-                  }
-        
-                </div>
-                `
-                : ""
-            }
-        
-          </div>
-        `)
+        .setHTML(buildPopupHTML(properties))
         .addTo(map);
     });
 
     map.on("mouseleave", layerId, () => {
       map.getCanvas().style.cursor = "";
-      if (map.getLayer("campus-building-hover")) {
-        map.setFilter("campus-building-hover", ["==", ["get", "id"], ""]);
-      }
-      if (map.getLayer("residence-building-hover")) {
-        map.setFilter("residence-building-hover", ["==", ["get", "id"], ""]);
-      }
+
+      clearBuildingHover(map);
+
       hoverPopup.remove();
     });
-    map.on("click", layerId, (e) => {
-      const eventLayers = getActiveEventLayerIds(map);
-      if (
-        eventLayers.length &&
-        map.queryRenderedFeatures(e.point, { layers: eventLayers }).length
-      ) {
-        return;
-      }
 
-      const feature = e.features?.[0];
+    map.on("click", layerId, (event) => {
+      if (isHoveringEvent(map, event.point)) return;
+
+      const feature = event.features?.[0];
       if (!feature) return;
 
-      const properties = feature.properties as BuildingProperties;
+      const properties =
+        feature.properties as BuildingProperties;
 
       hoverPopup.remove();
-      //since we send a callback function setSelectedBuilding it will use that
-      //useState hook and send the properties information back into the
-      //selectedBuilding so we can use it in map.tsx
+
       onBuildingClick?.(properties);
     });
   });
