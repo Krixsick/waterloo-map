@@ -60,8 +60,8 @@ const filters: {
     label: "Gyms",
     value: "gym",
     icon: Dumbbell,
-    activeClass: "bg-rose-50 text-rose-800",
-    checkClass: "border-rose-600 bg-rose-600",
+    activeClass: "bg-indigo-50 text-indigo-800",
+    checkClass: "border-indigo-600 bg-indigo-600",
   },
   {
     label: "Student Life",

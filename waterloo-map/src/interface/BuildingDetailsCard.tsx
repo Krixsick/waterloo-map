@@ -1,5 +1,7 @@
 import {
+  Activity,
   Clock3,
+  ExternalLink,
   Info,
   LocateFixed,
   MapPin,
@@ -9,13 +11,47 @@ import {
 } from "lucide-react";
 
 import type { BuildingFeature } from "../data/buildings";
+import type {
+  LibraryOccupancyLevel,
+  LibraryOccupancyLocation,
+  LibraryOccupancyZone,
+} from "../types/library";
 import { buildingCategoryDetails } from "./buildingCategoryDetails";
 
 type BuildingDetailsCardProps = {
   building: BuildingFeature | null;
+  libraryOccupancy: LibraryOccupancyLocation | null;
+  libraryOccupancyLoading: boolean;
+  libraryOccupancyError: boolean;
+  libraryOccupancySource?: string;
   onClose: () => void;
   onRecenter: () => void;
 };
+
+const occupancyLabels: Record<LibraryOccupancyLevel, string> = {
+  "not-busy": "Not busy",
+  busy: "Busy",
+  "very-busy": "Very busy",
+  closed: "Closed",
+  unavailable: "Unavailable",
+};
+
+const occupancyStyles: Record<LibraryOccupancyLevel, string> = {
+  "not-busy": "bg-emerald-500",
+  busy: "bg-amber-500",
+  "very-busy": "bg-violet-600",
+  closed: "bg-slate-400",
+  unavailable: "bg-slate-300",
+};
+
+function zoneSummary(zone: LibraryOccupancyZone) {
+  if (zone.level === "closed" || zone.level === "unavailable") {
+    return occupancyLabels[zone.level];
+  }
+  return zone.percentage === null
+    ? occupancyLabels[zone.level]
+    : `${zone.percentage}% full`;
+}
 
 function ActionButton({
   icon: Icon,
@@ -42,6 +78,10 @@ function ActionButton({
 
 export default function BuildingDetailsCard({
   building,
+  libraryOccupancy,
+  libraryOccupancyLoading,
+  libraryOccupancyError,
+  libraryOccupancySource = "https://waitz.io/waterloo",
   onClose,
   onRecenter,
 }: BuildingDetailsCardProps) {
@@ -51,6 +91,11 @@ export default function BuildingDetailsCard({
   const category = buildingCategoryDetails[properties.category];
   const CategoryIcon = category.icon;
   const [longitude, latitude] = geometry.coordinates;
+  const isLibrary = properties.category === "library";
+  const occupancyUnavailable =
+    libraryOccupancyError ||
+    !libraryOccupancy ||
+    libraryOccupancy.level === "unavailable";
 
   function openDirections() {
     const destination = encodeURIComponent(`${latitude},${longitude}`);
@@ -129,6 +174,107 @@ export default function BuildingDetailsCard({
             )}
           </div>
         </div>
+
+        {isLibrary && (
+          <div className="flex gap-4 py-4">
+            <Activity className="mt-0.5 size-5 shrink-0 text-amber-600" />
+            <div className="min-w-0 flex-1">
+              <dt className="text-xs font-medium uppercase text-slate-500">
+                Live occupancy
+              </dt>
+
+              {libraryOccupancyLoading ? (
+                <dd className="mt-1 text-sm text-slate-600">
+                  Checking how busy it is…
+                </dd>
+              ) : occupancyUnavailable ? (
+                <dd className="mt-1">
+                  <p className="text-sm text-slate-600">
+                    Live occupancy is unavailable right now.
+                  </p>
+                  <a
+                    href={libraryOccupancySource}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900"
+                  >
+                    Check Waterloo occupancy
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                </dd>
+              ) : (
+                <dd className="mt-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-semibold text-slate-900">
+                      {occupancyLabels[libraryOccupancy.level]}
+                    </span>
+                    {libraryOccupancy.percentage !== null &&
+                      libraryOccupancy.isOpen && (
+                        <span className="text-xs font-medium text-slate-500">
+                          {libraryOccupancy.percentage}% full
+                        </span>
+                      )}
+                  </div>
+
+                  {libraryOccupancy.percentage !== null &&
+                    libraryOccupancy.isOpen && (
+                      <div
+                        className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
+                        role="progressbar"
+                        aria-label={`${properties.name} occupancy`}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={libraryOccupancy.percentage}
+                      >
+                        <div
+                          className={`h-full rounded-full transition-[width] ${occupancyStyles[libraryOccupancy.level]}`}
+                          style={{ width: `${libraryOccupancy.percentage}%` }}
+                        />
+                      </div>
+                    )}
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Estimated from anonymous device activity.
+                  </p>
+
+                  {libraryOccupancy.zones.length > 0 &&
+                    libraryOccupancy.isOpen && (
+                      <details className="mt-3 rounded-md border border-slate-200 bg-slate-50">
+                        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700">
+                          View floor details
+                        </summary>
+                        <div className="divide-y divide-slate-200 border-t border-slate-200 px-3">
+                          {libraryOccupancy.zones.map((zone) => (
+                            <div
+                              key={zone.id}
+                              className="flex items-center justify-between gap-3 py-2"
+                            >
+                              <span className="text-xs leading-4 text-slate-700">
+                                {zone.name}
+                              </span>
+                              <span className="shrink-0 text-xs font-medium text-slate-500">
+                                {zoneSummary(zone)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+
+                  <a
+                    href={libraryOccupancySource}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900"
+                  >
+                    Live data by Waitz
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                </dd>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-4 py-4">
           <MapPin className="mt-0.5 size-5 shrink-0 text-[#13735a]" />

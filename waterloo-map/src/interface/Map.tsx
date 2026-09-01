@@ -25,7 +25,7 @@ import {
 import { addEventLayers, updateEventMarkers } from "../map/eventLayers";
 
 //apis
-import { useLibraryHours } from "../api/libraryApi";
+import { useLibraryHours, useLibraryOccupancy } from "../api/libraryApi";
 import { useWaterlooEvents } from "../api/events";
 import { useTransitStops, useTransitVehicles } from "../api/transitApi";
 
@@ -43,7 +43,10 @@ import type {
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 
-import { getTimeRemaining } from "../utils/timeUtils";
+import {
+  getTimeRemaining,
+  getTodaysLibraryHours,
+} from "../utils/timeUtils";
 import { mapEventsToCampus } from "../utils/eventLocations";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -78,6 +81,14 @@ function Map() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
   const { data: libraryHours = {} } = useLibraryHours();
+  const selectedBuildingCategory = buildings.features.find(
+    ({ properties }) => properties.id === selectedBuildingId,
+  )?.properties.category;
+  const {
+    data: libraryOccupancyResponse,
+    isError: isLibraryOccupancyError,
+    isPending: isLibraryOccupancyPending,
+  } = useLibraryOccupancy(selectedBuildingCategory === "library");
   const {
     data: eventsResponse,
     isError: isEventsError,
@@ -153,7 +164,7 @@ function Map() {
       ...buildings,
       features: buildings.features.map((feature) => {
         const libraryInfo = libraryHours[feature.properties.name];
-        const liveHours = libraryInfo?.[0]?.time ?? null;
+        const liveHours = getTodaysLibraryHours(libraryInfo);
 
         return {
           ...feature,
@@ -173,6 +184,15 @@ function Map() {
       ) ?? null,
     [buildingsWithBackendInfo, selectedBuildingId],
   );
+  const selectedLibraryOccupancy = useMemo(() => {
+    if (selectedBuilding?.properties.category !== "library") return null;
+
+    return (
+      libraryOccupancyResponse?.locations.find(
+        ({ name }) => name === selectedBuilding.properties.name,
+      ) ?? null
+    );
+  }, [libraryOccupancyResponse?.locations, selectedBuilding]);
 
   function flyToBuilding(building: BuildingFeature) {
     if (!mapInstance) return;
@@ -437,6 +457,13 @@ function Map() {
         />
         <BuildingDetailsCard
           building={selectedBuilding}
+          libraryOccupancy={selectedLibraryOccupancy}
+          libraryOccupancyLoading={
+            selectedBuilding?.properties.category === "library" &&
+            isLibraryOccupancyPending
+          }
+          libraryOccupancyError={isLibraryOccupancyError}
+          libraryOccupancySource={libraryOccupancyResponse?.source}
           onClose={() => setSelectedBuildingId(null)}
           onRecenter={() => {
             if (selectedBuilding) flyToBuilding(selectedBuilding);
