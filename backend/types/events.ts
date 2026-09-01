@@ -3,31 +3,42 @@ export interface Wat2DoEvent {
   title: string;
   description?: string | null;
   location?: string | null;
-  dtstart_utc?: string | null;
-  dtend_utc?: string | null;
   price?: number | null;
-  food?: string | null;
+  food?: string | string[] | null;
   registration?: boolean | null;
   source_image_url?: string | null;
   school?: string | null;
   source_url?: string | null;
-  display_handle?: string | null;
-  club_type?: string | null;
+  category?: string | null;
+  organization?: string | null;
+  organization_type?: string | null;
+  organization_logo_url?: string | null;
+  ig_handle?: string | null;
+  cancelled?: boolean;
   added_at?: string | null;
-  categories?: string[];
   occurrences?: Wat2DoOccurrence[];
 }
 
 export interface Wat2DoOccurrence {
+  id?: string;
+  event_id?: number;
   dtstart_utc?: string | null;
   dtend_utc?: string | null;
+  duration?: number | null;
+  tz?: string | null;
+  created_at?: string | null;
 }
 
 export interface Wat2DoEventsResponse {
-  results: Wat2DoEvent[];
-  nextCursor?: string | null;
-  hasMore?: boolean;
-  totalCount?: number;
+  items: Wat2DoEvent[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  latest_added_event?: {
+    title: string;
+    added_at: string;
+  } | null;
 }
 
 export interface WaterlooEvent {

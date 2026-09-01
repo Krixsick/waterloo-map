@@ -5,7 +5,7 @@ const BUILDING_ALIASES: Record<string, string[]> = {
   "dc-building": ["davis centre", "davis center"],
   "dc-library": ["davis library"],
   mc: ["math and computer", "mathematics and computer"],
-  slc: ["great hall", "student life center"],
+  slc: ["great hall", "student life center", "the bomber", "bomber"],
   pac: ["physical activity complex"],
   cif: ["columbia ice fields"],
   qnc: ["quantum nano", "quantum-nano"],

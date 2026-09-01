@@ -1,7 +1,13 @@
 import express from "express";
 import axios from "axios";
 import * as cheerio from "cheerio";
-import { type TimeSlot } from "../types/library";
+import {
+  type LibraryOccupancyLevel,
+  type LibraryOccupancyLocation,
+  type LibraryOccupancyResponse,
+  type LibraryOccupancyZone,
+  type TimeSlot,
+} from "../types/library";
 import { withCache } from "../cache";
 
 const UW_API_KEY = process.env.UW_API_KEY;
@@ -25,7 +31,29 @@ const library_map: Record<string, string> = {
  Email us 7546Ask us
  */
 const library_website = "https://libcal.uwaterloo.ca/hours";
+const library_occupancy_website = "https://waitz.io/waterloo";
+const library_occupancy_api = "https://waitz.io/live/waterloo";
 const libraryRouter = express();
+export const libraryOccupancyRouter = express.Router();
+
+type WaitzOccupancySpace = {
+  id: number;
+  name: string;
+  percentage?: number | null;
+  capacity?: number | null;
+  people?: number | null;
+  isOpen?: boolean;
+  isAvailable?: boolean;
+  subLocs?: WaitzOccupancySpace[] | false;
+};
+
+type WaitzOccupancyResponse = {
+  data?: WaitzOccupancySpace[];
+};
+
+const canonicalLibraryNames: Record<string, string> = {
+  "Davis Library": "Davis Centre Library",
+};
 
 const uw = axios.create({
   baseURL: "https://openapi.data.uwaterloo.ca/v3",
@@ -69,6 +97,77 @@ const scrap_library_information = async () => {
   return waterloo_library_information;
 };
 
+function percentageValue(value?: number | null): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.round(Math.min(Math.max(value, 0), 1) * 100);
+}
+
+function optionalNumber(value?: number | null): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function occupancyLevel(
+  percentage: number | null,
+  isOpen: boolean,
+  isAvailable: boolean,
+): LibraryOccupancyLevel {
+  if (!isOpen) return "closed";
+  if (!isAvailable || percentage === null) return "unavailable";
+  if (percentage <= 45) return "not-busy";
+  if (percentage <= 80) return "busy";
+  return "very-busy";
+}
+
+function normalizeOccupancyZone(space: WaitzOccupancySpace): LibraryOccupancyZone {
+  const percentage = percentageValue(space.percentage);
+  const isOpen = space.isOpen !== false;
+  const isAvailable = space.isAvailable !== false;
+
+  return {
+    id: space.id,
+    name: space.name,
+    percentage,
+    capacity: optionalNumber(space.capacity),
+    people: optionalNumber(space.people),
+    level: occupancyLevel(percentage, isOpen, isAvailable),
+    isOpen,
+    isAvailable,
+  };
+}
+
+function normalizeOccupancyLocation(
+  space: WaitzOccupancySpace,
+): LibraryOccupancyLocation {
+  return {
+    ...normalizeOccupancyZone(space),
+    name: canonicalLibraryNames[space.name] ?? space.name,
+    zones: Array.isArray(space.subLocs)
+      ? space.subLocs.map(normalizeOccupancyZone)
+      : [],
+  };
+}
+
+async function loadLibraryOccupancy(): Promise<LibraryOccupancyResponse> {
+  const response = await axios.get<WaitzOccupancyResponse>(
+    library_occupancy_api,
+    {
+      timeout: 10_000,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "waterloo-map/1.0",
+      },
+    },
+  );
+
+  const spaces = Array.isArray(response.data?.data) ? response.data.data : [];
+
+  return {
+    locations: spaces.map(normalizeOccupancyLocation),
+    source: library_occupancy_website,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
 /**
  * Route to display information about libraries hours
  */
@@ -105,6 +204,21 @@ libraryRouter.get("/food", async (req, res) => {
       err.response?.data ?? err.message,
     );
     res.status(500).json({ error: "UW API request failed" });
+  }
+});
+
+libraryOccupancyRouter.get("/", async (_req, res) => {
+  try {
+    const data = await withCache(
+      "library:occupancy:v1",
+      60,
+      loadLibraryOccupancy,
+    );
+
+    res.json(data);
+  } catch (error) {
+    console.error("Library occupancy request failed:", error);
+    res.status(500).json({ error: "Failed to load library occupancy" });
   }
 });
 

@@ -32,7 +32,7 @@ export const buildingCategoryDetails: Record<
   gym: {
     icon: Dumbbell,
     label: "Gym",
-    styles: "bg-rose-100 text-rose-700",
+    styles: "bg-indigo-100 text-indigo-700",
   },
   "student-life": {
     icon: Users,
