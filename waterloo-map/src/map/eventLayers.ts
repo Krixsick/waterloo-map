@@ -12,6 +12,9 @@ export const EVENT_MARKER_LAYER_ID = "event-markers";
 const EVENT_LABEL_LAYER_ID = "event-labels";
 const EVENT_PIN_IMAGE_ID = "event-calendar-pin";
 
+const EVENT_POPUP_CLASS = "uw-event-popup";
+const EVENT_POPUP_STYLE_ID = "uw-event-popup-styles";
+
 type EventProperties = {
   id: number;
   name: string;
@@ -50,28 +53,97 @@ function eventsToGeoJson(
   };
 }
 
+function addEventPopupStyles() {
+  if (document.getElementById(EVENT_POPUP_STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = EVENT_POPUP_STYLE_ID;
+
+  style.innerHTML = `
+    .${EVENT_POPUP_CLASS} .mapboxgl-popup-content {
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    .${EVENT_POPUP_CLASS} .mapboxgl-popup-tip {
+      border-top-color: rgba(255, 255, 255, 0.82) !important;
+    }
+
+    .uw-event-preview {
+      width: 240px;
+      padding: 14px 16px;
+      border: 1px solid rgba(221, 214, 254, 0.8);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+      color: #0f172a;
+      font-family: "Figtree", sans-serif;
+    }
+
+    .uw-event-preview-label {
+      margin: 0;
+      color: #7c3aed;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.4;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .uw-event-preview-title {
+      margin: 6px 0 0;
+      color: #0f172a;
+      font-family: "Figtree", sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+
+    .uw-event-preview-details {
+      margin: 6px 0 0;
+      color: #64748b;
+      font-family: "Figtree", sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
 function addEventPinImage(map: Map) {
   if (map.hasImage(EVENT_PIN_IMAGE_ID)) return;
 
   const canvas = document.createElement("canvas");
   canvas.width = 64;
   canvas.height = 76;
+
   const context = canvas.getContext("2d");
   if (!context) return;
 
   context.shadowColor = "rgba(15, 23, 42, 0.24)";
   context.shadowBlur = 8;
   context.shadowOffsetY = 4;
+
   context.beginPath();
   context.moveTo(32, 70);
   context.bezierCurveTo(26, 59, 9, 46, 9, 28);
   context.arc(32, 28, 23, Math.PI, 0);
   context.bezierCurveTo(55, 46, 38, 59, 32, 70);
   context.closePath();
+
   context.fillStyle = "#7c3aed";
   context.fill();
 
   context.shadowColor = "transparent";
+
   context.strokeStyle = "#ffffff";
   context.lineWidth = 4;
   context.stroke();
@@ -80,50 +152,70 @@ function addEventPinImage(map: Map) {
   context.lineWidth = 3;
   context.lineCap = "round";
   context.lineJoin = "round";
+
   context.strokeRect(21, 20, 22, 19);
+
   context.beginPath();
   context.moveTo(21, 26);
   context.lineTo(43, 26);
+
   context.moveTo(26, 17);
   context.lineTo(26, 22);
+
   context.moveTo(38, 17);
   context.lineTo(38, 22);
+
   context.stroke();
 
-  map.addImage(EVENT_PIN_IMAGE_ID, context.getImageData(0, 0, 64, 76), {
-    pixelRatio: 2,
-  });
+  map.addImage(
+    EVENT_PIN_IMAGE_ID,
+    context.getImageData(0, 0, 64, 76),
+    {
+      pixelRatio: 2,
+    },
+  );
 }
 
 function createEventPreview(properties: EventProperties) {
   const preview = document.createElement("div");
-  preview.className = "min-w-52 rounded-xl border border-violet-100 bg-white p-3 shadow-xl";
+  preview.className = "uw-event-preview";
 
-  const eyebrow = document.createElement("p");
-  eyebrow.className = "text-[11px] font-semibold uppercase tracking-wide text-violet-600";
-  eyebrow.textContent = "Campus event";
+  const label = document.createElement("p");
+  label.className = "uw-event-preview-label";
+  label.textContent = "Campus event";
 
   const title = document.createElement("p");
-  title.className = "mt-1 max-w-60 text-sm font-semibold leading-5 text-slate-900";
+  title.className = "uw-event-preview-title";
   title.textContent = properties.name;
 
   const details = document.createElement("p");
-  details.className = "mt-1 text-xs text-slate-500";
-  details.textContent = [properties.date, properties.time, properties.location]
+  details.className = "uw-event-preview-details";
+
+  details.textContent = [
+    properties.date,
+    properties.time,
+    properties.location,
+  ]
     .filter(Boolean)
     .join(" · ");
 
-  preview.append(eyebrow, title, details);
+  preview.append(label, title, details);
+
   return preview;
 }
 
 export function getActiveEventLayerIds(map: Map) {
-  return [EVENT_CLUSTER_LAYER_ID, EVENT_MARKER_LAYER_ID].filter((layerId) =>
-    Boolean(map.getLayer(layerId)),
-  );
+  return [
+    EVENT_CLUSTER_LAYER_ID,
+    EVENT_MARKER_LAYER_ID,
+  ].filter((layerId) => Boolean(map.getLayer(layerId)));
 }
 
-export function addEventLayers(map: Map, handlers: EventLayerHandlers) {
+export function addEventLayers(
+  map: Map,
+  handlers: EventLayerHandlers,
+) {
+  addEventPopupStyles();
   addEventPinImage(map);
 
   map.addSource(EVENT_SOURCE_ID, {
@@ -140,7 +232,15 @@ export function addEventLayers(map: Map, handlers: EventLayerHandlers) {
     source: EVENT_SOURCE_ID,
     filter: ["has", "point_count"],
     paint: {
-      "circle-radius": ["step", ["get", "point_count"], 24, 10, 30, 30, 36],
+      "circle-radius": [
+        "step",
+        ["get", "point_count"],
+        24,
+        10,
+        30,
+        30,
+        36,
+      ],
       "circle-color": "#8b5cf6",
       "circle-opacity": 0.2,
       "circle-blur": 0.65,
@@ -153,7 +253,15 @@ export function addEventLayers(map: Map, handlers: EventLayerHandlers) {
     source: EVENT_SOURCE_ID,
     filter: ["has", "point_count"],
     paint: {
-      "circle-radius": ["step", ["get", "point_count"], 17, 10, 21, 30, 25],
+      "circle-radius": [
+        "step",
+        ["get", "point_count"],
+        17,
+        10,
+        21,
+        30,
+        25,
+      ],
       "circle-color": [
         "step",
         ["get", "point_count"],
@@ -175,11 +283,16 @@ export function addEventLayers(map: Map, handlers: EventLayerHandlers) {
     filter: ["has", "point_count"],
     layout: {
       "text-field": ["get", "point_count_abbreviated"],
-      "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+      "text-font": [
+        "DIN Offc Pro Medium",
+        "Arial Unicode MS Bold",
+      ],
       "text-size": 12,
       "text-allow-overlap": true,
     },
-    paint: { "text-color": "#ffffff" },
+    paint: {
+      "text-color": "#ffffff",
+    },
   });
 
   map.addLayer({
@@ -189,7 +302,15 @@ export function addEventLayers(map: Map, handlers: EventLayerHandlers) {
     filter: ["!", ["has", "point_count"]],
     layout: {
       "icon-image": EVENT_PIN_IMAGE_ID,
-      "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.78, 18, 1],
+      "icon-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        13,
+        0.78,
+        18,
+        1,
+      ],
       "icon-anchor": "bottom",
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
@@ -204,10 +325,17 @@ export function addEventLayers(map: Map, handlers: EventLayerHandlers) {
     filter: ["!", ["has", "point_count"]],
     layout: {
       "text-field": ["get", "name"],
-      "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Regular"],
+      "text-font": [
+        "DIN Offc Pro Medium",
+        "Arial Unicode MS Regular",
+      ],
       "text-size": 11,
       "text-max-width": 16,
-      "text-variable-anchor": ["top", "left", "right"],
+      "text-variable-anchor": [
+        "top",
+        "left",
+        "right",
+      ],
       "text-radial-offset": 2.5,
       "text-justify": "auto",
       "text-padding": 4,
@@ -225,58 +353,142 @@ export function addEventLayers(map: Map, handlers: EventLayerHandlers) {
     closeButton: false,
     closeOnClick: false,
     offset: [0, -34],
-    className: "uw-event-popup",
+    className: EVENT_POPUP_CLASS,
   });
 
-  map.on("mouseenter", EVENT_MARKER_LAYER_ID, (event) => {
-    map.getCanvas().style.cursor = "pointer";
-    const feature = event.features?.[0];
-    if (!feature || feature.geometry.type !== "Point") return;
+  map.on(
+    "mouseenter",
+    EVENT_MARKER_LAYER_ID,
+    (event) => {
+      map.getCanvas().style.cursor = "pointer";
 
-    previewPopup
-      .setLngLat(feature.geometry.coordinates as [number, number])
-      .setDOMContent(createEventPreview(feature.properties as EventProperties))
-      .addTo(map);
-  });
-  map.on("mouseleave", EVENT_MARKER_LAYER_ID, () => {
-    map.getCanvas().style.cursor = "";
-    previewPopup.remove();
-  });
-  map.on("click", EVENT_MARKER_LAYER_ID, (event) => {
-    const feature = event.features?.[0];
-    const eventId = Number(feature?.properties?.id);
-    if (!Number.isFinite(eventId)) return;
-    previewPopup.remove();
-    handlers.onSelectEvent(eventId);
-  });
+      const feature = event.features?.[0];
 
-  map.on("mouseenter", EVENT_CLUSTER_LAYER_ID, () => {
-    map.getCanvas().style.cursor = "pointer";
-  });
-  map.on("mouseleave", EVENT_CLUSTER_LAYER_ID, () => {
-    map.getCanvas().style.cursor = "";
-  });
-  map.on("click", EVENT_CLUSTER_LAYER_ID, (event) => {
-    const feature = event.features?.[0];
-    if (!feature || feature.geometry.type !== "Point") return;
-    const clusterId = Number(feature.properties?.cluster_id);
-    if (!Number.isFinite(clusterId)) return;
-    const coordinates = feature.geometry.coordinates as [number, number];
-    handlers.onClearSelection?.();
+      if (
+        !feature ||
+        feature.geometry.type !== "Point"
+      ) {
+        return;
+      }
 
-    const source = map.getSource(EVENT_SOURCE_ID) as GeoJSONSource | undefined;
-    source?.getClusterExpansionZoom(clusterId, (error, zoom) => {
-      if (error || zoom === null || zoom === undefined) return;
-      map.easeTo({
-        center: coordinates,
-        zoom,
-        duration: 700,
-      });
-    });
-  });
+      previewPopup
+        .setLngLat(
+          feature.geometry.coordinates as [
+            number,
+            number,
+          ],
+        )
+        .setDOMContent(
+          createEventPreview(
+            feature.properties as EventProperties,
+          ),
+        )
+        .addTo(map);
+    },
+  );
+
+  map.on(
+    "mouseleave",
+    EVENT_MARKER_LAYER_ID,
+    () => {
+      map.getCanvas().style.cursor = "";
+      previewPopup.remove();
+    },
+  );
+
+  map.on(
+    "click",
+    EVENT_MARKER_LAYER_ID,
+    (event) => {
+      const feature = event.features?.[0];
+      const eventId = Number(
+        feature?.properties?.id,
+      );
+
+      if (!Number.isFinite(eventId)) return;
+
+      previewPopup.remove();
+
+      handlers.onSelectEvent(eventId);
+    },
+  );
+
+  map.on(
+    "mouseenter",
+    EVENT_CLUSTER_LAYER_ID,
+    () => {
+      map.getCanvas().style.cursor = "pointer";
+    },
+  );
+
+  map.on(
+    "mouseleave",
+    EVENT_CLUSTER_LAYER_ID,
+    () => {
+      map.getCanvas().style.cursor = "";
+    },
+  );
+
+  map.on(
+    "click",
+    EVENT_CLUSTER_LAYER_ID,
+    (event) => {
+      const feature = event.features?.[0];
+
+      if (
+        !feature ||
+        feature.geometry.type !== "Point"
+      ) {
+        return;
+      }
+
+      const clusterId = Number(
+        feature.properties?.cluster_id,
+      );
+
+      if (!Number.isFinite(clusterId)) return;
+
+      const coordinates =
+        feature.geometry.coordinates as [
+          number,
+          number,
+        ];
+
+      handlers.onClearSelection?.();
+
+      const source = map.getSource(
+        EVENT_SOURCE_ID,
+      ) as GeoJSONSource | undefined;
+
+      source?.getClusterExpansionZoom(
+        clusterId,
+        (error, zoom) => {
+          if (
+            error ||
+            zoom === null ||
+            zoom === undefined
+          ) {
+            return;
+          }
+
+          map.easeTo({
+            center: coordinates,
+            zoom,
+            duration: 700,
+          });
+        },
+      );
+    },
+  );
 }
 
-export function updateEventMarkers(map: Map, events: MappedWaterlooEvent[]) {
-  const source = map.getSource(EVENT_SOURCE_ID) as GeoJSONSource | undefined;
+export function updateEventMarkers(
+  map: Map,
+  events: MappedWaterlooEvent[],
+) {
+  const source = map.getSource(
+    EVENT_SOURCE_ID,
+  ) as GeoJSONSource | undefined;
+
   source?.setData(eventsToGeoJson(events));
 }
