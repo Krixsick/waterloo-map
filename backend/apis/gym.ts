@@ -373,119 +373,113 @@ async function scrapeAthleticsHours(): Promise<{
   schedule: BuildingHours | null;
   special: SpecialHours | null;
 }> {
-  const $ = await cheerio.fromURL(
-    ATHLETICS_HOURS_URL,
-  );
+  const response = await fetch(ATHLETICS_HOURS_URL);
 
-  let currentSection = "";
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch Athletics hours: ${response.status}`,
+    );
+  }
+
+  const html = await response.text();
+  const $ = cheerio.load(html);
+
+  const pageText = $("body")
+    .text()
+    .replace(/\u00a0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\r/g, "");
+
+  const rangeRegex =
+    /([A-Z]+\s+\d{1,2}\s*-\s*[A-Z]+\s+\d{1,2})(?:\s*\(REDUCED EXAM HOURS\))?/gi;
+
+  const rangeMatches = [...pageText.matchAll(rangeRegex)];
+
   let activeSchedule: BuildingHours | null = null;
 
-  const specialRows: SpecialHours[] = [];
+  for (let i = 0; i < rangeMatches.length; i++) {
+    const match = rangeMatches[i];
 
-  $("h2, table").each((_, element) => {
-    const node = $(element);
-    const tagName = element.tagName.toLowerCase();
+    const range = normalizeText(match[1]);
 
-    if (tagName === "h2") {
-      const heading = normalizeText(node.text());
-
-      if (
-        parseDateRange(heading) ||
-        /SPECIAL HOURS\s*&\s*CLOSURES/i.test(
-          heading,
-        )
-      ) {
-        currentSection = heading;
-      }
-
-      return;
+    if (!isTodayInRange(range)) {
+      continue;
     }
 
-    if (
-      tagName !== "table" ||
-      !currentSection
-    ) {
-      return;
-    }
+    const startIndex = match.index ?? 0;
 
-    const rows = node.find("tr");
+    const endIndex =
+      i + 1 < rangeMatches.length
+        ? rangeMatches[i + 1].index ?? pageText.length
+        : pageText.length;
 
-    if (
-      /SPECIAL HOURS\s*&\s*CLOSURES/i.test(
-        currentSection,
-      )
-    ) {
-      rows.each((_, row) => {
-        const cells = $(row)
-          .find("th, td")
-          .map((_, cell) =>
-            normalizeText($(cell).text()),
-          )
-          .get();
-
-        if (cells.length < 3) return;
-
-        const date = cells[0];
-        const pac = cells[1];
-        const cif = cells[2];
-
-        if (
-          !date ||
-          /^DATE$/i.test(date) ||
-          !pac ||
-          !cif
-        ) {
-          return;
-        }
-
-        specialRows.push({
-          date,
-          PAC: pac,
-          CIF: cif,
-        });
-      });
-
-      return;
-    }
-
-    if (!isTodayInRange(currentSection)) {
-      return;
-    }
+    const section = pageText.slice(
+      startIndex,
+      endIndex,
+    );
 
     const schedule: BuildingHours = {
       PAC: {},
       CIF: {},
     };
 
-    rows.each((_, row) => {
-      const cells = $(row)
-        .find("th, td")
-        .map((_, cell) =>
-          normalizeText($(cell).text()),
-        )
-        .get();
-
-      if (cells.length < 3) return;
-
-      const day = DAYS.find(
-        (item) =>
-          item.toLowerCase() ===
-          cells[0].toLowerCase(),
+    for (const day of DAYS) {
+      const dayRegex = new RegExp(
+        `${day}\\s*\\|?\\s*` +
+          `(CLOSED|\\d{1,2}:\\d{2}\\s*[AP]M\\s*-\\s*\\d{1,2}:\\d{2}\\s*[AP]M)` +
+          `\\s*\\|?\\s*` +
+          `(CLOSED|\\d{1,2}:\\d{2}\\s*[AP]M\\s*-\\s*\\d{1,2}:\\d{2}\\s*[AP]M)`,
+        "i",
       );
 
-      if (!day) return;
+      const dayMatch = section.match(dayRegex);
 
-      schedule.PAC[day] = cells[1];
-      schedule.CIF[day] = cells[2];
-    });
+      if (!dayMatch) continue;
+
+      schedule.PAC[day] = normalizeText(dayMatch[1]);
+      schedule.CIF[day] = normalizeText(dayMatch[2]);
+    }
 
     if (
       Object.keys(schedule.PAC).length > 0 &&
       Object.keys(schedule.CIF).length > 0
     ) {
       activeSchedule = schedule;
+      break;
     }
-  });
+  }
+
+  const specialRows: SpecialHours[] = [];
+
+  const specialStart = pageText.search(
+    /SPECIAL HOURS\s*&\s*CLOSURES/i,
+  );
+
+  const specialEnd = pageText.search(
+    /MAKING SPACE/i,
+  );
+
+  if (specialStart !== -1) {
+    const specialText = pageText.slice(
+      specialStart,
+      specialEnd !== -1
+        ? specialEnd
+        : pageText.length,
+    );
+
+    const specialRegex =
+      /((?:SUNDAY|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY),?\s+[A-Z]+\s+\d{1,2}|[A-Z]+\s+\d{1,2}\s*-\s*[A-Z]+\s+\d{1,2})\s*\|?\s*(CLOSED|\d{1,2}:\d{2}\s*[AP]M\s*-\s*\d{1,2}:\d{2}\s*[AP]M)\s*\|?\s*(CLOSED|\d{1,2}:\d{2}\s*[AP]M\s*-\s*\d{1,2}:\d{2}\s*[AP]M)/gi;
+
+    for (const match of specialText.matchAll(
+      specialRegex,
+    )) {
+      specialRows.push({
+        date: normalizeText(match[1]),
+        PAC: normalizeText(match[2]),
+        CIF: normalizeText(match[3]),
+      });
+    }
+  }
 
   const special =
     specialRows.find(
@@ -596,11 +590,7 @@ const combineGymInformation = async (): Promise<
 
 gymRouter.get("/", async (_req, res) => {
   try {
-    const data = await withCache(
-      "gym:full-info:v3",
-      60 * 5,
-      () => combineGymInformation(),
-    );
+    const data = await combineGymInformation();
 
     res.json(data);
   } catch (error) {

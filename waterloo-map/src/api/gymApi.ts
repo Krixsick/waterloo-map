@@ -1,27 +1,43 @@
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+
 const API_URL = import.meta.env.VITE_API_URL;
 
-const fetchGymInfo = async () => {
-  // no need for try and catch bec we want it to be an error for tanstack to catch for the {isError}
+export type GymOccupancy = {
+  name: string;
+  occupancy?: number;
+  remaining?: number;
+  maxOccupancy: number;
+  ratio: number;
+  percent: number;
+};
 
-  const response = await axios.get(`${API_URL}/gym`);
+export type GymBusyness = {
+  overall?: GymOccupancy;
+  facilities: Record<string, GymOccupancy>;
+};
+
+export type GymInfo = {
+  hours: Record<string, string>;
+  busyness: GymBusyness;
+};
+
+export type GymApiResponse = {
+  PAC: GymInfo;
+  CIF: GymInfo;
+};
+
+const fetchGymInfo = async (): Promise<GymApiResponse> => {
+  const response = await axios.get<GymApiResponse>(
+    `${API_URL}/gym`,
+  );
+
   return response.data;
 };
 
 export function useGymInfo() {
-  return useQuery({
+  return useQuery<GymApiResponse>({
     queryKey: ["gym"],
     queryFn: fetchGymInfo,
   });
 }
-
-// export async function fetchGymInfo() {
-//   const response = await fetch(`${API_URL}/gym`);
-
-//   if (!response.ok) {
-//     throw new Error(`Failed to fetch gym info: ${response.status}`);
-//   }
-
-//   return response.json();
-// }
