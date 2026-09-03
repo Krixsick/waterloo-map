@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -22,13 +27,25 @@ import {
   updateTransitStops,
   updateTransitVehicles,
 } from "../map/transitLayers";
-import { addEventLayers, updateEventMarkers } from "../map/eventLayers";
+import {
+  addEventLayers,
+  updateEventMarkers,
+} from "../map/eventLayers";
 
 //apis
-import { useLibraryHours, useLibraryOccupancy } from "../api/libraryApi";
+import {
+  useLibraryHours,
+  useLibraryOccupancy,
+} from "../api/libraryApi";
 import { useWaterlooEvents } from "../api/events";
-import { useTransitStops, useTransitVehicles } from "../api/transitApi";
-import { useGymInfo } from "../api/gymApi";
+import {
+  useTransitStops,
+  useTransitVehicles,
+} from "../api/transitApi";
+import {
+  useGymInfo,
+  type GymApiResponse,
+} from "../api/gymApi";
 
 import type {
   BuildingCategory,
@@ -50,7 +67,8 @@ import {
 } from "../utils/timeUtils";
 import { mapEventsToCampus } from "../utils/eventLocations";
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+mapboxgl.accessToken =
+  import.meta.env.VITE_MAPBOX_TOKEN;
 
 const DEFAULT_CATEGORIES: BuildingCategory[] = [
   "academic",
@@ -59,94 +77,185 @@ const DEFAULT_CATEGORIES: BuildingCategory[] = [
   "student-life",
   "residence",
 ];
+
 const NO_TRANSIT_VEHICLES: TransitVehicle[] = [];
 const NO_TRANSIT_STOPS: TransitStop[] = [];
-const DEFAULT_TRANSIT_MODES: TransitMode[] = ["bus", "ion"];
+
+const DEFAULT_TRANSIT_MODES: TransitMode[] = [
+  "bus",
+  "ion",
+];
 
 function Map() {
-  const mapContainer = useRef<HTMLDivElement | null>(null);
-  const userLocationRef = useRef<[number, number] | null>(null);
+  const mapContainer =
+    useRef<HTMLDivElement | null>(null);
 
-  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const userLocationRef =
+    useRef<[number, number] | null>(null);
+
+  const gymInfoRef =
+    useRef<GymApiResponse | undefined>(undefined);
+
+  const [mapInstance, setMapInstance] =
+    useState<mapboxgl.Map | null>(null);
+
+  const [isMapLoaded, setIsMapLoaded] =
+    useState(false);
+
   const [is3D, setIs3D] = useState(true);
-  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(
-    null,
+
+  const [
+    selectedBuildingId,
+    setSelectedBuildingId,
+  ] = useState<string | null>(null);
+
+  const [showTransit, setShowTransit] =
+    useState(false);
+
+  const [showEvents, setShowEvents] =
+    useState(false);
+
+  const [
+    activeTransitModes,
+    setActiveTransitModes,
+  ] = useState<TransitMode[]>(
+    DEFAULT_TRANSIT_MODES,
   );
-  const [showTransit, setShowTransit] = useState(false);
-  const [showEvents, setShowEvents] = useState(false);
-  const [activeTransitModes, setActiveTransitModes] =
-    useState<TransitMode[]>(DEFAULT_TRANSIT_MODES);
+
   const [selectedTransit, setSelectedTransit] =
     useState<TransitSelection | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
-  const { data: libraryHours = {} } = useLibraryHours();
-  const {data: gymInfo, isError: isGymError, isPending: isGymPending,} = useGymInfo();
+  const [selectedEventId, setSelectedEventId] =
+    useState<number | null>(null);
 
-  const selectedBuildingCategory = buildings.features.find(
-    ({ properties }) => properties.id === selectedBuildingId,
-  )?.properties.category;
+  const { data: libraryHours = {} } =
+    useLibraryHours();
+
+  const {
+    data: gymInfo,
+    isError: isGymError,
+    isPending: isGymPending,
+  } = useGymInfo();
+
+  gymInfoRef.current = gymInfo;
+
+  const selectedBuildingCategory =
+    buildings.features.find(
+      ({ properties }) =>
+        properties.id === selectedBuildingId,
+    )?.properties.category;
+
   const {
     data: libraryOccupancyResponse,
     isError: isLibraryOccupancyError,
     isPending: isLibraryOccupancyPending,
-  } = useLibraryOccupancy(selectedBuildingCategory === "library");
+  } = useLibraryOccupancy(
+    selectedBuildingCategory === "library",
+  );
+
   const {
     data: eventsResponse,
     isError: isEventsError,
     isPending: isEventsPending,
   } = useWaterlooEvents(showEvents);
+
   const {
     data: transitResponse,
     isError: isTransitError,
     isPending: isTransitPending,
   } = useTransitVehicles(showTransit);
+
   const {
     data: transitStopsResponse,
     isError: isTransitStopsError,
     isPending: isTransitStopsPending,
   } = useTransitStops(showTransit);
-  const transitVehicles = transitResponse?.data ?? NO_TRANSIT_VEHICLES;
-  const transitStops = transitStopsResponse?.data ?? NO_TRANSIT_STOPS;
+
+  const transitVehicles =
+    transitResponse?.data ??
+    NO_TRANSIT_VEHICLES;
+
+  const transitStops =
+    transitStopsResponse?.data ??
+    NO_TRANSIT_STOPS;
+
   const mappedEvents = useMemo(
-    () => mapEventsToCampus(eventsResponse?.events ?? [], buildings),
+    () =>
+      mapEventsToCampus(
+        eventsResponse?.events ?? [],
+        buildings,
+      ),
     [eventsResponse?.events],
   );
+
   const selectedEvent = useMemo(
     () =>
-      mappedEvents.find((event) => event.id === selectedEventId) ?? null,
+      mappedEvents.find(
+        (event) =>
+          event.id === selectedEventId,
+      ) ?? null,
     [mappedEvents, selectedEventId],
   );
+
   const visibleTransitVehicles = useMemo(
     () =>
       transitVehicles.filter((vehicle) =>
-        activeTransitModes.includes(vehicle.mode),
+        activeTransitModes.includes(
+          vehicle.mode,
+        ),
       ),
-    [activeTransitModes, transitVehicles],
+    [
+      activeTransitModes,
+      transitVehicles,
+    ],
   );
+
   const visibleTransitStops = useMemo(
     () =>
-      transitStops.filter((stop) => activeTransitModes.includes(stop.mode)),
+      transitStops.filter((stop) =>
+        activeTransitModes.includes(stop.mode),
+      ),
     [activeTransitModes, transitStops],
   );
+
   const hasTransitFeedProblem = [
     ...(transitResponse?.feeds ?? []),
     ...(transitStopsResponse?.feeds ?? []),
-  ].some((feed) => feed.isStale || feed.error);
-  const hasTransitData =
-    visibleTransitStops.length > 0 || visibleTransitVehicles.length > 0;
-  let transitStatus: TransitStatus = visibleTransitVehicles.length
-    ? "live"
-    : "scheduled";
+  ].some(
+    (feed) => feed.isStale || feed.error,
+  );
 
-  if (hasTransitFeedProblem || isTransitError || isTransitStopsError) {
+  const hasTransitData =
+    visibleTransitStops.length > 0 ||
+    visibleTransitVehicles.length > 0;
+
+  let transitStatus: TransitStatus =
+    visibleTransitVehicles.length
+      ? "live"
+      : "scheduled";
+
+  if (
+    hasTransitFeedProblem ||
+    isTransitError ||
+    isTransitStopsError
+  ) {
     transitStatus = "partial";
   }
-  if (isTransitStopsPending || (!hasTransitData && isTransitPending)) {
+
+  if (
+    isTransitStopsPending ||
+    (!hasTransitData &&
+      isTransitPending)
+  ) {
     transitStatus = "loading";
   }
-  if (isTransitError && isTransitStopsError) transitStatus = "error";
+
+  if (
+    isTransitError &&
+    isTransitStopsError
+  ) {
+    transitStatus = "error";
+  }
 
   const currentTransitSelection =
     selectedTransit?.type === "vehicle"
@@ -154,52 +263,94 @@ function Map() {
           type: "vehicle" as const,
           vehicle:
             visibleTransitVehicles.find(
-              (vehicle) => vehicle.id === selectedTransit.vehicle.id,
-            ) ?? selectedTransit.vehicle,
+              (vehicle) =>
+                vehicle.id ===
+                selectedTransit.vehicle.id,
+            ) ??
+            selectedTransit.vehicle,
         }
       : selectedTransit;
 
-  const [activeCategories, setActiveCategories] =
-    useState<BuildingCategory[]>(DEFAULT_CATEGORIES);
+  const [
+    activeCategories,
+    setActiveCategories,
+  ] = useState<BuildingCategory[]>(
+    DEFAULT_CATEGORIES,
+  );
 
-  const buildingsWithBackendInfo = useMemo(() => {
-    return {
-      ...buildings,
-      features: buildings.features.map((feature) => {
-        const libraryInfo = libraryHours[feature.properties.name];
-        const liveHours = getTodaysLibraryHours(libraryInfo);
+  const buildingsWithBackendInfo =
+    useMemo(() => {
+      return {
+        ...buildings,
 
-        return {
-          ...feature,
-          properties: {
-            ...feature.properties,
-            liveHours,
-            timeRemaining: getTimeRemaining(liveHours),
+        features: buildings.features.map(
+          (feature) => {
+            const libraryInfo =
+              libraryHours[
+                feature.properties.name
+              ];
+
+            const liveHours =
+              getTodaysLibraryHours(
+                libraryInfo,
+              );
+
+            return {
+              ...feature,
+
+              properties: {
+                ...feature.properties,
+                liveHours,
+                timeRemaining:
+                  getTimeRemaining(liveHours),
+              },
+            };
           },
-        };
-      }),
-    };
-  }, [libraryHours]);
+        ),
+      };
+    }, [libraryHours]);
+
   const selectedBuilding = useMemo(
     () =>
       buildingsWithBackendInfo.features.find(
-        ({ properties }) => properties.id === selectedBuildingId,
+        ({ properties }) =>
+          properties.id ===
+          selectedBuildingId,
       ) ?? null,
-    [buildingsWithBackendInfo, selectedBuildingId],
+    [
+      buildingsWithBackendInfo,
+      selectedBuildingId,
+    ],
   );
-  const selectedLibraryOccupancy = useMemo(() => {
-    if (selectedBuilding?.properties.category !== "library") return null;
 
-    return (
-      libraryOccupancyResponse?.locations.find(
-        ({ name }) => name === selectedBuilding.properties.name,
-      ) ?? null
-    );
-  }, [libraryOccupancyResponse?.locations, selectedBuilding]);
+  const selectedLibraryOccupancy =
+    useMemo(() => {
+      if (
+        selectedBuilding?.properties
+          .category !== "library"
+      ) {
+        return null;
+      }
 
-  function flyToBuilding(building: BuildingFeature) {
+      return (
+        libraryOccupancyResponse?.locations.find(
+          ({ name }) =>
+            name ===
+            selectedBuilding.properties.name,
+        ) ?? null
+      );
+    }, [
+      libraryOccupancyResponse?.locations,
+      selectedBuilding,
+    ]);
+
+  function flyToBuilding(
+    building: BuildingFeature,
+  ) {
     if (!mapInstance) return;
-    const [longitude, latitude] = building.geometry.coordinates;
+
+    const [longitude, latitude] =
+      building.geometry.coordinates;
 
     mapInstance.flyTo({
       center: [longitude, latitude],
@@ -211,18 +362,33 @@ function Map() {
     });
   }
 
-  function selectBuilding(building: BuildingFeature) {
-    setSelectedBuildingId(building.properties.id);
+  function selectBuilding(
+    building: BuildingFeature,
+  ) {
+    setSelectedBuildingId(
+      building.properties.id,
+    );
+
     setSelectedTransit(null);
     setSelectedEventId(null);
+
     flyToBuilding(building);
   }
 
-  function flyToEvent(event: (typeof mappedEvents)[number]) {
+  function flyToEvent(
+    event: (typeof mappedEvents)[number],
+  ) {
     if (!mapInstance) return;
+
     mapInstance.flyTo({
-      center: [event.coordinates.longitude, event.coordinates.latitude],
-      zoom: Math.max(mapInstance.getZoom(), 17.25),
+      center: [
+        event.coordinates.longitude,
+        event.coordinates.latitude,
+      ],
+      zoom: Math.max(
+        mapInstance.getZoom(),
+        17.25,
+      ),
       pitch: is3D ? 48 : 0,
       bearing: -20,
       duration: 1200,
@@ -230,17 +396,27 @@ function Map() {
     });
   }
 
-  function toggleCategory(category: BuildingCategory) {
+  function toggleCategory(
+    category: BuildingCategory,
+  ) {
     setActiveCategories((current) =>
       current.includes(category)
-        ? current.filter((item) => item !== category)
+        ? current.filter(
+            (item) => item !== category,
+          )
         : [...current, category],
     );
   }
 
   function resetFilters() {
-    setActiveCategories(DEFAULT_CATEGORIES);
-    setActiveTransitModes(DEFAULT_TRANSIT_MODES);
+    setActiveCategories(
+      DEFAULT_CATEGORIES,
+    );
+
+    setActiveTransitModes(
+      DEFAULT_TRANSIT_MODES,
+    );
+
     setShowTransit(false);
     setShowEvents(false);
     setSelectedBuildingId(null);
@@ -249,16 +425,28 @@ function Map() {
   }
 
   function toggleTransit() {
-    if (showTransit) setSelectedTransit(null);
-    setShowTransit((current) => !current);
+    if (showTransit) {
+      setSelectedTransit(null);
+    }
+
+    setShowTransit(
+      (current) => !current,
+    );
   }
 
   function toggleEvents() {
-    if (showEvents) setSelectedEventId(null);
-    setShowEvents((current) => !current);
+    if (showEvents) {
+      setSelectedEventId(null);
+    }
+
+    setShowEvents(
+      (current) => !current,
+    );
   }
 
-  function toggleTransitMode(mode: TransitMode) {
+  function toggleTransitMode(
+    mode: TransitMode,
+  ) {
     const selectedMode =
       selectedTransit?.type === "vehicle"
         ? selectedTransit.vehicle.mode
@@ -266,12 +454,18 @@ function Map() {
           ? selectedTransit.stop.mode
           : null;
 
-    if (activeTransitModes.includes(mode) && selectedMode === mode) {
+    if (
+      activeTransitModes.includes(mode) &&
+      selectedMode === mode
+    ) {
       setSelectedTransit(null);
     }
+
     setActiveTransitModes((current) =>
       current.includes(mode)
-        ? current.filter((item) => item !== mode)
+        ? current.filter(
+            (item) => item !== mode,
+          )
         : [...current, mode],
     );
   }
@@ -305,9 +499,12 @@ function Map() {
 
   function flyToMe() {
     if (!mapInstance) return;
-    //checks to see if user has location or not
+
     if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported by this browser.");
+      console.warn(
+        "Geolocation is not supported by this browser.",
+      );
+
       return;
     }
 
@@ -331,7 +528,8 @@ function Map() {
         ];
 
         mapInstance.flyTo({
-          center: userLocationRef.current,
+          center:
+            userLocationRef.current,
           zoom: 16,
           pitch: is3D ? 60 : 0,
           bearing: -26,
@@ -339,7 +537,9 @@ function Map() {
         });
       },
       () => {
-        console.warn("Geolocation permission denied.");
+        console.warn(
+          "Geolocation permission denied.",
+        );
       },
     );
   }
@@ -347,43 +547,70 @@ function Map() {
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    const map = createMap(mapContainer.current);
+    const map = createMap(
+      mapContainer.current,
+    );
+
     setMapInstance(map);
 
     map.on("load", () => {
       hideDefaultLabels(map);
+
       addImportantBuildingLayers(map);
-      addBuildingHoverPopup(map, ({ id }) => {
-        if (!id) return;
-        setSelectedBuildingId(id);
-        setSelectedTransit(null);
-        setSelectedEventId(null);
-      });
+
+      addBuildingHoverPopup(
+        map,
+        ({ id }) => {
+          if (!id) return;
+
+          setSelectedBuildingId(id);
+          setSelectedTransit(null);
+          setSelectedEventId(null);
+        },
+        () => gymInfoRef.current,
+      );
+
       addTransitLayers(map, {
         onSelectStop: (stop) => {
           setSelectedBuildingId(null);
           setSelectedEventId(null);
-          setSelectedTransit({ type: "stop", stop });
+
+          setSelectedTransit({
+            type: "stop",
+            stop,
+          });
         },
+
         onSelectVehicle: (vehicle) => {
           setSelectedBuildingId(null);
           setSelectedEventId(null);
-          setSelectedTransit({ type: "vehicle", vehicle });
+
+          setSelectedTransit({
+            type: "vehicle",
+            vehicle,
+          });
         },
       });
+
       addEventLayers(map, {
         onSelectEvent: (eventId) => {
           setSelectedBuildingId(null);
           setSelectedTransit(null);
           setSelectedEventId(eventId);
         },
+
         onClearSelection: () => {
           setSelectedBuildingId(null);
           setSelectedTransit(null);
           setSelectedEventId(null);
         },
       });
-      updateBuildingFilters(map, DEFAULT_CATEGORIES);
+
+      updateBuildingFilters(
+        map,
+        DEFAULT_CATEGORIES,
+      );
+
       setIsMapLoaded(true);
     });
 
@@ -395,96 +622,219 @@ function Map() {
   }, []);
 
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) return;
+    if (
+      !mapInstance ||
+      !isMapLoaded
+    ) {
+      return;
+    }
 
-    updateBuildingFilters(mapInstance, activeCategories);
-  }, [mapInstance, isMapLoaded, activeCategories]);
+    updateBuildingFilters(
+      mapInstance,
+      activeCategories,
+    );
+  }, [
+    mapInstance,
+    isMapLoaded,
+    activeCategories,
+  ]);
 
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) return;
+    if (
+      !mapInstance ||
+      !isMapLoaded
+    ) {
+      return;
+    }
 
-    const source = mapInstance.getSource("important-buildings") as
-      | mapboxgl.GeoJSONSource
-      | undefined;
+    const source =
+      mapInstance.getSource(
+        "important-buildings",
+      ) as
+        | mapboxgl.GeoJSONSource
+        | undefined;
 
-    source?.setData(buildingsWithBackendInfo);
-  }, [mapInstance, isMapLoaded, buildingsWithBackendInfo]);
+    source?.setData(
+      buildingsWithBackendInfo,
+    );
+  }, [
+    mapInstance,
+    isMapLoaded,
+    buildingsWithBackendInfo,
+  ]);
 
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) return;
+    if (
+      !mapInstance ||
+      !isMapLoaded
+    ) {
+      return;
+    }
+
     updateTransitVehicles(
       mapInstance,
-      showTransit ? visibleTransitVehicles : [],
+      showTransit
+        ? visibleTransitVehicles
+        : [],
     );
-  }, [mapInstance, isMapLoaded, showTransit, visibleTransitVehicles]);
+  }, [
+    mapInstance,
+    isMapLoaded,
+    showTransit,
+    visibleTransitVehicles,
+  ]);
 
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) return;
-    updateTransitStops(mapInstance, showTransit ? visibleTransitStops : []);
-  }, [mapInstance, isMapLoaded, showTransit, visibleTransitStops]);
+    if (
+      !mapInstance ||
+      !isMapLoaded
+    ) {
+      return;
+    }
+
+    updateTransitStops(
+      mapInstance,
+      showTransit
+        ? visibleTransitStops
+        : [],
+    );
+  }, [
+    mapInstance,
+    isMapLoaded,
+    showTransit,
+    visibleTransitStops,
+  ]);
 
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) return;
-    updateEventMarkers(mapInstance, showEvents ? mappedEvents : []);
-  }, [mapInstance, isMapLoaded, mappedEvents, showEvents]);
+    if (
+      !mapInstance ||
+      !isMapLoaded
+    ) {
+      return;
+    }
+
+    updateEventMarkers(
+      mapInstance,
+      showEvents
+        ? mappedEvents
+        : [],
+    );
+  }, [
+    mapInstance,
+    isMapLoaded,
+    mappedEvents,
+    showEvents,
+  ]);
 
   return (
     <SideBar
       renderMenuPanel={(closeMenu) => (
         <MapFilters
-          activeCategories={activeCategories}
-          onToggleCategory={toggleCategory}
+          activeCategories={
+            activeCategories
+          }
+          onToggleCategory={
+            toggleCategory
+          }
           onResetFilters={resetFilters}
           showTransit={showTransit}
           onToggleTransit={toggleTransit}
-          activeTransitModes={activeTransitModes}
-          onToggleTransitMode={toggleTransitMode}
-          transitStopCount={visibleTransitStops.length}
-          transitVehicleCount={visibleTransitVehicles.length}
+          activeTransitModes={
+            activeTransitModes
+          }
+          onToggleTransitMode={
+            toggleTransitMode
+          }
+          transitStopCount={
+            visibleTransitStops.length
+          }
+          transitVehicleCount={
+            visibleTransitVehicles.length
+          }
           transitStatus={transitStatus}
           showEvents={showEvents}
           onToggleEvents={toggleEvents}
           eventCount={mappedEvents.length}
-          eventsLoading={showEvents && isEventsPending}
-          eventsError={showEvents && isEventsError}
+          eventsLoading={
+            showEvents &&
+            isEventsPending
+          }
+          eventsError={
+            showEvents &&
+            isEventsError
+          }
           onClose={closeMenu}
         />
       )}
     >
       <div className="relative h-screen w-full overflow-hidden">
-        <LoadingScreen isComplete={isMapLoaded} />
+        <LoadingScreen
+          isComplete={isMapLoaded}
+        />
 
         <SearchBar
-          buildings={buildingsWithBackendInfo}
-          onSelectBuilding={selectBuilding}
+          buildings={
+            buildingsWithBackendInfo
+          }
+          onSelectBuilding={
+            selectBuilding
+          }
         />
+
         <BuildingDetailsCard
           building={selectedBuilding}
-          libraryOccupancy={selectedLibraryOccupancy}
+          libraryOccupancy={
+            selectedLibraryOccupancy
+          }
           libraryOccupancyLoading={
-            selectedBuilding?.properties.category === "library" &&
+            selectedBuilding?.properties
+              .category === "library" &&
             isLibraryOccupancyPending
           }
-          libraryOccupancyError={isLibraryOccupancyError}
-          libraryOccupancySource={libraryOccupancyResponse?.source}
+          libraryOccupancyError={
+            isLibraryOccupancyError
+          }
+          libraryOccupancySource={
+            libraryOccupancyResponse?.source
+          }
           gymInfo={gymInfo}
-          gymLoading={selectedBuilding?.properties.category === "gym" && isGymPending}
+          gymLoading={
+            selectedBuilding?.properties
+              .category === "gym" &&
+            isGymPending
+          }
           gymError={isGymError}
-          onClose={() => setSelectedBuildingId(null)}
+          onClose={() =>
+            setSelectedBuildingId(null)
+          }
           onRecenter={() => {
-            if (selectedBuilding) flyToBuilding(selectedBuilding);
+            if (selectedBuilding) {
+              flyToBuilding(
+                selectedBuilding,
+              );
+            }
           }}
         />
+
         <EventDetailsCard
           event={selectedEvent}
-          onClose={() => setSelectedEventId(null)}
+          onClose={() =>
+            setSelectedEventId(null)
+          }
           onRecenter={() => {
-            if (selectedEvent) flyToEvent(selectedEvent);
+            if (selectedEvent) {
+              flyToEvent(selectedEvent);
+            }
           }}
         />
+
         <TransitDetailsCard
-          selection={currentTransitSelection}
-          onClose={() => setSelectedTransit(null)}
+          selection={
+            currentTransitSelection
+          }
+          onClose={() =>
+            setSelectedTransit(null)
+          }
         />
 
         <MapControls
@@ -494,7 +844,10 @@ function Map() {
           onFlyToMe={flyToMe}
         />
 
-        <div className="h-full w-full" ref={mapContainer} />
+        <div
+          className="h-full w-full"
+          ref={mapContainer}
+        />
       </div>
     </SideBar>
   );
