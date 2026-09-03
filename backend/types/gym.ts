@@ -7,18 +7,12 @@ export interface GymOccupy {
   percent: number | undefined;
 }
 
-export interface GymFullInfo {
-  hours: Record<string, string> | null;
-  busyness: GymOccupy | null;
-}
+export type GymBusyness = {
+  overall?: GymOccupy;
+  facilities: Record<string, GymOccupy>;
+};
 
-//unnecessary
-// export interface GymHours {
-//   monday: number | undefined;
-//   tuesday: number | undefined;
-//   wednesday: number | undefined;
-//   thursday: number | undefined;
-//   friday: number | undefined;
-//   saturday: number | undefined;
-//   sunday: number | undefined;
-// }
+export type GymFullInfo = {
+  hours: Record<string, string>;
+  busyness: GymBusyness;
+};
