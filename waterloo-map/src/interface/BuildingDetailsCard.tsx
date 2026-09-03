@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { GymApiResponse } from "../api/gymApi";
 import type { BuildingFeature } from "../data/buildings";
 import type {
   LibraryOccupancyLevel,
@@ -24,6 +25,9 @@ type BuildingDetailsCardProps = {
   libraryOccupancyLoading: boolean;
   libraryOccupancyError: boolean;
   libraryOccupancySource?: string;
+  gymInfo?: GymApiResponse;
+  gymLoading: boolean;
+  gymError: boolean;
   onClose: () => void;
   onRecenter: () => void;
 };
@@ -48,9 +52,39 @@ function zoneSummary(zone: LibraryOccupancyZone) {
   if (zone.level === "closed" || zone.level === "unavailable") {
     return occupancyLabels[zone.level];
   }
+
   return zone.percentage === null
     ? occupancyLabels[zone.level]
     : `${zone.percentage}% full`;
+}
+
+function getToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    weekday: "long",
+    timeZone: "America/Toronto",
+  }).format(new Date());
+}
+
+function getGymOccupancyLabel(percent: number) {
+  if (percent < 30) return "Not busy";
+  if (percent < 60) return "Moderately busy";
+  if (percent < 80) return "Busy";
+
+  return "Very busy";
+}
+
+function getGymOccupancyStyle(percent: number) {
+  if (percent < 30) return "bg-emerald-500";
+  if (percent < 60) return "bg-amber-400";
+  if (percent < 80) return "bg-orange-500";
+
+  return "bg-violet-600";
+}
+
+function getGymFacilityName(name: string) {
+  return name
+    .replace(/^PAC - /, "")
+    .replace("CIF Fitness Centre", "Fitness Centre");
 }
 
 function ActionButton({
@@ -82,6 +116,9 @@ export default function BuildingDetailsCard({
   libraryOccupancyLoading,
   libraryOccupancyError,
   libraryOccupancySource = "https://waitz.io/waterloo",
+  gymInfo,
+  gymLoading,
+  gymError,
   onClose,
   onRecenter,
 }: BuildingDetailsCardProps) {
@@ -90,15 +127,49 @@ export default function BuildingDetailsCard({
   const { properties, geometry } = building;
   const category = buildingCategoryDetails[properties.category];
   const CategoryIcon = category.icon;
+
   const [longitude, latitude] = geometry.coordinates;
+
   const isLibrary = properties.category === "library";
+  const isGym = properties.category === "gym";
+
   const occupancyUnavailable =
     libraryOccupancyError ||
     !libraryOccupancy ||
     libraryOccupancy.level === "unavailable";
 
+  const today = getToday();
+
+  const abbreviation = properties.abbreviation?.toUpperCase();
+
+  const gymKey =
+    abbreviation === "PAC"
+      ? "PAC"
+      : abbreviation === "CIF"
+        ? "CIF"
+        : null;
+
+  const gym =
+    isGym && gymKey && gymInfo
+      ? gymInfo[gymKey]
+      : null;
+
+  const gymHours = gym?.hours[today];
+  const gymOccupancy = gym?.busyness.overall;
+
+  const gymFacilities = gym
+    ? Object.values(gym.busyness.facilities)
+    : [];
+
+  const displayHours = isGym
+    ? gymHours ?? "Hours unavailable"
+    : properties.liveHours ?? "Hours unavailable";
+
   function openDirections() {
-    const destination = encodeURIComponent(`${latitude},${longitude}`);
+    const destination = encodeURIComponent(
+      `${latitude},${longitude}`,
+    );
+
     window.open(
       `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
       "_blank",
@@ -123,6 +194,7 @@ export default function BuildingDetailsCard({
             <h2 className="text-ui-title text-slate-950">
               {properties.name}
             </h2>
+
             <p className="text-ui-subtitle mt-1 text-slate-500">
               {properties.abbreviation} · {category.label}
             </p>
@@ -150,6 +222,7 @@ export default function BuildingDetailsCard({
           label="Directions"
           onClick={openDirections}
         />
+
         <ActionButton
           icon={LocateFixed}
           label="Recenter"
@@ -160,14 +233,27 @@ export default function BuildingDetailsCard({
       <dl className="divide-y divide-slate-100 px-5">
         <div className="flex gap-4 py-4">
           <Clock3 className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
+
           <div>
             <dt className="text-ui-label text-slate-500">
               Today's hours
             </dt>
-            <dd className="text-ui-value mt-1 text-slate-800">
-              {properties.liveHours ?? "Hours unavailable"}
-            </dd>
-            {properties.timeRemaining && (
+
+            {isGym && gymLoading ? (
+              <dd className="text-ui-value mt-1 text-slate-600">
+                Loading hours…
+              </dd>
+            ) : isGym && gymError ? (
+              <dd className="text-ui-value mt-1 text-slate-600">
+                Hours unavailable
+              </dd>
+            ) : (
+              <dd className="text-ui-value mt-1 text-slate-800">
+                {displayHours}
+              </dd>
+            )}
+
+            {!isGym && properties.timeRemaining && (
               <p className="text-ui-meta mt-1 text-emerald-700">
                 {properties.timeRemaining}
               </p>
@@ -178,20 +264,22 @@ export default function BuildingDetailsCard({
         {isLibrary && (
           <div className="flex gap-4 py-4">
             <Activity className="mt-0.5 size-5 shrink-0 text-amber-600" />
+
             <div className="min-w-0 flex-1">
               <dt className="text-ui-label text-slate-500">
                 Live occupancy
               </dt>
 
               {libraryOccupancyLoading ? (
-                <dd className="text-ui-body mt-1 text-slate-600">
+                <dd className="text-ui-value mt-1 text-slate-600">
                   Checking how busy it is…
                 </dd>
               ) : occupancyUnavailable ? (
                 <dd className="mt-1">
-                  <p className="text-ui-body text-slate-600">
+                  <p className="text-ui-value text-slate-600">
                     Live occupancy is unavailable right now.
                   </p>
+
                   <a
                     href={libraryOccupancySource}
                     target="_blank"
@@ -205,9 +293,10 @@ export default function BuildingDetailsCard({
               ) : (
                 <dd className="mt-2">
                   <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-ui-value text-slate-900">
+                    <span className="text-ui-value text-slate-900">
                       {occupancyLabels[libraryOccupancy.level]}
                     </span>
+
                     {libraryOccupancy.percentage !== null &&
                       libraryOccupancy.isOpen && (
                         <span className="text-ui-meta font-medium text-slate-500">
@@ -224,11 +313,19 @@ export default function BuildingDetailsCard({
                         aria-label={`${properties.name} occupancy`}
                         aria-valuemin={0}
                         aria-valuemax={100}
-                        aria-valuenow={libraryOccupancy.percentage}
+                        aria-valuenow={
+                          libraryOccupancy.percentage
+                        }
                       >
                         <div
-                          className={`h-full rounded-full transition-[width] ${occupancyStyles[libraryOccupancy.level]}`}
-                          style={{ width: `${libraryOccupancy.percentage}%` }}
+                          className={`h-full rounded-full transition-[width] ${
+                            occupancyStyles[
+                              libraryOccupancy.level
+                            ]
+                          }`}
+                          style={{
+                            width: `${libraryOccupancy.percentage}%`,
+                          }}
                         />
                       </div>
                     )}
@@ -243,20 +340,24 @@ export default function BuildingDetailsCard({
                         <summary className="text-ui-action cursor-pointer px-3 py-2 text-slate-700">
                           View floor details
                         </summary>
+
                         <div className="divide-y divide-slate-200 border-t border-slate-200 px-3">
-                          {libraryOccupancy.zones.map((zone) => (
-                            <div
-                              key={zone.id}
-                              className="flex items-center justify-between gap-3 py-2"
-                            >
-                              <span className="text-ui-meta text-slate-700">
-                                {zone.name}
-                              </span>
-                              <span className="text-ui-meta shrink-0 font-medium text-slate-500">
-                                {zoneSummary(zone)}
-                              </span>
-                            </div>
-                          ))}
+                          {libraryOccupancy.zones.map(
+                            (zone) => (
+                              <div
+                                key={zone.id}
+                                className="flex items-center justify-between gap-3 py-2"
+                              >
+                                <span className="text-ui-meta text-slate-700">
+                                  {zone.name}
+                                </span>
+
+                                <span className="text-ui-meta shrink-0 font-medium text-slate-500">
+                                  {zoneSummary(zone)}
+                                </span>
+                              </div>
+                            ),
+                          )}
                         </div>
                       </details>
                     )}
@@ -276,15 +377,137 @@ export default function BuildingDetailsCard({
           </div>
         )}
 
+        {isGym && (
+          <div className="flex gap-4 py-4">
+            <Activity className="mt-0.5 size-5 shrink-0 text-amber-600" />
+
+            <div className="min-w-0 flex-1">
+              <dt className="text-ui-label text-slate-500">
+                Live occupancy
+              </dt>
+
+              {gymLoading ? (
+                <dd className="text-ui-value mt-1 text-slate-600">
+                  Checking how busy it is…
+                </dd>
+              ) : gymError || !gym ? (
+                <dd className="text-ui-value mt-1 text-slate-600">
+                  Live occupancy is unavailable right now.
+                </dd>
+              ) : !gymOccupancy ? (
+                <dd className="text-ui-value mt-1 text-slate-600">
+                  Live occupancy is unavailable right now.
+                </dd>
+              ) : (
+                <dd className="mt-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-ui-value text-slate-900">
+                      {getGymOccupancyLabel(
+                        gymOccupancy.percent,
+                      )}
+                    </span>
+
+                    <span className="text-ui-meta font-medium text-slate-500">
+                      {gymOccupancy.percent}% full
+                    </span>
+                  </div>
+
+                  <div
+                    className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
+                    role="progressbar"
+                    aria-label={`${properties.name} occupancy`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={gymOccupancy.percent}
+                  >
+                    <div
+                      className={`h-full rounded-full transition-[width] ${getGymOccupancyStyle(
+                        gymOccupancy.percent,
+                      )}`}
+                      style={{
+                        width: `${Math.min(
+                          gymOccupancy.percent,
+                          100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    {gymOccupancy.occupancy !== undefined && (
+                      <span className="text-ui-meta text-slate-500">
+                        {gymOccupancy.occupancy} inside
+                      </span>
+                    )}
+
+                    {gymOccupancy.remaining !== undefined && (
+                      <span className="text-ui-meta text-slate-500">
+                        {gymOccupancy.remaining} spots available
+                      </span>
+                    )}
+                  </div>
+
+                  {gymKey === "PAC" &&
+                    gymFacilities.length > 0 && (
+                      <details className="mt-3 rounded-md border border-slate-200 bg-slate-50">
+                        <summary className="text-ui-action cursor-pointer px-3 py-2 text-slate-700">
+                          View area details
+                        </summary>
+
+                        <div className="divide-y divide-slate-200 border-t border-slate-200 px-3">
+                          {gymFacilities.map((facility) => (
+                            <div
+                              key={facility.name}
+                              className="py-2.5"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-ui-meta text-slate-700">
+                                  {getGymFacilityName(
+                                    facility.name,
+                                  )}
+                                </span>
+
+                                <span className="text-ui-meta shrink-0 font-medium text-slate-500">
+                                  {facility.percent}% full
+                                </span>
+                              </div>
+
+                              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                <div
+                                  className={`h-full rounded-full ${getGymOccupancyStyle(
+                                    facility.percent,
+                                  )}`}
+                                  style={{
+                                    width: `${Math.min(
+                                      facility.percent,
+                                      100,
+                                    )}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                </dd>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-4 py-4">
           <MapPin className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
+
           <div>
             <dt className="text-ui-label text-slate-500">
               Location
             </dt>
+
             <dd className="text-ui-value mt-1 text-slate-800">
               University of Waterloo campus
             </dd>
+
             <p className="text-ui-meta mt-1 text-slate-500">
               {latitude.toFixed(5)}, {longitude.toFixed(5)}
             </p>
@@ -293,10 +516,12 @@ export default function BuildingDetailsCard({
 
         <div className="flex gap-4 py-4">
           <Info className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
+
           <div>
             <dt className="text-ui-label text-slate-500">
               Location type
             </dt>
+
             <dd className="text-ui-value mt-1 text-slate-800">
               {category.label}
             </dd>

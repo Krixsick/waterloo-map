@@ -28,6 +28,7 @@ import { addEventLayers, updateEventMarkers } from "../map/eventLayers";
 import { useLibraryHours, useLibraryOccupancy } from "../api/libraryApi";
 import { useWaterlooEvents } from "../api/events";
 import { useTransitStops, useTransitVehicles } from "../api/transitApi";
+import { useGymInfo } from "../api/gymApi";
 
 import type {
   BuildingCategory,
@@ -81,6 +82,8 @@ function Map() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
   const { data: libraryHours = {} } = useLibraryHours();
+  const {data: gymInfo, isError: isGymError, isPending: isGymPending,} = useGymInfo();
+
   const selectedBuildingCategory = buildings.features.find(
     ({ properties }) => properties.id === selectedBuildingId,
   )?.properties.category;
@@ -464,6 +467,9 @@ function Map() {
           }
           libraryOccupancyError={isLibraryOccupancyError}
           libraryOccupancySource={libraryOccupancyResponse?.source}
+          gymInfo={gymInfo}
+          gymLoading={selectedBuilding?.properties.category === "gym" && isGymPending}
+          gymError={isGymError}
           onClose={() => setSelectedBuildingId(null)}
           onRecenter={() => {
             if (selectedBuilding) flyToBuilding(selectedBuilding);
