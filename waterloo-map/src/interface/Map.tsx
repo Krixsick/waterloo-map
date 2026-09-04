@@ -7,50 +7,72 @@ import {
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-//components
+// components
 import { SearchBar } from "./searchbar/SearchBar";
 import { LoadingScreen } from "./loading/LoadingScreen";
 import BuildingDetailsCard from "./BuildingDetailsCard";
 import EventDetailsCard from "./EventDetailsCard";
 import TransitDetailsCard from "./TransitDetailsCard";
 import { SideBar } from "./sidebar/Sidebar";
+import MapFilters from "./MapFilters";
+import MapControls from "./MapControls";
 
-//utility functions
+// utility functions
 import { buildings } from "../data/buildings";
 import { createMap } from "../map/createMap";
 import { hideDefaultLabels } from "../map/mapStyle";
 import { addImportantBuildingLayers } from "../map/buildingLayers";
 import { addBuildingHoverPopup } from "../map/buildingHover";
 import { updateBuildingFilters } from "../map/buildingFilters";
+
 import {
   addTransitLayers,
   updateTransitStops,
   updateTransitVehicles,
 } from "../map/transitLayers";
+
 import {
   addEventLayers,
   updateEventMarkers,
 } from "../map/eventLayers";
 
-//apis
+import {
+  getTimeRemaining,
+  getTodaysLibraryHours,
+} from "../utils/timeUtils";
+
+import { mapEventsToCampus } from "../utils/eventLocations";
+
+// APIs
 import {
   useLibraryHours,
   useLibraryOccupancy,
 } from "../api/libraryApi";
+
 import { useWaterlooEvents } from "../api/events";
+
 import {
   useTransitStops,
   useTransitVehicles,
 } from "../api/transitApi";
+
 import {
   useGymInfo,
   type GymApiResponse,
 } from "../api/gymApi";
 
+import {
+  useCampusFood,
+  useResidenceFood,
+  type FoodInfo,
+} from "../api/foodApi";
+
+// types
 import type {
   BuildingCategory,
   BuildingFeature,
 } from "../data/buildings";
+
 import type {
   TransitMode,
   TransitStatus,
@@ -58,14 +80,6 @@ import type {
   TransitStop,
   TransitVehicle,
 } from "../types/transit";
-import MapFilters from "./MapFilters";
-import MapControls from "./MapControls";
-
-import {
-  getTimeRemaining,
-  getTodaysLibraryHours,
-} from "../utils/timeUtils";
-import { mapEventsToCampus } from "../utils/eventLocations";
 
 mapboxgl.accessToken =
   import.meta.env.VITE_MAPBOX_TOKEN;
@@ -126,15 +140,20 @@ function Map() {
   const [isMapLoaded, setIsMapLoaded] =
     useState(false);
 
-  const [is3D, setIs3D] = useState(true);
+  const [is3D, setIs3D] =
+    useState(true);
 
   const [
     selectedBuildingId,
     setSelectedBuildingId,
   ] = useState<string | null>(null);
 
-  const expandedParentId =
-  getExpandedParentId(selectedBuildingId);
+  const [
+    activeCategories,
+    setActiveCategories,
+  ] = useState<BuildingCategory[]>(
+    DEFAULT_CATEGORIES,
+  );
 
   const [showTransit, setShowTransit] =
     useState(false);
@@ -149,11 +168,26 @@ function Map() {
     DEFAULT_TRANSIT_MODES,
   );
 
-  const [selectedTransit, setSelectedTransit] =
-    useState<TransitSelection | null>(null);
+  const [
+    selectedTransit,
+    setSelectedTransit,
+  ] = useState<TransitSelection | null>(
+    null,
+  );
 
-  const [selectedEventId, setSelectedEventId] =
-    useState<number | null>(null);
+  const [
+    selectedEventId,
+    setSelectedEventId,
+  ] = useState<number | null>(null);
+
+  const expandedParentId =
+    getExpandedParentId(
+      selectedBuildingId,
+    );
+
+  // --------------------
+  // API DATA
+  // --------------------
 
   const { data: libraryHours = {} } =
     useLibraryHours();
@@ -164,18 +198,28 @@ function Map() {
     isPending: isGymPending,
   } = useGymInfo();
 
+  const {
+    data: campusFoodData = {},
+  } = useCampusFood();
+  
+  const {
+    data: residenceFoodData = {},
+  } = useResidenceFood();
+
   gymInfoRef.current = gymInfo;
 
   const selectedBuildingCategory =
     buildings.features.find(
       ({ properties }) =>
-        properties.id === selectedBuildingId,
+        properties.id ===
+        selectedBuildingId,
     )?.properties.category;
 
   const {
     data: libraryOccupancyResponse,
     isError: isLibraryOccupancyError,
-    isPending: isLibraryOccupancyPending,
+    isPending:
+      isLibraryOccupancyPending,
   } = useLibraryOccupancy(
     selectedBuildingCategory === "library",
   );
@@ -198,6 +242,127 @@ function Map() {
     isPending: isTransitStopsPending,
   } = useTransitStops(showTransit);
 
+  // --------------------
+  // BUILDING DATA
+  // --------------------
+
+  const buildingsWithBackendInfo =
+    useMemo(() => {
+      return {
+        ...buildings,
+
+        features: buildings.features.map(
+          (feature) => {
+            const libraryInfo =
+              libraryHours[
+                feature.properties.name
+              ];
+
+            const liveHours =
+              getTodaysLibraryHours(
+                libraryInfo,
+              );
+
+            return {
+              ...feature,
+
+              properties: {
+                ...feature.properties,
+                liveHours,
+                timeRemaining:
+                  getTimeRemaining(
+                    liveHours,
+                  ),
+              },
+            };
+          },
+        ),
+      };
+    }, [libraryHours]);
+
+  const selectedBuilding = useMemo(
+    () =>
+      buildingsWithBackendInfo.features.find(
+        ({ properties }) =>
+          properties.id ===
+          selectedBuildingId,
+      ) ?? null,
+    [
+      buildingsWithBackendInfo,
+      selectedBuildingId,
+    ],
+  );
+
+  // --------------------
+  // FOOD DATA
+  // --------------------
+
+  const selectedBuildingFood =
+    useMemo<FoodInfo[]>(() => {
+      if (!selectedBuilding) {
+        return [];
+      }
+
+      const buildingId =
+        selectedBuilding.properties.id;
+
+      const campusFood =
+        Object.values(
+          campusFoodData,
+        ).filter(
+          (food) =>
+            food.buildingId ===
+            buildingId,
+        );
+
+      const residenceFood =
+        Object.values(
+          residenceFoodData,
+        ).filter(
+          (food) =>
+            food.residenceId ===
+            buildingId,
+        );
+
+      return [
+        ...campusFood,
+        ...residenceFood,
+      ];
+    }, [
+      campusFoodData,
+      residenceFoodData,
+      selectedBuilding,
+    ]);
+
+  // --------------------
+  // LIBRARY OCCUPANCY
+  // --------------------
+
+  const selectedLibraryOccupancy =
+    useMemo(() => {
+      if (
+        selectedBuilding?.properties
+          .category !== "library"
+      ) {
+        return null;
+      }
+
+      return (
+        libraryOccupancyResponse?.locations.find(
+          ({ name }) =>
+            name ===
+            selectedBuilding.properties.name,
+        ) ?? null
+      );
+    }, [
+      libraryOccupancyResponse?.locations,
+      selectedBuilding,
+    ]);
+
+  // --------------------
+  // TRANSIT DATA
+  // --------------------
+
   const transitVehicles =
     transitResponse?.data ??
     NO_TRANSIT_VEHICLES;
@@ -206,50 +371,43 @@ function Map() {
     transitStopsResponse?.data ??
     NO_TRANSIT_STOPS;
 
-  const mappedEvents = useMemo(
-    () =>
-      mapEventsToCampus(
-        eventsResponse?.events ?? [],
-        buildings,
-      ),
-    [eventsResponse?.events],
-  );
-
-  const selectedEvent = useMemo(
-    () =>
-      mappedEvents.find(
-        (event) =>
-          event.id === selectedEventId,
-      ) ?? null,
-    [mappedEvents, selectedEventId],
-  );
-
-  const visibleTransitVehicles = useMemo(
-    () =>
-      transitVehicles.filter((vehicle) =>
-        activeTransitModes.includes(
-          vehicle.mode,
+  const visibleTransitVehicles =
+    useMemo(
+      () =>
+        transitVehicles.filter(
+          (vehicle) =>
+            activeTransitModes.includes(
+              vehicle.mode,
+            ),
         ),
-      ),
-    [
-      activeTransitModes,
-      transitVehicles,
-    ],
-  );
+      [
+        activeTransitModes,
+        transitVehicles,
+      ],
+    );
 
-  const visibleTransitStops = useMemo(
-    () =>
-      transitStops.filter((stop) =>
-        activeTransitModes.includes(stop.mode),
-      ),
-    [activeTransitModes, transitStops],
-  );
+  const visibleTransitStops =
+    useMemo(
+      () =>
+        transitStops.filter(
+          (stop) =>
+            activeTransitModes.includes(
+              stop.mode,
+            ),
+        ),
+      [
+        activeTransitModes,
+        transitStops,
+      ],
+    );
 
   const hasTransitFeedProblem = [
     ...(transitResponse?.feeds ?? []),
-    ...(transitStopsResponse?.feeds ?? []),
+    ...(transitStopsResponse?.feeds ??
+      []),
   ].some(
-    (feed) => feed.isStale || feed.error,
+    (feed) =>
+      feed.isStale || feed.error,
   );
 
   const hasTransitData =
@@ -298,78 +456,35 @@ function Map() {
         }
       : selectedTransit;
 
-  const [
-    activeCategories,
-    setActiveCategories,
-  ] = useState<BuildingCategory[]>(
-    DEFAULT_CATEGORIES,
+  // --------------------
+  // EVENT DATA
+  // --------------------
+
+  const mappedEvents = useMemo(
+    () =>
+      mapEventsToCampus(
+        eventsResponse?.events ?? [],
+        buildings,
+      ),
+    [eventsResponse?.events],
   );
 
-  const buildingsWithBackendInfo =
-    useMemo(() => {
-      return {
-        ...buildings,
-
-        features: buildings.features.map(
-          (feature) => {
-            const libraryInfo =
-              libraryHours[
-                feature.properties.name
-              ];
-
-            const liveHours =
-              getTodaysLibraryHours(
-                libraryInfo,
-              );
-
-            return {
-              ...feature,
-
-              properties: {
-                ...feature.properties,
-                liveHours,
-                timeRemaining:
-                  getTimeRemaining(liveHours),
-              },
-            };
-          },
-        ),
-      };
-    }, [libraryHours]);
-
-  const selectedBuilding = useMemo(
+  const selectedEvent = useMemo(
     () =>
-      buildingsWithBackendInfo.features.find(
-        ({ properties }) =>
-          properties.id ===
-          selectedBuildingId,
+      mappedEvents.find(
+        (event) =>
+          event.id ===
+          selectedEventId,
       ) ?? null,
     [
-      buildingsWithBackendInfo,
-      selectedBuildingId,
+      mappedEvents,
+      selectedEventId,
     ],
   );
 
-  const selectedLibraryOccupancy =
-    useMemo(() => {
-      if (
-        selectedBuilding?.properties
-          .category !== "library"
-      ) {
-        return null;
-      }
-
-      return (
-        libraryOccupancyResponse?.locations.find(
-          ({ name }) =>
-            name ===
-            selectedBuilding.properties.name,
-        ) ?? null
-      );
-    }, [
-      libraryOccupancyResponse?.locations,
-      selectedBuilding,
-    ]);
+  // --------------------
+  // MAP ACTIONS
+  // --------------------
 
   function flyToBuilding(
     building: BuildingFeature,
@@ -380,7 +495,10 @@ function Map() {
       building.geometry.coordinates;
 
     mapInstance.flyTo({
-      center: [longitude, latitude],
+      center: [
+        longitude,
+        latitude,
+      ],
       zoom: 17,
       pitch: is3D ? 60 : 0,
       bearing: -26,
@@ -429,9 +547,13 @@ function Map() {
     setActiveCategories((current) =>
       current.includes(category)
         ? current.filter(
-            (item) => item !== category,
+            (item) =>
+              item !== category,
           )
-        : [...current, category],
+        : [
+            ...current,
+            category,
+          ],
     );
   }
 
@@ -482,18 +604,25 @@ function Map() {
           : null;
 
     if (
-      activeTransitModes.includes(mode) &&
+      activeTransitModes.includes(
+        mode,
+      ) &&
       selectedMode === mode
     ) {
       setSelectedTransit(null);
     }
 
-    setActiveTransitModes((current) =>
-      current.includes(mode)
-        ? current.filter(
-            (item) => item !== mode,
-          )
-        : [...current, mode],
+    setActiveTransitModes(
+      (current) =>
+        current.includes(mode)
+          ? current.filter(
+              (item) =>
+                item !== mode,
+            )
+          : [
+              ...current,
+              mode,
+            ],
     );
   }
 
@@ -513,7 +642,10 @@ function Map() {
     if (!mapInstance) return;
 
     mapInstance.easeTo({
-      center: [-80.544, 43.471],
+      center: [
+        -80.544,
+        43.471,
+      ],
       zoom: 15,
       pitch: 60,
       bearing: -26,
@@ -537,7 +669,8 @@ function Map() {
 
     if (userLocationRef.current) {
       mapInstance.flyTo({
-        center: userLocationRef.current,
+        center:
+          userLocationRef.current,
         zoom: 16,
         pitch: is3D ? 60 : 0,
         bearing: -26,
@@ -571,6 +704,10 @@ function Map() {
     );
   }
 
+  // --------------------
+  // INITIALIZE MAP
+  // --------------------
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -583,7 +720,9 @@ function Map() {
     map.on("load", () => {
       hideDefaultLabels(map);
 
-      addImportantBuildingLayers(map);
+      addImportantBuildingLayers(
+        map,
+      );
 
       addBuildingHoverPopup(
         map,
@@ -608,7 +747,9 @@ function Map() {
           });
         },
 
-        onSelectVehicle: (vehicle) => {
+        onSelectVehicle: (
+          vehicle,
+        ) => {
           setSelectedBuildingId(null);
           setSelectedEventId(null);
 
@@ -620,7 +761,9 @@ function Map() {
       });
 
       addEventLayers(map, {
-        onSelectEvent: (eventId) => {
+        onSelectEvent: (
+          eventId,
+        ) => {
           setSelectedBuildingId(null);
           setSelectedTransit(null);
           setSelectedEventId(eventId);
@@ -648,6 +791,10 @@ function Map() {
     };
   }, []);
 
+  // --------------------
+  // BUILDING FILTERS
+  // --------------------
+
   useEffect(() => {
     if (
       !mapInstance ||
@@ -666,37 +813,96 @@ function Map() {
     activeCategories,
   ]);
 
+  // --------------------
+  // UWP CHILDREN + GROUP HIGHLIGHT
+  // --------------------
+
   useEffect(() => {
-    if (!mapInstance || !isMapLoaded) {
+    if (
+      !mapInstance ||
+      !isMapLoaded
+    ) {
       return;
     }
-  
-    const childFilter = expandedParentId
-      ? [
-          "==",
-          ["get", "parentId"],
-          expandedParentId,
-        ]
-      : [
-          "==",
-          ["get", "parentId"],
-          "",
-        ];
-  
-    mapInstance.setFilter(
-      "child-residence-building-squares",
-      childFilter,
-    );
-  
-    mapInstance.setFilter(
-      "child-residence-building-labels",
-      childFilter,
-    );
+
+    const childFilter =
+      expandedParentId
+        ? [
+            "==",
+            ["get", "parentId"],
+            expandedParentId,
+          ]
+        : [
+            "==",
+            ["get", "parentId"],
+            "",
+          ];
+
+    if (
+      mapInstance.getLayer(
+        "child-residence-building-squares",
+      )
+    ) {
+      mapInstance.setFilter(
+        "child-residence-building-squares",
+        childFilter,
+      );
+    }
+
+    if (
+      mapInstance.getLayer(
+        "child-residence-building-labels",
+      )
+    ) {
+      mapInstance.setFilter(
+        "child-residence-building-labels",
+        childFilter,
+      );
+    }
+
+    if (
+      mapInstance.getLayer(
+        "selected-residence-group",
+      )
+    ) {
+      const selectedGroupFilter =
+        expandedParentId
+          ? [
+              "any",
+              [
+                "==",
+                ["get", "id"],
+                expandedParentId,
+              ],
+              [
+                "==",
+                [
+                  "get",
+                  "parentId",
+                ],
+                expandedParentId,
+              ],
+            ]
+          : [
+              "==",
+              ["get", "id"],
+              "",
+            ];
+
+      mapInstance.setFilter(
+        "selected-residence-group",
+        selectedGroupFilter,
+      );
+    }
   }, [
     mapInstance,
     isMapLoaded,
     expandedParentId,
   ]);
+
+  // --------------------
+  // UPDATE BUILDING SOURCE
+  // --------------------
 
   useEffect(() => {
     if (
@@ -721,6 +927,10 @@ function Map() {
     isMapLoaded,
     buildingsWithBackendInfo,
   ]);
+
+  // --------------------
+  // UPDATE TRANSIT
+  // --------------------
 
   useEffect(() => {
     if (
@@ -764,6 +974,10 @@ function Map() {
     visibleTransitStops,
   ]);
 
+  // --------------------
+  // UPDATE EVENTS
+  // --------------------
+
   useEffect(() => {
     if (
       !mapInstance ||
@@ -785,9 +999,15 @@ function Map() {
     showEvents,
   ]);
 
+  // --------------------
+  // UI
+  // --------------------
+
   return (
     <SideBar
-      renderMenuPanel={(closeMenu) => (
+      renderMenuPanel={(
+        closeMenu,
+      ) => (
         <MapFilters
           activeCategories={
             activeCategories
@@ -795,9 +1015,15 @@ function Map() {
           onToggleCategory={
             toggleCategory
           }
-          onResetFilters={resetFilters}
-          showTransit={showTransit}
-          onToggleTransit={toggleTransit}
+          onResetFilters={
+            resetFilters
+          }
+          showTransit={
+            showTransit
+          }
+          onToggleTransit={
+            toggleTransit
+          }
           activeTransitModes={
             activeTransitModes
           }
@@ -810,10 +1036,18 @@ function Map() {
           transitVehicleCount={
             visibleTransitVehicles.length
           }
-          transitStatus={transitStatus}
-          showEvents={showEvents}
-          onToggleEvents={toggleEvents}
-          eventCount={mappedEvents.length}
+          transitStatus={
+            transitStatus
+          }
+          showEvents={
+            showEvents
+          }
+          onToggleEvents={
+            toggleEvents
+          }
+          eventCount={
+            mappedEvents.length
+          }
           eventsLoading={
             showEvents &&
             isEventsPending
@@ -828,7 +1062,9 @@ function Map() {
     >
       <div className="relative h-screen w-full overflow-hidden">
         <LoadingScreen
-          isComplete={isMapLoaded}
+          isComplete={
+            isMapLoaded
+          }
         />
 
         <SearchBar
@@ -841,13 +1077,19 @@ function Map() {
         />
 
         <BuildingDetailsCard
-          building={selectedBuilding}
+          building={
+            selectedBuilding
+          }
+          foodLocations={
+            selectedBuildingFood
+          }
           libraryOccupancy={
             selectedLibraryOccupancy
           }
           libraryOccupancyLoading={
-            selectedBuilding?.properties
-              .category === "library" &&
+            selectedBuilding
+              ?.properties.category ===
+              "library" &&
             isLibraryOccupancyPending
           }
           libraryOccupancyError={
@@ -858,16 +1100,23 @@ function Map() {
           }
           gymInfo={gymInfo}
           gymLoading={
-            selectedBuilding?.properties
-              .category === "gym" &&
+            selectedBuilding
+              ?.properties.category ===
+              "gym" &&
             isGymPending
           }
-          gymError={isGymError}
+          gymError={
+            isGymError
+          }
           onClose={() =>
-            setSelectedBuildingId(null)
+            setSelectedBuildingId(
+              null,
+            )
           }
           onRecenter={() => {
-            if (selectedBuilding) {
+            if (
+              selectedBuilding
+            ) {
               flyToBuilding(
                 selectedBuilding,
               );
@@ -878,11 +1127,15 @@ function Map() {
         <EventDetailsCard
           event={selectedEvent}
           onClose={() =>
-            setSelectedEventId(null)
+            setSelectedEventId(
+              null,
+            )
           }
           onRecenter={() => {
             if (selectedEvent) {
-              flyToEvent(selectedEvent);
+              flyToEvent(
+                selectedEvent,
+              );
             }
           }}
         />
@@ -892,15 +1145,21 @@ function Map() {
             currentTransitSelection
           }
           onClose={() =>
-            setSelectedTransit(null)
+            setSelectedTransit(
+              null,
+            )
           }
         />
 
         <MapControls
           is3D={is3D}
           onReset={resetMap}
-          onToggleView={toggleView}
-          onFlyToMe={flyToMe}
+          onToggleView={
+            toggleView
+          }
+          onFlyToMe={
+            flyToMe
+          }
         />
 
         <div
