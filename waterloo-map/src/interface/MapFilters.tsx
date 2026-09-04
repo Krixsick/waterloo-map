@@ -9,6 +9,7 @@ import {
   RotateCcw,
   TrainFront,
   Users,
+  Utensils,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -50,6 +51,13 @@ const filters: {
     checkClass: "border-sky-600 bg-sky-600",
   },
   {
+    label: "Student Life",
+    value: "student-life",
+    icon: Users,
+    activeClass: "bg-teal-50 text-teal-800",
+    checkClass: "border-teal-600 bg-teal-600",
+  },
+  {
     label: "Libraries",
     value: "library",
     icon: BookOpen,
@@ -62,13 +70,6 @@ const filters: {
     icon: Dumbbell,
     activeClass: "bg-indigo-50 text-indigo-800",
     checkClass: "border-indigo-600 bg-indigo-600",
-  },
-  {
-    label: "Student Life",
-    value: "student-life",
-    icon: Users,
-    activeClass: "bg-teal-50 text-teal-800",
-    checkClass: "border-teal-600 bg-teal-600",
   },
   {
     label: "Residences",

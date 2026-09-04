@@ -13,6 +13,7 @@ export type BuildingProperties = {
   abbreviation: string;
   category: BuildingCategory;
   description: string;
+  parentId?: string;
   liveHours?: string | null;
   timeRemaining?: string | null;
 };
@@ -104,7 +105,7 @@ export const buildings: BuildingsGeoJSON = {
       },
       geometry: {
         type: "Point",
-        coordinates: [-80.542085, 43.471620],
+        coordinates: [-80.5408536, 43.471676],
       },
     },
     {
@@ -558,6 +559,165 @@ export const buildings: BuildingsGeoJSON = {
     {
       type: "Feature",
       properties: {
+        id: "eby-hall",
+        name: "Eby Hall",
+        abbreviation: "EH",
+        category: "residence",
+        parentId: "uwp",
+        description: "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.53571620419638, 43.47083169493707],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "bh",
+        name: "Beck Hall",
+        abbreviation: "BH",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.53463596001428, 43.4708368087237],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "wan",
+        name: "Waterloo Court North",
+        abbreviation: "WAN",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.53521006141801, 43.470220523351415],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "was",
+        name: "Waterloo Court South",
+        abbreviation: "WAS",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.53432164365351, 43.469997637779635],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "win",
+        name: "Wilmot Court North",
+        abbreviation: "WIN",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5369773, 43.47132899581],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "wis",
+        name: "Wilmot Court South",
+        abbreviation: "WIS",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.536215599, 43.471052588022],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "wen",
+        name: "Wellesley Court North",
+        abbreviation: "WEN",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5361995, 43.4716482257],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "wes",
+        name: "Wellesley Court South",
+        abbreviation: "WES",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.53542166, 43.471227776],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "won",
+        name: "Woolwich Court North",
+        abbreviation: "WON",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5332939, 43.4710261405],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "wos",
+        name: "Woolwich Court South",
+        abbreviation: "WOS",
+        category: "residence",
+        parentId: "uwp",
+        description:
+          "Residence building within University of Waterloo Place.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5336909, 43.470356527],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
         id: "mkv",
         name: "Mackenzie King Village",
         abbreviation: "MKV",
@@ -616,7 +776,7 @@ export const buildings: BuildingsGeoJSON = {
       properties: {
         id: "united",
         name: "United College",
-        abbreviation: "UC",
+        abbreviation: "UTD",
         category: "residence",
         description: "University college with residence, dining hall, and GreenHouse programs.",
       },
@@ -630,13 +790,283 @@ export const buildings: BuildingsGeoJSON = {
       properties: {
         id: "grebel",
         name: "Conrad Grebel University College",
-        abbreviation: "CGUC",
+        abbreviation: "CGR",
         category: "residence",
         description: "University college with residence and music programs.",
       },
       geometry: {
         type: "Point",
         coordinates: [-80.545029, 43.466235],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "opt",
+        name: "School of Optometry and Vision Science",
+        abbreviation: "OPT",
+        category: "academic",
+        description:
+          "Home to the School of Optometry and Vision Science and the Waterloo Eye Institute.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5456, 43.47557]
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "bmh",
+        name: "B.C. Matthews Hall",
+        abbreviation: "BMH",
+        category: "academic",
+        description:
+          "Academic building for the Faculty of Health with classrooms, research spaces, and faculty offices.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.545333, 43.473689],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "lhi",
+        name: "Lyle S. Hallman Institute for Health Promotion",
+        abbreviation: "LHI",
+        category: "academic",
+        description:
+          "Faculty of Health building with teaching, research, and office spaces.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.54602, 43.473282],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "erc",
+        name: "Energy Research Centre",
+        abbreviation: "ERC",
+        category: "academic",
+        description:
+          "Research facility supporting energy-related research and innovation.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5444, 43.473668],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "csb",
+        name: "Central Services Building",
+        abbreviation: "CSB",
+        category: "student-life",
+        description:
+          "Campus services and operations building.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.543666, 43.473856],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "gsc",
+        name: "General Services Complex",
+        abbreviation: "GSC",
+        category: "student-life",
+        description:
+          "Campus operations and facilities services complex.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.542807, 43.473596],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "ec1",
+        name: "East Campus 1",
+        abbreviation: "EC1",
+        category: "academic",
+        description:
+          "East Campus building with university research, teaching, and office spaces.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5404009, 43.476338],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "ec2",
+        name: "East Campus 2",
+        abbreviation: "EC2",
+        category: "academic",
+        description:
+          "East Campus building with university research and office spaces.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.541379, 43.474732],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "ec3",
+        name: "East Campus 3",
+        abbreviation: "EC3",
+        category: "academic",
+        description:
+          "East Campus building with university research and office spaces.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5421005, 43.47588],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "ec4",
+        name: "East Campus 4",
+        abbreviation: "EC4",
+        category: "academic",
+        description:
+          "East Campus building with university research and office spaces.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [ -80.5397, 43.474963],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "ec5",
+        name: "East Campus 5",
+        abbreviation: "EC5",
+        category: "academic",
+        description:
+          "East Campus building with university research and office spaces.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.540741, 43.475467],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "avr",
+        name: "Autonomous Vehicle Research & Intelligence Laboratory",
+        abbreviation: "AVR",
+        category: "academic",
+        description:
+          "Research facility for autonomous vehicle and intelligent transportation technologies.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.539679, 43.47434],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "ech",
+        name: "East Campus Hall",
+        abbreviation: "ECH",
+        category: "academic",
+        description:
+          "East Campus building with university teaching, research, and office spaces.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5387579, 43.4738566],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "gh",
+        name: "Graduate House",
+        abbreviation: "GH",
+        category: "student-life",
+        description:
+          "Graduate student space for social activities, events, and community gathering.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.540887, 43.4698135],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "mhr",
+        name: "Minota Hagey Residence",
+        abbreviation: "MHR",
+        category: "residence",
+        description:
+          "Student residence located on the University of Waterloo campus.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.542535, 43.465963],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "hs",
+        name: "Health Services",
+        abbreviation: "HS",
+        category: "student-life",
+        description:
+          "Campus health services building providing medical and wellness services to students.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5461599, 43.470707],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "fed",
+        name: "Federation Hall",
+        abbreviation: "FED",
+        category: "student-life",
+        description:
+          "Campus event venue and gathering space used for student events, performances, and functions.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.548497, 43.473202],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "cln",
+        name: "Columbia Lake Village North",
+        abbreviation: "CLN",
+        category: "residence",
+        description:
+          "Student residence community located on the north side of Columbia Lake Village.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.56296, 43.472215],
       },
     },
   ],

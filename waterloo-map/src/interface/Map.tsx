@@ -86,6 +86,30 @@ const DEFAULT_TRANSIT_MODES: TransitMode[] = [
   "ion",
 ];
 
+function getExpandedParentId(
+  buildingId: string | null,
+) {
+  if (!buildingId) return null;
+
+  const building = buildings.features.find(
+    ({ properties }) =>
+      properties.id === buildingId,
+  );
+
+  if (!building) return null;
+
+  if (building.properties.parentId) {
+    return building.properties.parentId;
+  }
+
+  const hasChildren = buildings.features.some(
+    ({ properties }) =>
+      properties.parentId === buildingId,
+  );
+
+  return hasChildren ? buildingId : null;
+}
+
 function Map() {
   const mapContainer =
     useRef<HTMLDivElement | null>(null);
@@ -108,6 +132,9 @@ function Map() {
     selectedBuildingId,
     setSelectedBuildingId,
   ] = useState<string | null>(null);
+
+  const expandedParentId =
+  getExpandedParentId(selectedBuildingId);
 
   const [showTransit, setShowTransit] =
     useState(false);
@@ -637,6 +664,38 @@ function Map() {
     mapInstance,
     isMapLoaded,
     activeCategories,
+  ]);
+
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) {
+      return;
+    }
+  
+    const childFilter = expandedParentId
+      ? [
+          "==",
+          ["get", "parentId"],
+          expandedParentId,
+        ]
+      : [
+          "==",
+          ["get", "parentId"],
+          "",
+        ];
+  
+    mapInstance.setFilter(
+      "child-residence-building-squares",
+      childFilter,
+    );
+  
+    mapInstance.setFilter(
+      "child-residence-building-labels",
+      childFilter,
+    );
+  }, [
+    mapInstance,
+    isMapLoaded,
+    expandedParentId,
   ]);
 
   useEffect(() => {

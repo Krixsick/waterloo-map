@@ -9,6 +9,9 @@ export function updateBuildingFilters(
     (category) => category !== "residence",
   );
 
+  const residencesActive =
+    activeCategories.includes("residence");
+
   map.setFilter("campus-building-circles", [
     "in",
     ["get", "category"],
@@ -24,12 +27,17 @@ export function updateBuildingFilters(
   map.setFilter("residence-building-squares", [
     "all",
     ["==", ["get", "category"], "residence"],
-    ["in", ["get", "category"], ["literal", activeCategories]],
+    ["!", ["has", "parentId"]],
+    residencesActive,
   ]);
 
   map.setFilter("campus-building-labels", [
-    "in",
-    ["get", "category"],
-    ["literal", activeCategories],
+    "all",
+    [
+      "in",
+      ["get", "category"],
+      ["literal", activeCategories],
+    ],
+    ["!", ["has", "parentId"]],
   ]);
 }
