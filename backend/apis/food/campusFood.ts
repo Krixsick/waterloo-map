@@ -2,55 +2,11 @@ import * as cheerio from "cheerio";
 import express from "express";
 import type { CampusFoodInfo } from "../../types/food";
 import { withCache } from "../../cache";
-const campus_food_router = express.Router();
-const waterloo_campus_food_list = {};
 
-const waterloo_campus_food_url: Record<string, string> = {
-  "Brubakers Food Court":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/brubakers-food-court",
-  "DC BYTES - Closed for M4 Construction":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/dc-bytes-closed-m4-construction",
-  "Starbucks - STC":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/starbucks-stc",
-  "The Market":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/market",
-  "Tim Hortons - DC":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/tim-hortons-dc",
-  "Tim Hortons SLC":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/tim-hortons-slc",
-  "Browsers Cafe":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/browsers-cafe",
-  "CEIT Cafe":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/ceit-cafe",
-  "Ev3rgreen Cafe":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/ev3rgreen-cafe",
-  "Jugo Juice-CIF":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/jugo-juice-cif",
-  "Jugo Juice-SLC":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/jugo-juice-slc",
-  "Liquid Assets Cafe":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/liquid-assets-cafe",
-  "ML’s Diner":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/mls-diner",
-  "Mudie’s - Village 1":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/mudies-village-1",
-  "REVelation - Ron Eydt Village":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/revelation-ron-eydt-village",
-  "Rolltation HLTH":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/rolltation-hlth",
-  "South Side Marketplace":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/south-side-marketplace",
-  "Starbucks - HLTH":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/starbucks-hlth",
-  "Tim Hortons - ML":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/tim-hortons-ml",
-  "Tim Hortons - EC5":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/tim-hortons-ec5",
-  "Tim Hortons-SCH":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/tim-hortons-sch",
-  "UW Food Services Administration":
-    "https://uwaterloo.ca/food-services-information/locations-and-hours/uw-food-services-administration",
-};
+const campus_food_router = express.Router();
+
+const FOOD_SERVICES_URL =
+  "https://uwaterloo.ca/food-services/locations-and-hours";
 
 const DAYS = [
   "Sunday",
@@ -61,105 +17,468 @@ const DAYS = [
   "Friday",
   "Saturday",
 ] as const;
+
 type Day = (typeof DAYS)[number];
 
-/* 
-Utility function to clean the day range from the waterloo campus food urls
-*/
-
-function expand_day_range(label: string): Day[] {
-  // 1. Clean and split the string
-  const parts = label.split(/\s*[-–]\s*/).map((s) => s.trim() as Day);
-  const start_day = parts[0];
-  const end_day = parts[1];
-
-  if (parts.length === 1) {
-    return DAYS.includes(start_day) ? [start_day] : [];
-  }
-  const start_index = DAYS.indexOf(start_day);
-  let end_index = DAYS.indexOf(end_day);
-
-  if (start_index === -1 || end_index === -1) return [];
-  if (end_index < start_index) {
-    end_index += 7;
-  }
-  const twoWeeks = [...DAYS, ...DAYS];
-  return twoWeeks.slice(start_index, end_index + 1);
-}
-/*
-scrap's like food inside the waterloo campus buildings so more cafs, tims 
-*/
-const scrap_waterloo_campus_food = async (name: string, url: string) => {
-  const campus_food_information: Record<string, CampusFoodInfo> = {};
-  const $ = await cheerio.fromURL(url);
-  $(".content_node");
-  const payment = $(".payment")
-    .first()
-    .text()
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const location = $(".outlet-description p").text().replace("Location:", "");
-  const features = $(".outlet-description p")
-    .filter((index, element) => $(element).text().includes("Includes:"))
-    .text()
-    .replace("Includes:", "");
-  const hours: Record<string, string> = {};
-  //we loop through and each row we take in and store it
-  $(".oh-display").each((index, element) => {
-    const row = $(element);
-    const label = row.find(".oh-display-label").text().trim();
-    const time = row
-      .find(".oh-display-times")
-      .text()
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!label || !time) return; // guard against empty rows
-
-    const days = expand_day_range(label);
-    for (const day of days) hours[day] = time;
-  });
-
-  const exceptions: string[] = [];
-  const notice = $(".field-name-field-hours-notice .field-item").text().trim();
-  if (notice) exceptions.push(notice);
-
-  return {
-    name,
-    location,
-    features,
-    payment,
-    hours,
-    exceptions,
-    url,
-  };
+type CampusFoodConfig = {
+  buildingId: string;
+  searchName: string;
 };
 
-campus_food_router.get("/", async (req, res) => {
-  try {
-    // 1. Create an array of pending promises
-    const response = await withCache(
-      "campusfood:full-info:v1",
-      60 * 5,
-      async () => {
-        const scrape_promises = Object.entries(waterloo_campus_food_url).map(
-          async ([name, url]) => {
-            const data = await scrap_waterloo_campus_food(name, url);
-            return [name, data] as const; // Return as a Tuple
-          },
-        );
+type CampusFoodResponse = CampusFoodInfo & {
+  buildingId: string;
+};
 
-        const results = await Promise.all(scrape_promises);
+const CAMPUS_FOOD_LOCATIONS: Record<
+  string,
+  CampusFoodConfig
+> = {
+  "Brubakers Food Court": {
+    buildingId: "slc",
+    searchName:
+      "Brubakers Food Court Student Life Centre (SLC)",
+  },
 
-        return Object.fromEntries(results);
-      },
+  "Starbucks - STC": {
+    buildingId: "stc",
+    searchName:
+      "Starbucks Science Teaching Complex (STC)",
+  },
+
+  "Tim Hortons - DC": {
+    buildingId: "dc-building",
+    searchName:
+      "Tim Hortons Davis Centre (DC)",
+  },
+
+  "Tim Hortons SLC": {
+    buildingId: "slc",
+    searchName:
+      "Tim Hortons Student Life Centre (SLC)",
+  },
+
+  "Browsers Cafe": {
+    buildingId: "dp",
+    searchName:
+      "Browsers Café Dana Porter Library (DPL)",
+  },
+
+  "CEIT Cafe": {
+    buildingId: "eit",
+    searchName:
+      "CEIT Café Centre for Environmental & Information Technology (EIT)",
+  },
+
+  "Ev3rgreen Cafe": {
+    buildingId: "ev3",
+    searchName:
+      "Ev3rgreen Café Environment 3 (EV3)",
+  },
+
+  "Liquid Assets Cafe": {
+    buildingId: "hh",
+    searchName:
+      "Liquid Assets Café Hagey Hall (HH)",
+  },
+
+  "ML’s Diner": {
+    buildingId: "ml",
+    searchName:
+      "ML's Diner Modern Languages (ML)",
+  },
+
+  "Rolltation HLTH": {
+    buildingId: "exp",
+    searchName:
+      "Rolltation Health Expansion (EXP)",
+  },
+
+  "South Side Marketplace": {
+    buildingId: "sch",
+    searchName:
+      "South Side Marketplace South Campus Hall (SCH)",
+  },
+
+  "Starbucks - HLTH": {
+    buildingId: "exp",
+    searchName:
+      "Starbucks Health Expansion (EXP)",
+  },
+
+  "Tim Hortons - ML": {
+    buildingId: "ml",
+    searchName:
+      "Tim Hortons Modern Languages (ML)",
+  },
+
+  "Tim Hortons - EC5": {
+    buildingId: "ec5",
+    searchName:
+      "Tim Hortons East Campus 5 (EC5)",
+  },
+
+  "Tim Hortons - SCH": {
+    buildingId: "sch",
+    searchName:
+      "Tim Hortons South Campus Hall (SCH)",
+  },
+};
+
+function expandDayLabel(label: string): Day[] {
+  const cleaned = label
+    .replace(":", "")
+    .trim();
+
+  if (cleaned.includes(",")) {
+    return cleaned
+      .split(",")
+      .map((day) => day.trim())
+      .filter((day): day is Day =>
+        DAYS.includes(day as Day),
+      );
+  }
+
+  const rangeParts = cleaned
+    .split(/\s*[-–—]\s*/)
+    .map((day) => day.trim());
+
+  if (rangeParts.length === 1) {
+    const day = rangeParts[0] as Day;
+
+    return DAYS.includes(day)
+      ? [day]
+      : [];
+  }
+
+  if (rangeParts.length !== 2) {
+    return [];
+  }
+
+  const startDay =
+    rangeParts[0] as Day;
+
+  const endDay =
+    rangeParts[1] as Day;
+
+  const startIndex =
+    DAYS.indexOf(startDay);
+
+  let endIndex =
+    DAYS.indexOf(endDay);
+
+  if (
+    startIndex === -1 ||
+    endIndex === -1
+  ) {
+    return [];
+  }
+
+  if (endIndex < startIndex) {
+    endIndex += DAYS.length;
+  }
+
+  const twoWeeks = [
+    ...DAYS,
+    ...DAYS,
+  ];
+
+  return twoWeeks.slice(
+    startIndex,
+    endIndex + 1,
+  );
+}
+
+function getCleanLines(text: string) {
+  return text
+    .split("\n")
+    .map((line) =>
+      line.replace(/\s+/g, " ").trim(),
+    )
+    .filter(Boolean);
+}
+
+function findLocationContainer(
+  $: cheerio.CheerioAPI,
+  anchor: cheerio.Cheerio<any>,
+) {
+  let current = anchor.parent();
+
+  for (let i = 0; i < 10; i++) {
+    if (!current.length) break;
+
+    const text = current.text();
+
+    if (
+      text.includes(
+        "Hours of operation",
+      )
+    ) {
+      return current;
+    }
+
+    current = current.parent();
+  }
+
+  return null;
+}
+
+function parseHours(
+  lines: string[],
+) {
+  const hours: Record<
+    string,
+    string
+  > = {};
+
+  const hoursHeadingIndex =
+    lines.findIndex(
+      (line) =>
+        line === "Hours of operation",
     );
 
-    res.json(response);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Failed to scrape campus food" });
+  if (hoursHeadingIndex === -1) {
+    return hours;
   }
-});
+
+  let index =
+    hoursHeadingIndex + 1;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (
+      line === "Exceptions" ||
+      line === "Description"
+    ) {
+      break;
+    }
+
+    const days =
+      expandDayLabel(line);
+
+    if (days.length > 0) {
+      const time =
+        lines[index + 1];
+
+      if (time) {
+        for (const day of days) {
+          hours[day] = time;
+        }
+
+        index += 2;
+        continue;
+      }
+    }
+
+    index++;
+  }
+
+  return hours;
+}
+
+function parseExceptions(
+  lines: string[],
+) {
+  const exceptions: string[] = [];
+
+  const exceptionsHeadingIndex =
+    lines.findIndex(
+      (line) => line === "Exceptions",
+    );
+
+  if (
+    exceptionsHeadingIndex === -1
+  ) {
+    return exceptions;
+  }
+
+  let index =
+    exceptionsHeadingIndex + 1;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (
+      line === "Description" ||
+      line === "Hours of operation"
+    ) {
+      break;
+    }
+
+    if (line.endsWith(":")) {
+      const value =
+        lines[index + 1];
+
+      if (value) {
+        exceptions.push(
+          `${line} ${value}`,
+        );
+
+        index += 2;
+        continue;
+      }
+    }
+
+    index++;
+  }
+
+  return exceptions;
+}
+
+function parseDescription(
+  lines: string[],
+) {
+  const descriptionIndex =
+    lines.findIndex(
+      (line) =>
+        line === "Description",
+    );
+
+  if (
+    descriptionIndex === -1 ||
+    !lines[descriptionIndex + 1]
+  ) {
+    return "";
+  }
+
+  return lines[
+    descriptionIndex + 1
+  ];
+}
+
+async function scrapeCampusFood() {
+  const $ =
+    await cheerio.fromURL(
+      FOOD_SERVICES_URL,
+    );
+
+  const response: Record<
+    string,
+    CampusFoodResponse
+  > = {};
+
+  for (
+    const [
+      displayName,
+      config,
+    ] of Object.entries(
+      CAMPUS_FOOD_LOCATIONS,
+    )
+  ) {
+    const anchor = $("a")
+    .filter((_, element) => {
+      const text = $(element)
+        .text()
+        .replace(/\s+/g, " ")
+        .trim();
+
+      return (
+        text.toLowerCase() ===
+        config.searchName.toLowerCase()
+      );
+    })
+    .first();
+
+    if (!anchor.length) {
+      console.warn(
+        `Could not find campus food location: ${displayName}`,
+      );
+
+      response[displayName] = {
+        name: displayName,
+        buildingId:
+          config.buildingId,
+        location: "",
+        description: "",
+        payment: [],
+        hours: {},
+        exceptions: [],
+        url: FOOD_SERVICES_URL,
+      };
+
+      continue;
+    }
+
+    const container =
+      findLocationContainer(
+        $,
+        anchor,
+      );
+
+    if (!container) {
+      console.warn(
+        `Could not find content container for: ${displayName}`,
+      );
+
+      response[displayName] = {
+        name: displayName,
+        buildingId:
+          config.buildingId,
+        location: "",
+        description: "",
+        payment: [],
+        hours: {},
+        exceptions: [],
+        url: FOOD_SERVICES_URL,
+      };
+
+      continue;
+    }
+
+    const lines =
+      getCleanLines(
+        container.text(),
+      );
+
+    const hours =
+      parseHours(lines);
+
+    const exceptions =
+      parseExceptions(lines);
+
+    const description =
+      parseDescription(lines);
+
+    response[displayName] = {
+      name: displayName,
+      buildingId:
+        config.buildingId,
+      location: "",
+      description,
+      payment: [],
+      hours,
+      exceptions,
+      url: FOOD_SERVICES_URL,
+    };
+  }
+
+  return response;
+}
+
+campus_food_router.get(
+  "/",
+  async (req, res) => {
+    try {
+      const response =
+        await withCache(
+          "campusfood:full-info:v3",
+          60 * 5,
+          scrapeCampusFood,
+        );
+
+      res.json(response);
+    } catch (error) {
+      console.error(
+        "Campus food scrape failed:",
+        error,
+      );
+
+      res.status(500).json({
+        error:
+          "Failed to scrape campus food",
+      });
+    }
+  },
+);
 
 export default campus_food_router;
