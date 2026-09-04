@@ -1,6 +1,10 @@
 import * as cheerio from "cheerio";
 import express from "express";
-import type { CampusFoodInfo } from "../../types/food";
+import type {
+  CampusFoodConfig,
+  CampusFoodResponse,
+  Day,
+} from "../../types/food";
 import { withCache } from "../../cache";
 
 const campus_food_router = express.Router();
@@ -17,17 +21,6 @@ const DAYS = [
   "Friday",
   "Saturday",
 ] as const;
-
-type Day = (typeof DAYS)[number];
-
-type CampusFoodConfig = {
-  buildingId: string;
-  searchName: string;
-};
-
-type CampusFoodResponse = CampusFoodInfo & {
-  buildingId: string;
-};
 
 const CAMPUS_FOOD_LOCATIONS: Record<
   string,
