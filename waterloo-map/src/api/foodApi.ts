@@ -43,6 +43,7 @@ export type FoodInfo = {
       | "weekly"
       | "static";
     url?: string;
+    urls?: string[];
   };
 };
 
