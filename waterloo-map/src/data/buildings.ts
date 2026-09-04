@@ -35,7 +35,7 @@ export const buildings: BuildingsGeoJSON = {
       },
       geometry: {
         type: "Point",
-        coordinates: [-80.5420, 43.4724],
+        coordinates: [-80.54226750234126, 43.472934061382944],
       },
     },
     {
@@ -287,7 +287,7 @@ export const buildings: BuildingsGeoJSON = {
       },
       geometry: {
         type: "Point",
-        coordinates: [-80.543537, 43.468118],
+        coordinates: [-80.54333256, 43.46793654178],
       },
     },
     {
