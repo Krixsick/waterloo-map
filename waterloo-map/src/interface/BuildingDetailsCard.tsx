@@ -6,21 +6,27 @@ import {
   LocateFixed,
   MapPin,
   Navigation,
+  UtensilsCrossed,
   X,
   type LucideIcon,
 } from "lucide-react";
 
 import type { GymApiResponse } from "../api/gymApi";
+import type { FoodInfo } from "../api/foodApi";
 import type { BuildingFeature } from "../data/buildings";
+
 import type {
   LibraryOccupancyLevel,
   LibraryOccupancyLocation,
   LibraryOccupancyZone,
 } from "../types/library";
+
 import { buildingCategoryDetails } from "./buildingCategoryDetails";
+import FoodDetailsCard from "./FoodDetailsCard";
 
 type BuildingDetailsCardProps = {
   building: BuildingFeature | null;
+  foodLocations?: FoodInfo[];
   libraryOccupancy: LibraryOccupancyLocation | null;
   libraryOccupancyLoading: boolean;
   libraryOccupancyError: boolean;
@@ -32,7 +38,10 @@ type BuildingDetailsCardProps = {
   onRecenter: () => void;
 };
 
-const occupancyLabels: Record<LibraryOccupancyLevel, string> = {
+const occupancyLabels: Record<
+  LibraryOccupancyLevel,
+  string
+> = {
   "not-busy": "Not busy",
   busy: "Busy",
   "very-busy": "Very busy",
@@ -40,7 +49,10 @@ const occupancyLabels: Record<LibraryOccupancyLevel, string> = {
   unavailable: "Unavailable",
 };
 
-const occupancyStyles: Record<LibraryOccupancyLevel, string> = {
+const occupancyStyles: Record<
+  LibraryOccupancyLevel,
+  string
+> = {
   "not-busy": "bg-emerald-500",
   busy: "bg-amber-500",
   "very-busy": "bg-violet-600",
@@ -48,8 +60,13 @@ const occupancyStyles: Record<LibraryOccupancyLevel, string> = {
   unavailable: "bg-slate-300",
 };
 
-function zoneSummary(zone: LibraryOccupancyZone) {
-  if (zone.level === "closed" || zone.level === "unavailable") {
+function zoneSummary(
+  zone: LibraryOccupancyZone,
+) {
+  if (
+    zone.level === "closed" ||
+    zone.level === "unavailable"
+  ) {
     return occupancyLabels[zone.level];
   }
 
@@ -59,32 +76,60 @@ function zoneSummary(zone: LibraryOccupancyZone) {
 }
 
 function getToday() {
-  return new Intl.DateTimeFormat("en-CA", {
-    weekday: "long",
-    timeZone: "America/Toronto",
-  }).format(new Date());
+  return new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      weekday: "long",
+      timeZone: "America/Toronto",
+    },
+  ).format(new Date());
 }
 
-function getGymOccupancyLabel(percent: number) {
-  if (percent < 30) return "Not busy";
-  if (percent < 60) return "Moderately busy";
-  if (percent < 80) return "Busy";
+function getGymOccupancyLabel(
+  percent: number,
+) {
+  if (percent < 30) {
+    return "Not busy";
+  }
+
+  if (percent < 60) {
+    return "Moderately busy";
+  }
+
+  if (percent < 80) {
+    return "Busy";
+  }
 
   return "Very busy";
 }
 
-function getGymOccupancyStyle(percent: number) {
-  if (percent < 30) return "bg-emerald-500";
-  if (percent < 60) return "bg-amber-400";
-  if (percent < 80) return "bg-orange-500";
+function getGymOccupancyStyle(
+  percent: number,
+) {
+  if (percent < 30) {
+    return "bg-emerald-500";
+  }
+
+  if (percent < 60) {
+    return "bg-amber-400";
+  }
+
+  if (percent < 80) {
+    return "bg-orange-500";
+  }
 
   return "bg-violet-600";
 }
 
-function getGymFacilityName(name: string) {
+function getGymFacilityName(
+  name: string,
+) {
   return name
     .replace(/^PAC - /, "")
-    .replace("CIF Fitness Centre", "Fitness Centre");
+    .replace(
+      "CIF Fitness Centre",
+      "Fitness Centre",
+    );
 }
 
 function ActionButton({
@@ -105,6 +150,7 @@ function ActionButton({
       <span className="flex size-10 items-center justify-center rounded-full bg-emerald-100">
         <Icon className="size-5" />
       </span>
+
       {label}
     </button>
   );
@@ -112,6 +158,7 @@ function ActionButton({
 
 export default function BuildingDetailsCard({
   building,
+  foodLocations = [],
   libraryOccupancy,
   libraryOccupancyLoading,
   libraryOccupancyError,
@@ -124,23 +171,40 @@ export default function BuildingDetailsCard({
 }: BuildingDetailsCardProps) {
   if (!building) return null;
 
-  const { properties, geometry } = building;
-  const category = buildingCategoryDetails[properties.category];
-  const CategoryIcon = category.icon;
+  const {
+    properties,
+    geometry,
+  } = building;
 
-  const [longitude, latitude] = geometry.coordinates;
+  const category =
+    buildingCategoryDetails[
+      properties.category
+    ];
 
-  const isLibrary = properties.category === "library";
-  const isGym = properties.category === "gym";
+  const CategoryIcon =
+    category.icon;
+
+  const [longitude, latitude] =
+    geometry.coordinates;
+
+  const isLibrary =
+    properties.category ===
+    "library";
+
+  const isGym =
+    properties.category ===
+    "gym";
 
   const occupancyUnavailable =
     libraryOccupancyError ||
     !libraryOccupancy ||
-    libraryOccupancy.level === "unavailable";
+    libraryOccupancy.level ===
+      "unavailable";
 
   const today = getToday();
 
-  const abbreviation = properties.abbreviation?.toUpperCase();
+  const abbreviation =
+    properties.abbreviation?.toUpperCase();
 
   const gymKey =
     abbreviation === "PAC"
@@ -150,25 +214,37 @@ export default function BuildingDetailsCard({
         : null;
 
   const gym =
-    isGym && gymKey && gymInfo
+    isGym &&
+    gymKey &&
+    gymInfo
       ? gymInfo[gymKey]
       : null;
 
-  const gymHours = gym?.hours[today];
-  const gymOccupancy = gym?.busyness.overall;
+  const gymHours =
+    gym?.hours[today];
 
-  const gymFacilities = gym
-    ? Object.values(gym.busyness.facilities)
-    : [];
+  const gymOccupancy =
+    gym?.busyness.overall;
 
-  const displayHours = isGym
-    ? gymHours ?? "Hours unavailable"
-    : properties.liveHours ?? "Hours unavailable";
+  const gymFacilities =
+    gym
+      ? Object.values(
+          gym.busyness.facilities,
+        )
+      : [];
+
+  const displayHours =
+    isGym
+      ? gymHours ??
+        "Hours unavailable"
+      : properties.liveHours ??
+        "Hours unavailable";
 
   function openDirections() {
-    const destination = encodeURIComponent(
-      `${latitude},${longitude}`,
-    );
+    const destination =
+      encodeURIComponent(
+        `${latitude},${longitude}`,
+      );
 
     window.open(
       `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
@@ -196,7 +272,8 @@ export default function BuildingDetailsCard({
             </h2>
 
             <p className="text-ui-subtitle mt-1 text-slate-500">
-              {properties.abbreviation} · {category.label}
+              {properties.abbreviation} ·{" "}
+              {category.label}
             </p>
           </div>
 
@@ -239,11 +316,13 @@ export default function BuildingDetailsCard({
               Today's hours
             </dt>
 
-            {isGym && gymLoading ? (
+            {isGym &&
+            gymLoading ? (
               <dd className="text-ui-value mt-1 text-slate-600">
                 Loading hours…
               </dd>
-            ) : isGym && gymError ? (
+            ) : isGym &&
+              gymError ? (
               <dd className="text-ui-value mt-1 text-slate-600">
                 Hours unavailable
               </dd>
@@ -253,11 +332,14 @@ export default function BuildingDetailsCard({
               </dd>
             )}
 
-            {!isGym && properties.timeRemaining && (
-              <p className="text-ui-meta mt-1 text-emerald-700">
-                {properties.timeRemaining}
-              </p>
-            )}
+            {!isGym &&
+              properties.timeRemaining && (
+                <p className="text-ui-meta mt-1 text-emerald-700">
+                  {
+                    properties.timeRemaining
+                  }
+                </p>
+              )}
           </div>
         </div>
 
@@ -281,7 +363,9 @@ export default function BuildingDetailsCard({
                   </p>
 
                   <a
-                    href={libraryOccupancySource}
+                    href={
+                      libraryOccupancySource
+                    }
                     target="_blank"
                     rel="noreferrer"
                     className="text-ui-action mt-3 inline-flex items-center gap-1 text-amber-700 hover:text-amber-900"
@@ -294,18 +378,28 @@ export default function BuildingDetailsCard({
                 <dd className="mt-2">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-ui-value text-slate-900">
-                      {occupancyLabels[libraryOccupancy.level]}
+                      {
+                        occupancyLabels[
+                          libraryOccupancy
+                            .level
+                        ]
+                      }
                     </span>
 
-                    {libraryOccupancy.percentage !== null &&
+                    {libraryOccupancy.percentage !==
+                      null &&
                       libraryOccupancy.isOpen && (
                         <span className="text-ui-meta font-medium text-slate-500">
-                          {libraryOccupancy.percentage}% full
+                          {
+                            libraryOccupancy.percentage
+                          }
+                          % full
                         </span>
                       )}
                   </div>
 
-                  {libraryOccupancy.percentage !== null &&
+                  {libraryOccupancy.percentage !==
+                    null &&
                     libraryOccupancy.isOpen && (
                       <div
                         className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
@@ -320,7 +414,8 @@ export default function BuildingDetailsCard({
                         <div
                           className={`h-full rounded-full transition-[width] ${
                             occupancyStyles[
-                              libraryOccupancy.level
+                              libraryOccupancy
+                                .level
                             ]
                           }`}
                           style={{
@@ -334,7 +429,9 @@ export default function BuildingDetailsCard({
                     Estimated from anonymous device activity.
                   </p>
 
-                  {libraryOccupancy.zones.length > 0 &&
+                  {libraryOccupancy
+                    .zones.length >
+                    0 &&
                     libraryOccupancy.isOpen && (
                       <details className="mt-3 rounded-md border border-slate-200 bg-slate-50">
                         <summary className="text-ui-action cursor-pointer px-3 py-2 text-slate-700">
@@ -345,15 +442,21 @@ export default function BuildingDetailsCard({
                           {libraryOccupancy.zones.map(
                             (zone) => (
                               <div
-                                key={zone.id}
+                                key={
+                                  zone.id
+                                }
                                 className="flex items-center justify-between gap-3 py-2"
                               >
                                 <span className="text-ui-meta text-slate-700">
-                                  {zone.name}
+                                  {
+                                    zone.name
+                                  }
                                 </span>
 
                                 <span className="text-ui-meta shrink-0 font-medium text-slate-500">
-                                  {zoneSummary(zone)}
+                                  {zoneSummary(
+                                    zone,
+                                  )}
                                 </span>
                               </div>
                             ),
@@ -363,7 +466,9 @@ export default function BuildingDetailsCard({
                     )}
 
                   <a
-                    href={libraryOccupancySource}
+                    href={
+                      libraryOccupancySource
+                    }
                     target="_blank"
                     rel="noreferrer"
                     className="text-ui-action mt-3 inline-flex items-center gap-1 text-amber-700 hover:text-amber-900"
@@ -390,7 +495,8 @@ export default function BuildingDetailsCard({
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Checking how busy it is…
                 </dd>
-              ) : gymError || !gym ? (
+              ) : gymError ||
+                !gym ? (
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Live occupancy is unavailable right now.
                 </dd>
@@ -408,7 +514,10 @@ export default function BuildingDetailsCard({
                     </span>
 
                     <span className="text-ui-meta font-medium text-slate-500">
-                      {gymOccupancy.percent}% full
+                      {
+                        gymOccupancy.percent
+                      }
+                      % full
                     </span>
                   </div>
 
@@ -418,7 +527,9 @@ export default function BuildingDetailsCard({
                     aria-label={`${properties.name} occupancy`}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-valuenow={gymOccupancy.percent}
+                    aria-valuenow={
+                      gymOccupancy.percent
+                    }
                   >
                     <div
                       className={`h-full rounded-full transition-[width] ${getGymOccupancyStyle(
@@ -434,64 +545,106 @@ export default function BuildingDetailsCard({
                   </div>
 
                   <div className="mt-2 flex items-center justify-between gap-3">
-                    {gymOccupancy.occupancy !== undefined && (
+                    {gymOccupancy.occupancy !==
+                      undefined && (
                       <span className="text-ui-meta text-slate-500">
-                        {gymOccupancy.occupancy} inside
+                        {
+                          gymOccupancy.occupancy
+                        }{" "}
+                        inside
                       </span>
                     )}
 
-                    {gymOccupancy.remaining !== undefined && (
+                    {gymOccupancy.remaining !==
+                      undefined && (
                       <span className="text-ui-meta text-slate-500">
-                        {gymOccupancy.remaining} spots available
+                        {
+                          gymOccupancy.remaining
+                        }{" "}
+                        spots available
                       </span>
                     )}
                   </div>
 
-                  {gymKey === "PAC" &&
-                    gymFacilities.length > 0 && (
+                  {gymKey ===
+                    "PAC" &&
+                    gymFacilities.length >
+                      0 && (
                       <details className="mt-3 rounded-md border border-slate-200 bg-slate-50">
                         <summary className="text-ui-action cursor-pointer px-3 py-2 text-slate-700">
                           View area details
                         </summary>
 
                         <div className="divide-y divide-slate-200 border-t border-slate-200 px-3">
-                          {gymFacilities.map((facility) => (
-                            <div
-                              key={facility.name}
-                              className="py-2.5"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-ui-meta text-slate-700">
-                                  {getGymFacilityName(
-                                    facility.name,
-                                  )}
-                                </span>
+                          {gymFacilities.map(
+                            (facility) => (
+                              <div
+                                key={
+                                  facility.name
+                                }
+                                className="py-2.5"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-ui-meta text-slate-700">
+                                    {getGymFacilityName(
+                                      facility.name,
+                                    )}
+                                  </span>
 
-                                <span className="text-ui-meta shrink-0 font-medium text-slate-500">
-                                  {facility.percent}% full
-                                </span>
-                              </div>
+                                  <span className="text-ui-meta shrink-0 font-medium text-slate-500">
+                                    {
+                                      facility.percent
+                                    }
+                                    % full
+                                  </span>
+                                </div>
 
-                              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                                <div
-                                  className={`h-full rounded-full ${getGymOccupancyStyle(
-                                    facility.percent,
-                                  )}`}
-                                  style={{
-                                    width: `${Math.min(
+                                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                  <div
+                                    className={`h-full rounded-full ${getGymOccupancyStyle(
                                       facility.percent,
-                                      100,
-                                    )}%`,
-                                  }}
-                                />
+                                    )}`}
+                                    style={{
+                                      width: `${Math.min(
+                                        facility.percent,
+                                        100,
+                                      )}%`,
+                                    }}
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ),
+                          )}
                         </div>
                       </details>
                     )}
                 </dd>
               )}
+            </div>
+          </div>
+        )}
+
+        {foodLocations.length > 0 && (
+          <div className="flex gap-4 py-4">
+            <UtensilsCrossed className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
+
+            <div className="min-w-0 flex-1">
+              <dt className="text-ui-label text-slate-500">
+                Food & drink
+              </dt>
+
+              <dd className="mt-3">
+                <div className="space-y-2">
+                  {foodLocations.map(
+                    (food) => (
+                      <FoodDetailsCard
+                        key={food.name}
+                        food={food}
+                      />
+                    ),
+                  )}
+                </div>
+              </dd>
             </div>
           </div>
         )}
@@ -509,7 +662,8 @@ export default function BuildingDetailsCard({
             </dd>
 
             <p className="text-ui-meta mt-1 text-slate-500">
-              {latitude.toFixed(5)}, {longitude.toFixed(5)}
+              {latitude.toFixed(5)},{" "}
+              {longitude.toFixed(5)}
             </p>
           </div>
         </div>
