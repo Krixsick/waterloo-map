@@ -1,353 +1,250 @@
 import * as cheerio from "cheerio";
-import express from "express";
-import type {
-  CampusFoodConfig,
-  CampusFoodResponse,
-  Day,
-} from "../../types/food";
+
 import { withCache } from "../../cache";
 
-const campus_food_router = express.Router();
+import {
+  findLocationContainer,
+  getCleanLines,
+  parseDescription,
+  parseExceptions,
+  parseHours,
+} from "./foodServicesUtils";
 
-const FOOD_SERVICES_URL =
+import type {
+  FoodCategory,
+  FoodLocation,
+} from "./types";
+
+const SOURCE_URL =
   "https://uwaterloo.ca/food-services/locations-and-hours";
 
-const DAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-] as const;
+type CampusFoodConfig = {
+  id: string;
+  buildingId: string;
+  category: FoodCategory;
+  searchName: string;
+};
 
-const CAMPUS_FOOD_LOCATIONS: Record<string, CampusFoodConfig> = {
+const CAMPUS_FOOD_LOCATIONS: Record<
+  string,
+  CampusFoodConfig
+> = {
   "Brubakers Food Court": {
+    id: "brubakers",
     buildingId: "slc",
-    searchName: "Brubakers Food Court Student Life Centre (SLC)",
+    category: "food-court",
+    searchName:
+      "Brubakers Food Court Student Life Centre (SLC)",
   },
 
   "Starbucks - STC": {
+    id: "starbucks-stc",
     buildingId: "stc",
-    searchName: "Starbucks Science Teaching Complex (STC)",
+    category: "cafe",
+    searchName:
+      "Starbucks Science Teaching Complex (STC)",
   },
 
   "Tim Hortons - DC": {
+    id: "tim-hortons-dc",
     buildingId: "dc-building",
-    searchName: "Tim Hortons Davis Centre (DC)",
+    category: "cafe",
+    searchName:
+      "Tim Hortons Davis Centre (DC)",
   },
 
   "Tim Hortons SLC": {
+    id: "tim-hortons-slc",
     buildingId: "slc",
-    searchName: "Tim Hortons Student Life Centre (SLC)",
+    category: "cafe",
+    searchName:
+      "Tim Hortons Student Life Centre (SLC)",
   },
 
   "Browsers Cafe": {
+    id: "browsers-cafe",
     buildingId: "dp",
-    searchName: "Browsers Café Dana Porter Library (DPL)",
+    category: "cafe",
+    searchName:
+      "Browsers Café Dana Porter Library (DPL)",
   },
 
   "CEIT Cafe": {
+    id: "ceit-cafe",
     buildingId: "eit",
+    category: "cafe",
     searchName:
       "CEIT Café Centre for Environmental & Information Technology (EIT)",
   },
 
   "Ev3rgreen Cafe": {
+    id: "ev3rgreen-cafe",
     buildingId: "ev3",
-    searchName: "Ev3rgreen Café Environment 3 (EV3)",
+    category: "cafe",
+    searchName:
+      "Ev3rgreen Café Environment 3 (EV3)",
   },
 
   "Liquid Assets Cafe": {
+    id: "liquid-assets-cafe",
     buildingId: "hh",
-    searchName: "Liquid Assets Café Hagey Hall (HH)",
+    category: "cafe",
+    searchName:
+      "Liquid Assets Café Hagey Hall (HH)",
   },
 
   "ML’s Diner": {
+    id: "mls-diner",
     buildingId: "ml",
-    searchName: "ML's Diner Modern Languages (ML)",
+    category: "restaurant",
+    searchName:
+      "ML's Diner Modern Languages (ML)",
   },
 
   "Rolltation HLTH": {
+    id: "rolltation-hlth",
     buildingId: "exp",
-    searchName: "Rolltation Health Expansion (EXP)",
+    category: "restaurant",
+    searchName:
+      "Rolltation Health Expansion (EXP)",
   },
 
   "South Side Marketplace": {
+    id: "south-side-marketplace",
     buildingId: "sch",
-    searchName: "South Side Marketplace South Campus Hall (SCH)",
+    category: "food-court",
+    searchName:
+      "South Side Marketplace South Campus Hall (SCH)",
   },
 
   "Starbucks - HLTH": {
+    id: "starbucks-hlth",
     buildingId: "exp",
-    searchName: "Starbucks Health Expansion (EXP)",
+    category: "cafe",
+    searchName:
+      "Starbucks Health Expansion (EXP)",
   },
 
   "Tim Hortons - ML": {
+    id: "tim-hortons-ml",
     buildingId: "ml",
-    searchName: "Tim Hortons Modern Languages (ML)",
+    category: "cafe",
+    searchName:
+      "Tim Hortons Modern Languages (ML)",
   },
 
   "Tim Hortons - EC5": {
+    id: "tim-hortons-ec5",
     buildingId: "ec5",
-    searchName: "Tim Hortons East Campus 5 (EC5)",
+    category: "cafe",
+    searchName:
+      "Tim Hortons East Campus 5 (EC5)",
   },
 
-  "Tim Hortons - SCH": {
+  "Tim Hortons-SCH": {
+    id: "tim-hortons-sch",
     buildingId: "sch",
-    searchName: "Tim Hortons South Campus Hall (SCH)",
+    category: "cafe",
+    searchName:
+      "Tim Hortons South Campus Hall (SCH)",
   },
 };
 
-function expandDayLabel(label: string): Day[] {
-  const cleaned = label.replace(":", "").trim();
+async function scrapeCampusFood(): Promise<
+  Record<string, FoodLocation>
+> {
+  const response =
+    await fetch(SOURCE_URL);
 
-  if (cleaned.includes(",")) {
-    return cleaned
-      .split(",")
-      .map((day) => day.trim())
-      .filter((day): day is Day => DAYS.includes(day as Day));
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch UW Food Services page: ${response.status}`,
+    );
   }
 
-  const rangeParts = cleaned.split(/\s*[-–—]\s*/).map((day) => day.trim());
+  const html =
+    await response.text();
 
-  if (rangeParts.length === 1) {
-    const day = rangeParts[0] as Day;
+  const $ = cheerio.load(html);
 
-    return DAYS.includes(day) ? [day] : [];
-  }
+  const results: Record<
+    string,
+    FoodLocation
+  > = {};
 
-  if (rangeParts.length !== 2) {
-    return [];
-  }
-
-  const startDay = rangeParts[0] as Day;
-
-  const endDay = rangeParts[1] as Day;
-
-  const startIndex = DAYS.indexOf(startDay);
-
-  let endIndex = DAYS.indexOf(endDay);
-
-  if (startIndex === -1 || endIndex === -1) {
-    return [];
-  }
-
-  if (endIndex < startIndex) {
-    endIndex += DAYS.length;
-  }
-
-  const twoWeeks = [...DAYS, ...DAYS];
-
-  return twoWeeks.slice(startIndex, endIndex + 1);
-}
-
-function getCleanLines(text: string) {
-  return text
-    .split("\n")
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
-}
-
-function findLocationContainer(
-  $: cheerio.CheerioAPI,
-  anchor: cheerio.Cheerio<any>,
-) {
-  let current = anchor.parent();
-
-  for (let i = 0; i < 10; i++) {
-    if (!current.length) break;
-
-    const text = current.text();
-
-    if (text.includes("Hours of operation")) {
-      return current;
-    }
-
-    current = current.parent();
-  }
-
-  return null;
-}
-
-function parseHours(lines: string[]) {
-  const hours: Record<string, string> = {};
-
-  const hoursHeadingIndex = lines.findIndex(
-    (line) => line === "Hours of operation",
-  );
-
-  if (hoursHeadingIndex === -1) {
-    return hours;
-  }
-
-  let index = hoursHeadingIndex + 1;
-
-  while (index < lines.length) {
-    const line = lines[index];
-
-    if (line === "Exceptions" || line === "Description") {
-      break;
-    }
-
-    const days = expandDayLabel(line);
-
-    if (days.length > 0) {
-      const time = lines[index + 1];
-
-      if (time) {
-        for (const day of days) {
-          hours[day] = time;
-        }
-
-        index += 2;
-        continue;
-      }
-    }
-
-    index++;
-  }
-
-  return hours;
-}
-
-function parseExceptions(lines: string[]) {
-  const exceptions: string[] = [];
-
-  const exceptionsHeadingIndex = lines.findIndex(
-    (line) => line === "Exceptions",
-  );
-
-  if (exceptionsHeadingIndex === -1) {
-    return exceptions;
-  }
-
-  let index = exceptionsHeadingIndex + 1;
-
-  while (index < lines.length) {
-    const line = lines[index];
-
-    if (line === "Description" || line === "Hours of operation") {
-      break;
-    }
-
-    if (line.endsWith(":")) {
-      const value = lines[index + 1];
-
-      if (value) {
-        exceptions.push(`${line} ${value}`);
-
-        index += 2;
-        continue;
-      }
-    }
-
-    index++;
-  }
-
-  return exceptions;
-}
-
-function parseDescription(lines: string[]) {
-  const descriptionIndex = lines.findIndex((line) => line === "Description");
-
-  if (descriptionIndex === -1 || !lines[descriptionIndex + 1]) {
-    return "";
-  }
-
-  return lines[descriptionIndex + 1];
-}
-
-async function scrapeCampusFood() {
-  const $ = await cheerio.fromURL(FOOD_SERVICES_URL);
-
-  const response: Record<string, CampusFoodResponse> = {};
-
-  for (const [displayName, config] of Object.entries(CAMPUS_FOOD_LOCATIONS)) {
-    const anchor = $("a")
-      .filter((_, element) => {
-        const text = $(element).text().replace(/\s+/g, " ").trim();
-
-        return text.toLowerCase() === config.searchName.toLowerCase();
-      })
-      .first();
-
-    if (!anchor.length) {
-      console.warn(`Could not find campus food location: ${displayName}`);
-
-      response[displayName] = {
-        name: displayName,
-        buildingId: config.buildingId,
-        location: "",
-        description: "",
-        paymentMethods: [],
-        hours: {},
-        exceptions: [],
-        url: FOOD_SERVICES_URL,
-      };
-
-      continue;
-    }
-
-    const container = findLocationContainer($, anchor);
+  for (
+    const [
+      displayName,
+      config,
+    ] of Object.entries(
+      CAMPUS_FOOD_LOCATIONS,
+    )
+  ) {
+    const container =
+      findLocationContainer(
+        $,
+        config.searchName,
+      );
 
     if (!container) {
-      console.warn(`Could not find content container for: ${displayName}`);
-
-      response[displayName] = {
-        name: displayName,
-        buildingId: config.buildingId,
-        location: "",
-        description: "",
-        paymentMethods: [],
-        hours: {},
-        exceptions: [],
-        url: FOOD_SERVICES_URL,
-      };
+      console.warn(
+        `Could not find food location: ${displayName}`,
+      );
 
       continue;
     }
 
-    const lines = getCleanLines(container.text());
+    const lines =
+      getCleanLines(
+        container.text(),
+      );
 
-    const hours = parseHours(lines);
+    const hours =
+      parseHours(lines);
 
-    const exceptions = parseExceptions(lines);
+    const exceptions =
+      parseExceptions(lines);
 
-    const description = parseDescription(lines);
+    const description =
+      parseDescription(lines);
 
-    response[displayName] = {
-      name: displayName,
-      buildingId: config.buildingId,
-      location: "",
-      description,
-      paymentMethods: [],
-      hours,
-      exceptions,
-      url: FOOD_SERVICES_URL,
-    };
+    const foodLocation: FoodLocation =
+      {
+        id: config.id,
+
+        name: displayName,
+
+        buildingId:
+          config.buildingId,
+
+        category:
+          config.category,
+
+        description,
+
+        hours,
+
+        exceptions,
+
+        source: {
+          name: "UW Food Services",
+          url: SOURCE_URL,
+        },
+
+        url: SOURCE_URL,
+      };
+
+    results[config.id] =
+      foodLocation;
   }
 
-  return response;
+  return results;
 }
 
-campus_food_router.get("/", async (req, res) => {
-  try {
-    const response = await withCache(
-      "campusfood:full-info:v3",
-      60 * 5,
-      scrapeCampusFood,
-    );
-
-    res.json(response);
-  } catch (error) {
-    console.error("Campus food scrape failed:", error);
-
-    res.status(500).json({
-      error: "Failed to scrape campus food",
-    });
-  }
-});
-
-export default campus_food_router;
+export async function getCampusFood() {
+  return withCache(
+    "campusfood:full-info:v6",
+    60 * 5,
+    scrapeCampusFood,
+  );
+}

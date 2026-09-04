@@ -62,8 +62,7 @@ import {
 } from "../api/gymApi";
 
 import {
-  useCampusFood,
-  useResidenceFood,
+  useFood,
   type FoodInfo,
 } from "../api/foodApi";
 
@@ -199,12 +198,8 @@ function Map() {
   } = useGymInfo();
 
   const {
-    data: campusFoodData = {},
-  } = useCampusFood();
-  
-  const {
-    data: residenceFoodData = {},
-  } = useResidenceFood();
+    data: foodData = {},
+  } = useFood();
 
   gymInfoRef.current = gymInfo;
 
@@ -298,41 +293,34 @@ function Map() {
   // --------------------
 
   const selectedBuildingFood =
-    useMemo<FoodInfo[]>(() => {
-      if (!selectedBuilding) {
-        return [];
-      }
+  useMemo<FoodInfo[]>(() => {
+    if (!selectedBuilding) {
+      return [];
+    }
 
-      const buildingId =
-        selectedBuilding.properties.id;
+    const buildingId =
+      selectedBuilding.properties.id;
 
-      const campusFood =
-        Object.values(
-          campusFoodData,
-        ).filter(
-          (food) =>
-            food.buildingId ===
-            buildingId,
-        );
+    return Object.values(
+      foodData,
+    ).filter(
+      (food) =>
+        food.buildingId === buildingId,
+    );
+  }, [
+    foodData,
+    selectedBuilding,
+  ]);
 
-      const residenceFood =
-        Object.values(
-          residenceFoodData,
-        ).filter(
-          (food) =>
-            food.residenceId ===
-            buildingId,
-        );
-
-      return [
-        ...campusFood,
-        ...residenceFood,
-      ];
-    }, [
-      campusFoodData,
-      residenceFoodData,
-      selectedBuilding,
-    ]);
+  console.log("FOOD DATA", foodData);
+console.log(
+  "SELECTED BUILDING",
+  selectedBuilding?.properties.id,
+);
+console.log(
+  "SELECTED BUILDING FOOD",
+  selectedBuildingFood,
+);
 
   // --------------------
   // LIBRARY OCCUPANCY

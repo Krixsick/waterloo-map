@@ -1,83 +1,66 @@
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL =
+  import.meta.env.VITE_API_URL?.replace(
+    /\/+$/,
+    "",
+  );
+
+export type FoodCategory =
+  | "restaurant"
+  | "cafe"
+  | "convenience"
+  | "dining-hall"
+  | "food-court"
+  | "bar";
 
 export type FoodInfo = {
+  id: string;
   name: string;
-  location: string;
-  description?: string | string[];
-  payment?: string[];
-  hours?: Record<string, string>;
-  exceptions?: string[];
-  url: string;
-
+  buildingId: string;
+  category: FoodCategory;
   logo?: string;
 
-  menu?: {
-    label?: string;
+  location?: string;
+  description?: string | string[];
+
+  payment?: string[];
+
+  hours?: Record<string, string>;
+  exceptions?: string[];
+
+  url?: string;
+
+  source: {
+    name: string;
     url: string;
+  };
+
+  menu?: {
+    type?:
+      | "daily"
+      | "weekly"
+      | "static";
+    url?: string;
   };
 };
 
-export type CampusFoodInfo =
-  FoodInfo & {
-    buildingId: string;
-  };
+export type FoodApiResponse =
+  Record<string, FoodInfo>;
 
-export type ResidenceFoodInfo =
-  FoodInfo & {
-    residenceId: string;
-  };
-
-export type CampusFoodApiResponse =
-  Record<string, CampusFoodInfo>;
-
-export type ResidenceFoodApiResponse =
-  Record<string, ResidenceFoodInfo>;
-
-async function fetchCampusFood(): Promise<CampusFoodApiResponse> {
+async function fetchFood(): Promise<FoodApiResponse> {
   const response =
-    await axios.get<CampusFoodApiResponse>(
-      `${API_URL}/food/campus`,
+    await axios.get<FoodApiResponse>(
+      `${API_URL}/food`,
     );
-
-  console.log(
-    "CAMPUS FOOD RESPONSE",
-    response.data,
-  );
 
   return response.data;
 }
 
-async function fetchResidenceFood(): Promise<ResidenceFoodApiResponse> {
-  const response =
-    await axios.get<ResidenceFoodApiResponse>(
-      `${API_URL}/food/residence`,
-    );
-
-  console.log(
-    "RESIDENCE FOOD RESPONSE",
-    response.data,
-  );
-
-  return response.data;
-}
-
-export function useCampusFood() {
+export function useFood() {
   return useQuery({
-    queryKey: ["campus-food-v2"],
-    queryFn: fetchCampusFood,
-    retry: false,
-    refetchOnMount: "always",
-  });
-}
-
-export function useResidenceFood() {
-  return useQuery({
-    queryKey: ["residence-food-v2"],
-    queryFn: fetchResidenceFood,
-    retry: false,
-    refetchOnMount: "always",
+    queryKey: ["food"],
+    queryFn: fetchFood,
   });
 }

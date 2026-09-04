@@ -2,16 +2,15 @@ import {
     ChevronDown,
     CreditCard,
     ExternalLink,
-    UtensilsCrossed,
   } from "lucide-react";
   
-  import { useState } from "react";
-  
-  import type { FoodInfo } from "../api/foodApi";
-  
-  type FoodDetailsCardProps = {
+import { useState } from "react";
+import type { FoodInfo } from "../api/foodApi";
+import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
+
+type FoodDetailsCardProps = {
     food: FoodInfo;
-  };
+};
   
   const MONTHS: Record<string, number> = {
     jan: 0,
@@ -153,6 +152,34 @@ import {
     return null;
   }
   
+  function getTodayMenuUrl() {
+    const formatter =
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Toronto",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+  
+    const parts = formatter.formatToParts(
+      new Date(),
+    );
+  
+    const year = parts.find(
+      (part) => part.type === "year",
+    )?.value;
+  
+    const month = parts.find(
+      (part) => part.type === "month",
+    )?.value;
+  
+    const day = parts.find(
+      (part) => part.type === "day",
+    )?.value;
+  
+    return `https://uwaterloo.ca/food-services/daily-menu?date=${year}-${month}-${day}`;
+  }
+
   function getSpecialFoodHoursForToday(
     food: FoodInfo,
   ) {
@@ -316,14 +343,21 @@ import {
   }: FoodDetailsCardProps) {
     const [isExpanded, setIsExpanded] =
       useState(false);
+    
+    const categoryDetails =
+      FOOD_CATEGORY_DETAILS[food.category];
+    
+    const CategoryIcon =
+      categoryDetails.icon;
   
     const descriptionText =
       getDescriptionText(
         food.description,
       );
   
-    const hasExpandableContent =
+      const hasExpandableContent =
       Boolean(descriptionText) ||
+      Boolean(food.menu?.type) ||
       Boolean(food.menu?.url) ||
       (food.payment?.length ?? 0) > 0;
   
@@ -336,6 +370,7 @@ import {
       specialHours ??
       food.hours?.[today] ??
       "Hours unavailable";
+    const menuUrl = food.menu?.type === "daily" ? getTodayMenuUrl() : food.menu?.url;
   
     return (
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors hover:border-slate-300">
@@ -361,15 +396,15 @@ import {
         >
           <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-emerald-50 text-[#13735a]">
             {food.logo ? (
-              <img
+                <img
                 src={food.logo}
                 alt={`${food.name} logo`}
                 className="h-full w-full object-contain p-1.5"
-              />
+                />
             ) : (
-              <UtensilsCrossed className="size-5" />
+                <CategoryIcon className="size-5" />
             )}
-          </div>
+            </div>
   
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
@@ -470,29 +505,27 @@ import {
                 </div>
               )}
   
-              {food.menu?.url && (
-                <a
-                  href={food.menu.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`text-ui-action inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-3 py-2 text-[#13735a] transition-colors hover:bg-emerald-100 ${
-                    descriptionText ||
-                    (food.payment
-                      ?.length ??
-                      0) > 0
-                      ? "mt-4"
-                      : ""
-                  }`}
-                >
-                  {food.menu.label ??
-                    "View menu"}
-  
-                  <ExternalLink className="size-3.5" />
-                </a>
-              )}
+  {menuUrl && (
+  <a
+    href={menuUrl}
+    target="_blank"
+    rel="noreferrer"
+    className={`text-ui-action inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-3 py-2 text-[#13735a] transition-colors hover:bg-emerald-100 ${
+      descriptionText ||
+      (food.payment?.length ?? 0) > 0
+        ? "mt-4"
+        : ""
+    }`}
+  >
+    {food.menu?.type === "daily"
+      ? "View today's menu"
+      : "View menu"}
+
+    <ExternalLink className="size-3.5" />
+  </a>
+)}
             </div>
           )}
       </div>
     );
   }
-  
