@@ -1,28 +1,24 @@
 import { Router } from "express";
 
-import {
-  getCampusFood,
-} from "./campusFood";
+import { getCampusFood } from "./campusFood";
+import { getResidenceFood } from "./residenceFood";
+import { getWusaFood } from "./wusaFood";
 
-import {
-  getResidenceFood,
-} from "./residenceFood";
-
-import type {
-  FoodLocation,
-} from "./types";
+import type { FoodLocation } from "./types";
 
 const router = Router();
 
 router.get("/", async (_req, res) => {
   try {
     const [
-      campusFood,
-      residenceFood,
-    ] = await Promise.all([
-      getCampusFood(),
-      getResidenceFood(),
-    ]);
+        campusFood,
+        residenceFood,
+        wusaFood,
+      ] = await Promise.all([
+        getCampusFood(),
+        getResidenceFood(),
+        getWusaFood(),
+      ]);
 
     const allFood: Record<
       string,
@@ -30,6 +26,7 @@ router.get("/", async (_req, res) => {
     > = {
       ...campusFood,
       ...residenceFood,
+      ...wusaFood,
     };
 
     res.json(allFood);

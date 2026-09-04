@@ -44,5 +44,6 @@ export type FoodLocation = {
       | "static";
 
     url?: string;
+    urls?: string[];
   };
 };
