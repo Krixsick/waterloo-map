@@ -2,3 +2,4 @@
 .env
 
 *[Aa]gent*.md
+dist/
