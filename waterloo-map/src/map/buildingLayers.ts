@@ -43,7 +43,11 @@ export function addImportantBuildingLayers(
     minzoom: 15,
     paint: {
       "fill-extrusion-color": "#cbd5e1",
-      "fill-extrusion-height": ["*", ["coalesce", ["get", "height"], 10], 0.35],
+      "fill-extrusion-height": [
+        "*",
+        ["coalesce", ["get", "height"], 10],
+        0.35,
+      ],
       "fill-extrusion-base": ["coalesce", ["get", "min_height"], 0],
       "fill-extrusion-opacity": 0.22,
     },
@@ -53,6 +57,10 @@ export function addImportantBuildingLayers(
     type: "geojson",
     data: buildingData,
   });
+
+  // --------------------------------------------------
+  // NON-RESIDENCE BUILDINGS
+  // --------------------------------------------------
 
   map.addLayer({
     id: "campus-building-glow",
@@ -94,6 +102,10 @@ export function addImportantBuildingLayers(
       "circle-opacity": 1,
     },
   });
+
+  // --------------------------------------------------
+  // RESIDENCE MARKER IMAGES
+  // --------------------------------------------------
 
   if (!map.hasImage("green-square")) {
     const canvas = document.createElement("canvas");
@@ -137,17 +149,52 @@ export function addImportantBuildingLayers(
     }
   }
 
+  // --------------------------------------------------
+  // NORMAL RESIDENCES
+  // Only residences WITHOUT a parentId show by default.
+  // UWP itself appears here.
+  // --------------------------------------------------
+
   map.addLayer({
     id: "residence-building-squares",
     type: "symbol",
     source: "important-buildings",
-    filter: ["==", ["get", "category"], "residence"],
+    filter: [
+      "all",
+      ["==", ["get", "category"], "residence"],
+      ["!", ["has", "parentId"]],
+    ],
     layout: {
       "icon-image": "green-square",
       "icon-size": 0.7,
       "icon-allow-overlap": true,
     },
   });
+
+  // --------------------------------------------------
+  // CHILD RESIDENCES
+  // Hidden by default.
+  //
+  // Later, clicking UWP will change this filter to:
+  //
+  // ["==", ["get", "parentId"], "uwp"]
+  // --------------------------------------------------
+
+  map.addLayer({
+    id: "child-residence-building-squares",
+    type: "symbol",
+    source: "important-buildings",
+    filter: ["==", ["get", "parentId"], ""],
+    layout: {
+      "icon-image": "green-square",
+      "icon-size": 0.55,
+      "icon-allow-overlap": true,
+    },
+  });
+
+  // --------------------------------------------------
+  // RESIDENCE HOVER
+  // --------------------------------------------------
 
   map.addLayer({
     id: "residence-building-hover",
@@ -161,24 +208,94 @@ export function addImportantBuildingLayers(
     },
   });
 
+  // --------------------------------------------------
+  // NORMAL BUILDING LABELS
+  //
+  // Exclude child buildings so BH, EH, WAN, etc.
+  // don't appear while their markers are hidden.
+  // --------------------------------------------------
+
   map.addLayer({
     id: "campus-building-labels",
     type: "symbol",
     source: "important-buildings",
     minzoom: 15.25,
+    filter: ["!", ["has", "parentId"]],
     layout: {
-      "text-field": ["get", "name"],
-      "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Regular"],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 15.25, 10, 18, 12],
+      "text-field": ["get", "abbreviation"],
+      "text-font": [
+        "DIN Offc Pro Medium",
+        "Arial Unicode MS Regular",
+      ],
+      "text-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        15.25,
+        11,
+        18,
+        14,
+      ],
       "text-max-width": 12,
-      "text-variable-anchor": ["top", "bottom", "left", "right"],
-      "text-radial-offset": 1.1,
+      "text-variable-anchor": [
+        "top",
+        "bottom",
+        "left",
+        "right",
+      ],
+      "text-radial-offset": 0.75,
       "text-justify": "auto",
       "text-padding": 4,
       "text-optional": true,
     },
     paint: {
       "text-color": buildingColor,
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 1.75,
+      "text-halo-blur": 0.5,
+    },
+  });
+
+  // --------------------------------------------------
+  // CHILD BUILDING LABELS
+  // Hidden by default with the child markers.
+  // --------------------------------------------------
+
+  map.addLayer({
+    id: "child-residence-building-labels",
+    type: "symbol",
+    source: "important-buildings",
+    minzoom: 15.25,
+    filter: ["==", ["get", "parentId"], ""],
+    layout: {
+      "text-field": ["get", "abbreviation"],
+      "text-font": [
+        "DIN Offc Pro Medium",
+        "Arial Unicode MS Regular",
+      ],
+      "text-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        15.25,
+        10,
+        18,
+        12,
+      ],
+      "text-max-width": 12,
+      "text-variable-anchor": [
+        "top",
+        "bottom",
+        "left",
+        "right",
+      ],
+      "text-radial-offset": 0.6,
+      "text-justify": "auto",
+      "text-padding": 3,
+      "text-optional": true,
+    },
+    paint: {
+      "text-color": "#16a34a",
       "text-halo-color": "#ffffff",
       "text-halo-width": 1.75,
       "text-halo-blur": 0.5,

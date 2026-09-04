@@ -6,6 +6,7 @@ import { getActiveEventLayerIds } from "./eventLayers";
 const HOVER_LAYERS = [
   "campus-building-circles",
   "residence-building-squares",
+  "child-residence-building-squares",
 ];
 
 const POPUP_CLASS = "uw-hover-popup";
@@ -162,7 +163,8 @@ function getOpenStatus(
 ) {
   if (!liveHours) return null;
 
-  const normalized = liveHours.trim().toLowerCase();
+  const normalized =
+    liveHours.trim().toLowerCase();
 
   if (normalized === "closed") {
     return {
@@ -172,10 +174,46 @@ function getOpenStatus(
     };
   }
 
+  const times = liveHours.split(
+    /\s*[–—-]\s*/,
+  );
+
+  if (times.length !== 2) {
+    return null;
+  }
+
+  const openMinutes =
+    parseTimeToMinutes(times[0]);
+
+  let closeMinutes =
+    parseTimeToMinutes(times[1]);
+
+  if (
+    openMinutes === null ||
+    closeMinutes === null
+  ) {
+    return null;
+  }
+
+  let now = getTorontoMinutesNow();
+
+  if (closeMinutes <= openMinutes) {
+    closeMinutes += 24 * 60;
+
+    if (now < openMinutes) {
+      now += 24 * 60;
+    }
+  }
+
+  const isOpen =
+    now >= openMinutes &&
+    now < closeMinutes;
+
   return {
-    label: "Open",
-    className:
-      "uw-hover-status uw-hover-status-open",
+    label: isOpen ? "Open" : "Closed",
+    className: isOpen
+      ? "uw-hover-status uw-hover-status-open"
+      : "uw-hover-status uw-hover-status-closed",
   };
 }
 
@@ -210,12 +248,12 @@ function getTorontoMinutesNow() {
 function parseTimeToMinutes(value: string) {
   const match = value
     .trim()
-    .match(/(\d{1,2}):(\d{2})\s*([AP]M)/i);
+    .match(/(\d{1,2})(?::(\d{2}))?\s*([AP]M)/i);
 
   if (!match) return null;
 
   let hour = Number(match[1]);
-  const minute = Number(match[2]);
+  const minute = Number(match[2] ?? 0);
   const period = match[3].toUpperCase();
 
   if (period === "AM" && hour === 12) {
@@ -457,7 +495,10 @@ function setBuildingHover(
   }
 
   if (
-    layerId === "residence-building-squares" &&
+    (
+      layerId === "residence-building-squares" ||
+      layerId === "child-residence-building-squares"
+    ) &&
     map.getLayer("residence-building-hover")
   ) {
     map.setFilter("residence-building-hover", [
