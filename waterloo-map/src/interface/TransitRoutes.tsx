@@ -1,4 +1,5 @@
-import { BusFront, LocateFixed, TrainFront, X } from "lucide-react";
+import TransitPanel from "./TransitPanel";
+import { BusFront, LocateFixed, ChevronDown, X } from "lucide-react";
 import { useState, type RefObject } from "react";
 import type { TransitRoute, TransitRouteDetail, TransitRoutePattern, TransitStop } from "../types/transit";
 import { transitRouteColor } from "../utils/transitRoutes";
@@ -6,8 +7,9 @@ import { transitRouteColor } from "../utils/transitRoutes";
 const focusStyle = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#135f49]";
 
 export function TransitRouteBar({
-  enabled, routes, selectedRoute, loading, error, partial, showHint, onToggle, onSelect, onRetry,
+  enabled, routes, selectedRoute, loading, error, partial, onToggle, onSelect, onRetry, onPlanTrip,
 }: {
+  onPlanTrip: () => void;
   enabled: boolean;
   routes: TransitRoute[];
   selectedRoute: TransitRoute | null;
@@ -26,32 +28,26 @@ export function TransitRouteBar({
   );
 
   return (
-    <section aria-label="Transit routes" className="absolute left-3 right-3 top-20 z-20 sm:left-5 sm:right-5">
-      <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-[0_2px_10px_rgba(15,23,42,0.12)] backdrop-blur-md">
-        <span className="flex shrink-0 items-center gap-2 px-2 text-sm font-semibold text-slate-700">
-          <BusFront size={18} aria-hidden="true" /><span className="hidden sm:inline">Routes</span>
-        </span>
-        <button type="button" aria-label="All routes" aria-pressed={!selectedRoute} onClick={() => onSelect(null)} className={`h-10 shrink-0 cursor-pointer rounded-xl px-3 text-sm font-medium ${focusStyle} ${!selectedRoute ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}>All</button>
-        <div role="group" aria-label="Choose a route" className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-1 py-1">
-          {routes.map((route) => {
-            const color = transitRouteColor(route.mode, route.routeId);
-            const selected = selectedRoute?.id === route.id;
-            return (
-              <button key={route.id} type="button" aria-label={`${route.mode === "ion" ? "ION" : "Route"} ${route.routeId}: ${route.name}`} aria-pressed={selected} title={route.name} onClick={() => onSelect(route)}
-                style={{ color: selected ? "#ffffff" : color, backgroundColor: selected ? color : `${color}0d`, borderColor: selected ? color : `${color}30` }}
-                className={`flex h-10 min-w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-bold transition-colors hover:brightness-95 ${focusStyle}`}>
-                {route.mode === "ion" && <TrainFront size={14} aria-hidden="true" />}{route.routeId}
-              </button>
-            );
-          })}
-          {loading && <span role="status" className="shrink-0 px-2 text-sm text-slate-500">Loading routes…</span>}
-          {error && <button type="button" onClick={onRetry} className={`shrink-0 px-2 text-sm text-red-700 underline ${focusStyle}`}>Routes unavailable · Retry</button>}
-          {!loading && !error && !routes.length && <span role="status" className="shrink-0 px-2 text-sm text-slate-500">No routes for the selected transit modes</span>}
+    <TransitPanel tab="explore" onExplore={() => {}} onPlan={onPlanTrip} onClose={onToggle}>
+        <div className="mt-3">
+          <details className="group relative">
+            <summary id="transit-route-picker" aria-label="Choose a transit route" className={`flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm hover:bg-emerald-50/50 ${focusStyle}`}>
+              <span className="flex min-w-0 items-center gap-3">
+                {selectedRoute ? <span style={{backgroundColor:transitRouteColor(selectedRoute.mode,selectedRoute.routeId)}} className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white">{selectedRoute.routeId}</span> : <span className="rounded-lg bg-white p-2 text-[#13735a]"><BusFront size={18} /></span>}
+                <span className="min-w-0"><span className="block truncate font-medium text-slate-800">{selectedRoute ? selectedRoute.name : "All routes"}</span><span className="mt-0.5 block text-xs text-slate-500">{selectedRoute ? `${selectedRoute.mode === "ion" ? "ION light rail" : "Bus route"} · Change route` : loading ? "Loading routes…" : error ? "Route list unavailable" : `${routes.length} routes · Choose a route`}</span></span>
+              </span>
+              <ChevronDown size={16} aria-hidden="true" className="shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="relative z-40 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+              <button type="button" onClick={event=>{onSelect(null);event.currentTarget.closest("details")?.removeAttribute("open");}} className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50">All routes</button>
+              {routes.map(route => <button type="button" key={route.id} onClick={event=>{onSelect(route);event.currentTarget.closest("details")?.removeAttribute("open");}} className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50"><span style={{backgroundColor:transitRouteColor(route.mode,route.routeId)}} className="min-w-10 rounded-md px-2 py-1 text-center text-xs font-bold text-white">{route.routeId}</span><span>{route.name}</span></button>)}
+            </div>
+          </details>
         </div>
-        <button type="button" onClick={onToggle} aria-label="Hide transit" className={`flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 ${focusStyle}`}><X size={18} /></button>
-      </div>
-      {showHint && !selectedRoute && !loading && !error && routes.length > 0 && <p className="mt-2 w-fit max-w-full rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs text-slate-600 shadow-sm">{partial ? "Some routes are unavailable. " : ""}Choose a number to see its path and stops.</p>}
-    </section>
+        {loading && <p role="status" className="mt-2 text-xs text-slate-500">Loading routes…</p>}
+        {error && <button type="button" onClick={onRetry} className="mt-2 text-xs text-red-700 underline">Routes unavailable · Retry</button>}
+        {partial && !error && <p className="mt-2 text-xs text-slate-500">Some routes are unavailable.</p>}
+    </TransitPanel>
   );
 }
 
@@ -73,7 +69,7 @@ export function TransitRouteCard({ route, detail, pattern, loading, error, vehic
   const [showStops, setShowStops] = useState(false);
   const color = transitRouteColor(route.mode, route.routeId);
   return (
-    <section ref={panelRef} aria-label={`Route ${route.routeId} details`} className="absolute left-3 top-40 z-20 max-h-[min(55svh,calc(100svh-15rem))] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg sm:left-5 sm:w-96">
+    <section ref={panelRef} aria-label={`Route ${route.routeId} details`} className="absolute left-3 top-[19rem] z-20 max-h-[calc(100svh-20rem)] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg sm:left-5 sm:w-96">
       <header className="flex items-start gap-3 p-4 pb-3">
         <span style={{ backgroundColor: color }} className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl px-2 text-base font-bold text-white">{route.routeId}</span>
         <div className="min-w-0 flex-1">
