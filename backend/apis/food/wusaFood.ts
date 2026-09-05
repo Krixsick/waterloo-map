@@ -397,6 +397,50 @@ function findMenuUrls(
     $: cheerio.CheerioAPI,
     pageUrl: string,
   ) {
+    /*
+     * 1. Prefer a real menu link.
+     *
+     * This is what The Bomber has, and it
+     * already worked correctly before.
+     */
+    const menuAnchor = $("a")
+      .filter((_, element) => {
+        const text = normalizeText(
+          $(element).text(),
+        ).toLowerCase();
+  
+        return (
+          text === "menu" ||
+          text === "our menu" ||
+          text === "view menu" ||
+          text.includes("view menu")
+        );
+      })
+      .first();
+  
+    const anchorHref =
+      menuAnchor.attr("href");
+  
+    if (anchorHref) {
+      try {
+        return [
+          new URL(
+            anchorHref,
+            pageUrl,
+          ).toString(),
+        ];
+      } catch {
+        return [anchorHref];
+      }
+    }
+  
+    /*
+     * 2. If there is no real menu link,
+     * fall back to embedded menu images.
+     *
+     * This handles Chaska, Wok Stop,
+     * Smarty Pants, etc.
+     */
     const urls: string[] = [];
   
     const menuImages = $("img").filter(
@@ -419,6 +463,9 @@ function findMenuUrls(
         | string
         | undefined;
   
+      /*
+       * Prefer largest image in srcset.
+       */
       if (srcset) {
         const candidates = srcset
           .split(",")
@@ -460,7 +507,9 @@ function findMenuUrls(
           image.attr("src");
       }
   
-      if (!imageUrl) return;
+      if (!imageUrl) {
+        return;
+      }
   
       try {
         imageUrl = new URL(
@@ -627,7 +676,7 @@ async function scrapeWusaFood(): Promise<
 
 export async function getWusaFood() {
   return withCache(
-    "wusafood:full-info:v4",
+    "wusafood:full-info:v5",
     60 * 5,
     scrapeWusaFood,
   );

@@ -2,7 +2,6 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
-    CreditCard,
     ExternalLink,
     X,
   } from "lucide-react";
@@ -12,6 +11,7 @@ import {
   
   import type { FoodInfo } from "../api/foodApi";
   import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
+  import { getFoodOpenStatus } from "../utils/timeUtils";
   
   type FoodDetailsCardProps = {
     food: FoodInfo;
@@ -355,6 +355,39 @@ import {
     return description.trim();
   }
   
+  function parseMealHours(
+    hours: string,
+  ) {
+    if (!hours.includes(" · ")) {
+      return null;
+    }
+  
+    return hours
+      .split(" · ")
+      .map((item) => {
+        const match = item.match(
+          /^(.*?)\s+(\d{1,2}:\d{2}(?:AM|PM)\s+-\s+\d{1,2}:\d{2}(?:AM|PM))$/,
+        );
+  
+        if (!match) {
+          return null;
+        }
+  
+        return {
+          label: match[1],
+          time: match[2],
+        };
+      })
+      .filter(
+        (
+          item,
+        ): item is {
+          label: string;
+          time: string;
+        } => item !== null,
+      );
+  }
+
   function MenuGallery({
     foodName,
     images,
@@ -587,10 +620,22 @@ import {
       specialHours ??
       food.hours?.[today] ??
       "Hours unavailable";
+
+    const foodStatus =
+      getFoodOpenStatus(
+        hours ===
+          "Hours unavailable"
+          ? null
+          : hours,
+      );
+
+    const mealHours =
+      parseMealHours(hours);
   
-    const dailyMenuUrl =
+      const dailyMenuUrl =
       hasDailyMenu
-        ? getTodayMenuUrl()
+        ? food.menu?.url ??
+          getTodayMenuUrl()
         : null;
   
     return (
@@ -599,15 +644,10 @@ import {
           <button
             type="button"
             onClick={() => {
-              if (
-                hasExpandableContent
-              ) {
                 setIsExpanded(
-                  (current) =>
-                    !current,
+                  (current) => !current,
                 );
-              }
-            }}
+              }}
             aria-expanded={
               hasExpandableContent
                 ? isExpanded
@@ -632,50 +672,81 @@ import {
             </div>
   
             <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-ui-value text-slate-900">
-                    {food.name}
-                  </p>
-  
-                  {!isExpanded &&
-                    descriptionText && (
-                      <p className="text-ui-meta mt-1 line-clamp-2 text-slate-500">
-                        {
-                          descriptionText
-                        }
-                      </p>
-                    )}
-                </div>
-  
-                {hasExpandableContent && (
-                  <ChevronDown
-                    className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
-                      isExpanded
-                        ? "rotate-180"
-                        : ""
-                    }`}
-                  />
-                )}
-              </div>
+            <div className="flex items-start justify-between gap-3">
+  <div className="min-w-0 flex-1">
+    <p className="text-ui-value text-slate-900">
+      {food.name}
+    </p>
+  </div>
+
+  <div className="flex shrink-0 items-center gap-2">
+    {hours !== "Hours unavailable" && (
+      <span
+        className={`text-ui-meta rounded-full px-2.5 py-1 font-medium ${
+          foodStatus.isOpen
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-rose-50 text-rose-700"
+        }`}
+      >
+        {foodStatus.status}
+      </span>
+    )}
+
+<ChevronDown
+  className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
+    isExpanded
+      ? "rotate-180"
+      : ""
+  }`}
+/>
+  </div>
+</div>
   
               <div className="mt-2">
-                <p
-                  className={`text-ui-meta font-medium ${
-                    specialHours
-                      ? "text-amber-700"
-                      : "text-slate-600"
-                  }`}
-                >
-                  {hours}
-                </p>
-  
-                {specialHours && (
-                  <p className="text-ui-meta mt-0.5 font-medium text-amber-600">
-                    Special hours
-                  </p>
-                )}
-              </div>
+  {mealHours &&
+  mealHours.length > 0 ? (
+    <div className="space-y-1">
+      {mealHours.map(
+        ({ label, time }) => (
+          <div
+            key={`${label}-${time}`}
+            className="flex items-center justify-between gap-3"
+          >
+            <span className="text-ui-meta text-slate-500">
+              {label}
+            </span>
+
+            <span className="text-ui-meta shrink-0 font-medium text-slate-700">
+              {time}
+            </span>
+          </div>
+        ),
+      )}
+    </div>
+  ) : (
+    <p
+      className={`text-ui-meta font-medium ${
+        specialHours
+          ? "text-amber-700"
+          : "text-slate-600"
+      }`}
+    >
+      {hours}
+    </p>
+  )}
+
+  {specialHours && (
+    <p className="text-ui-meta mt-1 font-medium text-amber-600">
+      Special hours
+    </p>
+  )}
+
+{foodStatus.timeMessage && (
+  <p className="text-ui-meta mt-1 text-slate-500">
+    {foodStatus.timeMessage}
+  </p>
+)}
+</div>
             </div>
           </button>
   
@@ -707,8 +778,6 @@ import {
                     }
                   >
                     <div className="flex items-center gap-1.5">
-                      <CreditCard className="size-4 text-slate-400" />
-  
                       <p className="text-ui-label text-slate-500">
                         Payment
                       </p>

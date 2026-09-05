@@ -117,16 +117,23 @@ function getExpandedParentId(
 
   if (!building) return null;
 
-  if (building.properties.parentId) {
+  if (
+    building.properties.category === "residence" &&
+    building.properties.parentId
+  ) {
     return building.properties.parentId;
   }
 
-  const hasChildren = buildings.features.some(
-    ({ properties }) =>
-      properties.parentId === buildingId,
-  );
+  const hasResidenceChildren =
+    buildings.features.some(
+      ({ properties }) =>
+        properties.category === "residence" &&
+        properties.parentId === buildingId,
+    );
 
-  return hasChildren ? buildingId : null;
+  return hasResidenceChildren
+    ? buildingId
+    : null;
 }
 
 function Map() {
@@ -222,15 +229,19 @@ function Map() {
         properties.id ===
         selectedBuildingId,
     )?.properties.category;
+  
+    const supportsLiveLibraryOccupancy =
+    selectedBuildingId === "dp" ||
+    selectedBuildingId === "dc-library";
 
   const {
     data: libraryOccupancyResponse,
     isError: isLibraryOccupancyError,
     isPending:
       isLibraryOccupancyPending,
-  } = useLibraryOccupancy(
-    selectedBuildingCategory === "library",
-  );
+    } = useLibraryOccupancy(
+      supportsLiveLibraryOccupancy,
+    );
 
   const {
     data: eventsResponse,
@@ -322,51 +333,54 @@ function Map() {
     const buildingId =
       selectedBuilding.properties.id;
 
-    return Object.values(
-      foodData,
-    ).filter(
-      (food) =>
-        food.buildingId === buildingId,
+    const matchedFood =
+      Object.values(foodData).filter(
+        (food) =>
+          food.buildingId ===
+          buildingId,
+      );
+
+    console.log(
+      "selected building id:",
+      buildingId,
     );
+
+    console.log(
+      "matched food:",
+      matchedFood,
+    );
+
+    return matchedFood;
   }, [
     foodData,
     selectedBuilding,
   ]);
-
-  console.log("FOOD DATA", foodData);
-console.log(
-  "SELECTED BUILDING",
-  selectedBuilding?.properties.id,
-);
-console.log(
-  "SELECTED BUILDING FOOD",
-  selectedBuildingFood,
-);
 
   // --------------------
   // LIBRARY OCCUPANCY
   // --------------------
 
   const selectedLibraryOccupancy =
-    useMemo(() => {
-      if (
-        selectedBuilding?.properties
-          .category !== "library"
-      ) {
-        return null;
-      }
+  useMemo(() => {
+    if (
+      !selectedBuilding ||
+      !supportsLiveLibraryOccupancy
+    ) {
+      return null;
+    }
 
-      return (
-        libraryOccupancyResponse?.locations.find(
-          ({ name }) =>
-            name ===
-            selectedBuilding.properties.name,
-        ) ?? null
-      );
-    }, [
-      libraryOccupancyResponse?.locations,
-      selectedBuilding,
-    ]);
+    return (
+      libraryOccupancyResponse?.locations.find(
+        ({ name }) =>
+          name ===
+          selectedBuilding.properties.name,
+      ) ?? null
+    );
+  }, [
+    libraryOccupancyResponse?.locations,
+    selectedBuilding,
+    supportsLiveLibraryOccupancy,
+  ]);
 
   // --------------------
   // TRANSIT DATA
@@ -884,17 +898,21 @@ console.log(
     }
 
     const childFilter =
-      expandedParentId
-        ? [
-            "==",
-            ["get", "parentId"],
-            expandedParentId,
-          ]
-        : [
-            "==",
-            ["get", "parentId"],
-            "",
-          ];
+  expandedParentId
+    ? [
+        "all",
+        ["==", ["get", "category"], "residence"],
+        [
+          "==",
+          ["get", "parentId"],
+          expandedParentId,
+        ],
+      ]
+    : [
+        "all",
+        ["==", ["get", "category"], "residence"],
+        ["==", ["get", "parentId"], ""],
+      ];
 
     if (
       mapInstance.getLayer(
@@ -924,28 +942,29 @@ console.log(
       )
     ) {
       const selectedGroupFilter =
-        expandedParentId
-          ? [
-              "any",
-              [
-                "==",
-                ["get", "id"],
-                expandedParentId,
-              ],
-              [
-                "==",
-                [
-                  "get",
-                  "parentId",
-                ],
-                expandedParentId,
-              ],
-            ]
-          : [
-              "==",
-              ["get", "id"],
-              "",
-            ];
+  expandedParentId
+    ? [
+        "any",
+        [
+          "==",
+          ["get", "id"],
+          expandedParentId,
+        ],
+        [
+          "all",
+          ["==", ["get", "category"], "residence"],
+          [
+            "==",
+            ["get", "parentId"],
+            expandedParentId,
+          ],
+        ],
+      ]
+    : [
+        "==",
+        ["get", "id"],
+        "",
+      ];
 
       mapInstance.setFilter(
         "selected-residence-group",
@@ -1181,9 +1200,7 @@ console.log(
             selectedLibraryOccupancy
           }
           libraryOccupancyLoading={
-            selectedBuilding
-              ?.properties.category ===
-              "library" &&
+            supportsLiveLibraryOccupancy &&
             isLibraryOccupancyPending
           }
           libraryOccupancyError={
