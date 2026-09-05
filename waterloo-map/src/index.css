@@ -260,12 +260,124 @@
     font-weight: 500;
   }
 }
-/* Mapbox's default font must not override the app's hover-card typography. */
-.mapboxgl-popup,
-.mapboxgl-popup-content {
+
+/* Map overlays use DOM elements outside the React component tree. */
+.transit-stop-popup {
+  z-index: 35;
+}
+
+.transit-stop-popup .mapboxgl-popup-content {
+  padding: 0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 24px rgb(15 23 42 / 16%);
+}
+
+.transit-stop-preview {
+  width: min(260px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  color: #0f172a;
   font-family: var(--font-title);
 }
-.food-hover-popup .mapboxgl-popup-content,
-.journey-stop-popup .mapboxgl-popup-content {
+
+.transit-stop-preview-meta {
+  margin: 0 0 6px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.transit-stop-preview-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.transit-stop-preview-label {
+  margin: 14px 0 7px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.transit-stop-preview-routes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.transit-stop-preview-route {
+  display: inline-flex;
+  min-width: 30px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.transit-stop-preview-action {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 14px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #edf5f1;
+  color: #135f49;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.transit-stop-preview-action:hover {
+  background: #e2efe8;
+}
+
+.transit-stop-preview-action:focus-visible {
+  outline: 2px solid #135f49;
+  outline-offset: 2px;
+}
+
+.parking-map-marker {
+  display: flex;
+  min-width: 42px;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 25%);
+  color: #fff;
   font-family: var(--font-title);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.parking-map-marker-symbol {
+  border-right: 1px solid rgb(255 255 255 / 45%);
+  padding-right: 5px;
+  font-size: 11px;
+}
+.parking-map-marker:hover,
+.parking-map-marker[aria-pressed="true"] {
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 85%), 0 3px 10px rgb(15 23 42 / 30%);
+  z-index: 2;
+}
+.parking-map-marker:focus-visible {
+  outline: 3px solid #0f172a;
+  outline-offset: 3px;
 }
