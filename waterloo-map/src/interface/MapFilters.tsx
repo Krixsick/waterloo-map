@@ -9,7 +9,6 @@ import {
   RotateCcw,
   TrainFront,
   Users,
-  Utensils,
   X,
   type LucideIcon,
 } from "lucide-react";
