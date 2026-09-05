@@ -514,7 +514,8 @@ function isHoveringEvent(
   map: mapboxgl.Map,
   point: mapboxgl.PointLike,
 ) {
-  const eventLayers = getActiveEventLayerIds(map);
+  if (map.getContainer().dataset.foodHover === "true") return true;
+  const eventLayers = [...getActiveEventLayerIds(map), ...["journey-stops", "transit-stop-markers", "transit-vehicle-markers"].filter(id => map.getLayer(id))];
 
   if (!eventLayers.length) return false;
 
@@ -540,6 +541,8 @@ export function addBuildingHoverPopup(
     offset: 18,
     className: POPUP_CLASS,
   });
+
+  map.getContainer().addEventListener("food-preview-open", () => { hoverPopup.remove(); clearBuildingHover(map); });
 
   HOVER_LAYERS.forEach((layerId) => {
     map.on("mouseenter", layerId, (event) => {

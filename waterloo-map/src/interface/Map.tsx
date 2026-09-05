@@ -1,3 +1,4 @@
+import FoodFilters from "./FoodFilters";
 import WalkingRoutes from "./WalkingRoutes";
 import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
 import { FoodMarkers, foodIsOpen } from "./FoodMap";
@@ -191,6 +192,7 @@ function Map() {
   useEffect(() => { const timer = window.setInterval(() => setEventNow(new Date()), 60000); return () => window.clearInterval(timer); }, []);
   const foodPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("foodPreview") === "1";
   const [showFood, setShowFood] = useState(foodPreview);
+  const [foodOpenOnly, setFoodOpenOnly] = useState(true);
   const [foodCategory, setFoodCategory] = useState("all");
   const [directionsMode, setDirectionsMode] = useState<"walk" | "transit">("walk");
   const [walkingMode, setWalkingMode] = useState(false);
@@ -342,9 +344,9 @@ function Map() {
 
   const mappedFood = useMemo(() => Object.values(foodData).filter(food => buildings.features.some(b => b.properties.id === food.buildingId)), [foodData]);
   const openFoodCount = mappedFood.filter(foodIsOpen).length;
-  const filteredFood = mappedFood.filter(food => (foodPreview || foodIsOpen(food)) && (foodCategory === "all" || (foodCategory === "meals" ? !["cafe", "convenience"].includes(food.category) : food.category === foodCategory)));
+  const filteredFood = mappedFood.filter(food => (foodPreview || !foodOpenOnly || foodIsOpen(food)) && (foodCategory === "all" || (foodCategory === "meals" ? !["cafe", "convenience"].includes(food.category) : food.category === foodCategory)));
   const selectFoodBuilding = useCallback((id: string) => { setSelectedBuildingId(id); setSelectedEventId(null); setFoodFocus(id); }, []);
-  function toggleFood() { setShowFood(value => !value); setShowEvents(false); setShowTransit(false); setSelectedBuildingId(null); setSelectedEventId(null); setSelectedTransit(null); }
+  function toggleFood() { setWalkingMode(false); setShowFood(value => !value); setShowEvents(false); setShowTransit(false); setSelectedBuildingId(null); setSelectedEventId(null); setSelectedTransit(null); }
   useEffect(() => {
     if (foodFocus && selectedBuildingId === foodFocus) document.getElementById("building-food-section")?.scrollIntoView({ block: "nearest" });
   }, [foodFocus, selectedBuildingId]);
@@ -610,7 +612,7 @@ function Map() {
 
   function resetFilters() {
     setWalkingMode(false);
-    setShowFood(false); setFoodCategory("all");
+    setShowFood(false); setFoodOpenOnly(true); setFoodCategory("all");
     setActiveCategories(
       DEFAULT_CATEGORIES,
     );
@@ -643,6 +645,7 @@ function Map() {
   }
 
   function toggleEvents() {
+    setWalkingMode(false); setShowFood(false);
     setShowFood(false);
     setSelectedEventId(null); setSelectedBuildingId(null); setSelectedTransit(null);
     setShowTransit(false); setEventVenueIds(null);
@@ -861,7 +864,7 @@ function Map() {
       });
 
       addEventLayers(map, {
-        onSelectVenue: (ids) => { setEventVenueIds(ids); setSelectedBuildingId(null); setSelectedTransit(null); setSelectedEventId(null); setShowEvents(true); },
+        onSelectVenue: (ids) => { setShowFood(false); setShowTransit(false); setEventVenueIds(ids); setSelectedBuildingId(null); setSelectedTransit(null); setSelectedEventId(null); setShowEvents(true); },
         onSelectEvent: (
           eventId,
         ) => {
@@ -1098,7 +1101,7 @@ function Map() {
 
     updateEventMarkers(
       mapInstance,
-      showEvents
+      showEvents && !showFood
         ? visibleMappedEvents
         : [],
     );
@@ -1107,6 +1110,7 @@ function Map() {
     isMapLoaded,
     visibleMappedEvents,
     showEvents,
+    showFood,
   ]);
 
   // --------------------
@@ -1194,15 +1198,14 @@ function Map() {
           }
         />
 
-        {!showTransit && !walkingMode && <div className="absolute left-3 top-20 z-20 flex items-center gap-2 sm:left-5">
+        {<div className="absolute left-3 top-20 z-20 flex items-center gap-2 sm:left-5">
           <button type="button" onClick={() => { setWalkingMode(false); toggleTransit(); }} className="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm"><BusFront size={18} />Transit</button>
           <button type="button" aria-pressed={showEvents} onClick={() => { setWalkingMode(false); toggleEvents(); }} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}><CalendarDays size={18} />Events</button>
           <button type="button" aria-pressed={showFood} onClick={() => { setWalkingMode(false); toggleFood(); }} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}><UtensilsCrossed size={18} />Food</button>
         </div>}
-        {showFood && mapInstance && isMapLoaded && <FoodMarkers preview={foodPreview} map={mapInstance} foods={filteredFood} onSelect={selectFoodBuilding} />}
-        {showFood && !selectedBuildingId && <div aria-label="Food map filters" className="absolute left-3 top-36 z-30 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:left-5">
-          <div className="flex items-center gap-2"><span className="px-2 text-sm text-emerald-800">{foodPreview ? "Preview · all spots shown open" : "Open now"}</span>
-          <select aria-label="Food category" value={foodCategory} onChange={e => setFoodCategory(e.target.value)} className="cursor-pointer rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700"><option value="all">All food</option><option value="meals">Meals</option><option value="cafe">Coffee</option><option value="convenience">Convenience</option></select></div>
+        {showFood && !showEvents && mapInstance && isMapLoaded && <FoodMarkers preview={foodPreview} map={mapInstance} foods={filteredFood} onSelect={selectFoodBuilding} />}
+        {showFood && !showEvents && !selectedBuildingId && <div aria-label="Food map filters" className="absolute left-3 top-36 z-30 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:left-5">
+          <FoodFilters openOnly={foodOpenOnly} onOpenOnly={setFoodOpenOnly} category={foodCategory} onCategory={setFoodCategory} />
           {foodLoading && <p className="px-3 pt-2 text-xs text-slate-500">Loading food spots…</p>}
           {foodError && <p className="px-3 pt-2 text-xs text-red-600">Food information is unavailable. Please try again shortly.</p>}
           {!foodLoading && !foodError && !filteredFood.length && <p className="px-3 pb-1 pt-2 text-xs text-slate-500">No food spots match these filters.</p>}

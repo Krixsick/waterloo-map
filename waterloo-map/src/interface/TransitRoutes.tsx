@@ -69,7 +69,7 @@ export function TransitRouteCard({ route, detail, pattern, loading, error, vehic
   const [showStops, setShowStops] = useState(false);
   const color = transitRouteColor(route.mode, route.routeId);
   return (
-    <section ref={panelRef} aria-label={`Route ${route.routeId} details`} className="absolute left-3 top-[19rem] z-20 max-h-[calc(100svh-20rem)] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg sm:left-5 sm:w-96">
+    <section ref={panelRef} aria-label={`Route ${route.routeId} details`} className="absolute left-3 top-[23rem] z-20 max-h-[calc(100svh-24rem)] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg sm:left-5 sm:w-96">
       <header className="flex items-start gap-3 p-4 pb-3">
         <span style={{ backgroundColor: color }} className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl px-2 text-base font-bold text-white">{route.routeId}</span>
         <div className="min-w-0 flex-1">
