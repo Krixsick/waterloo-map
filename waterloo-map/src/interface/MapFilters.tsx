@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  UtensilsCrossed,
   BusFront,
   CalendarDays,
   Check,
@@ -27,6 +28,9 @@ type MapFiltersProps = {
   transitStopCount: number;
   transitVehicleCount: number;
   transitStatus: TransitStatus;
+  showFood: boolean;
+  onToggleFood: () => void;
+  openFoodCount: number;
   showEvents: boolean;
   onToggleEvents: () => void;
   eventCount: number;
@@ -110,6 +114,7 @@ export default function MapFilters({
   transitStopCount,
   transitVehicleCount,
   transitStatus,
+  showFood, onToggleFood, openFoodCount,
   showEvents,
   onToggleEvents,
   eventCount,
@@ -209,6 +214,11 @@ export default function MapFilters({
         <h3 className="text-ui-label mb-2 px-2 text-slate-500">
           Explore
         </h3>
+        <label className={`mb-1 flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 focus-within:ring-2 focus-within:ring-emerald-600 ${showFood ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50"}`}>
+          <input type="checkbox" checked={showFood} onChange={onToggleFood} className="sr-only" />
+          <UtensilsCrossed size={20} aria-hidden="true" /><span className="flex-1"><span className="block text-sm font-medium">Food spots</span><span className="text-ui-meta block text-slate-500">{openFoodCount} spots open now</span></span>
+          <span aria-hidden="true" className={`flex size-5 items-center justify-center rounded border ${showFood ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-300 bg-white text-transparent"}`}><Check size={14} /></span>
+        </label>
         <label
           className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-violet-600/40 ${
             showEvents

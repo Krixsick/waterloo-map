@@ -1,3 +1,4 @@
+import { mathFood } from "./mathFood";
 import { getCollegeFood } from "./collegeFood";
 import { Router } from "express";
 
@@ -35,6 +36,7 @@ router.get("/", async (_req, res) => {
       ...wusaFood,
       ...stJeromesFood,
       ...collegeFood,
+      ...mathFood,
     };
 
     res.json(allFood);
