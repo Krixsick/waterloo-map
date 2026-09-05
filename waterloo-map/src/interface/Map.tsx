@@ -1,5 +1,6 @@
 import { FoodMarkers, foodIsOpen } from "./FoodMap";
-import { CalendarDays, UtensilsCrossed, BusFront } from "lucide-react";
+import ParkingMap from "./ParkingMap";
+import { CalendarDays, UtensilsCrossed, BusFront, SquareParking } from "lucide-react";
 import EventsPanel, { EventSummary } from "./EventsPanel";
 import { filterEvents, upcomingEvents, type EventDateFilter } from "../utils/eventDiscovery";
 import { matchBuilding } from "../utils/eventLocations";
@@ -178,6 +179,8 @@ function Map() {
   const fittedPatternRef = useRef<string | null>(null);
   const routeCardRef = useRef<HTMLElement | null>(null);
 
+  const [showParking, setShowParking] = useState(false);
+
   const [showTransit, setShowTransit] =
     useState(false);
 
@@ -340,7 +343,7 @@ function Map() {
   const openFoodCount = mappedFood.filter(foodIsOpen).length;
   const filteredFood = mappedFood.filter(food => (foodPreview || foodIsOpen(food)) && (foodCategory === "all" || (foodCategory === "meals" ? !["cafe", "convenience"].includes(food.category) : food.category === foodCategory)));
   const selectFoodBuilding = useCallback((id: string) => { setSelectedBuildingId(id); setSelectedEventId(null); setFoodFocus(id); }, []);
-  function toggleFood() { setShowFood(value => !value); setShowEvents(false); setShowTransit(false); setSelectedBuildingId(null); setSelectedEventId(null); setSelectedTransit(null); }
+  function toggleFood() { setShowParking(false); setShowFood(value => !value); setShowEvents(false); setShowTransit(false); setSelectedBuildingId(null); setSelectedEventId(null); setSelectedTransit(null); }
   useEffect(() => {
     if (foodFocus && selectedBuildingId === foodFocus) document.getElementById("building-food-section")?.scrollIntoView({ block: "nearest" });
   }, [foodFocus, selectedBuildingId]);
@@ -557,6 +560,7 @@ function Map() {
   function selectBuilding(
     building: BuildingFeature,
   ) {
+    setShowParking(false);
     setSelectedBuildingId(
       building.properties.id,
     );
@@ -605,6 +609,7 @@ function Map() {
   }
 
   function resetFilters() {
+    setShowParking(false);
     setShowFood(false); setFoodCategory("all");
     setActiveCategories(
       DEFAULT_CATEGORIES,
@@ -624,6 +629,7 @@ function Map() {
   }
 
   function toggleTransit() {
+    setShowParking(false);
     setShowFood(false);
     setShowEvents(false);
     setSelectedTransit(null);
@@ -638,10 +644,24 @@ function Map() {
   }
 
   function toggleEvents() {
+    setShowParking(false);
     setShowFood(false);
     setSelectedEventId(null); setSelectedBuildingId(null); setSelectedTransit(null);
     setShowTransit(false); setEventVenueIds(null);
     setShowEvents(current => !current);
+  }
+
+  function toggleParking() {
+    setShowParking((current) => !current);
+    setShowTransit(false);
+    setShowFood(false);
+    setShowEvents(false);
+    setSelectedRoute(null);
+    setSelectedPatternId(null);
+    setSelectedBuildingId(null);
+    setSelectedTransit(null);
+    setSelectedEventId(null);
+    setIs3D(false);
   }
 
   function toggleTransitMode(
@@ -792,12 +812,12 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-    mapInstance.setMinZoom(showTransit ? 9 : 13);
+    mapInstance.setMinZoom(showTransit ? 9 : showParking ? 11 : 13);
     updateTransitRoute(mapInstance, showTransit ? selectedRoute : null, showTransit ? routePattern : null);
     const key = showTransit && selectedRoute && routePattern ? `${selectedRoute.id}:${routePattern.id}` : null;
     if (key && key !== fittedPatternRef.current) fitSelectedRoute();
     fittedPatternRef.current = key;
-  }, [mapInstance, isMapLoaded, showTransit, selectedRoute, routePattern, fitSelectedRoute]);
+  }, [mapInstance, isMapLoaded, showTransit, showParking, selectedRoute, routePattern, fitSelectedRoute]);
 
   // --------------------
   // INITIALIZE MAP
@@ -902,13 +922,14 @@ function Map() {
 
     updateBuildingFilters(
       mapInstance,
-      selectedRoute ? [] : activeCategories,
+      selectedRoute || showParking ? [] : activeCategories,
     );
   }, [
     mapInstance,
     isMapLoaded,
     activeCategories,
     selectedRoute,
+    showParking,
   ]);
 
   // --------------------
@@ -1114,6 +1135,8 @@ function Map() {
         closeMenu,
       ) => (
         <MapFilters
+          showParking={showParking}
+          onToggleParking={toggleParking}
           activeCategories={
             activeCategories
           }
@@ -1182,11 +1205,13 @@ function Map() {
           }
         />
 
-        {!showTransit && <div className="absolute left-3 top-20 z-20 flex items-center gap-2 sm:left-5">
+        {!showTransit && <div className="absolute left-3 right-3 top-20 z-20 flex items-center gap-2 overflow-x-auto pb-1 [&>button]:shrink-0 sm:left-5 sm:right-auto">
           <button type="button" onClick={toggleTransit} className="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm"><BusFront size={18} />Transit</button>
           <button type="button" aria-pressed={showEvents} onClick={toggleEvents} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}><CalendarDays size={18} />Events</button>
           <button type="button" aria-pressed={showFood} onClick={toggleFood} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}><UtensilsCrossed size={18} />Food</button>
+          <button type="button" aria-pressed={showParking} onClick={toggleParking} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showParking ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}><SquareParking size={18} />Parking</button>
         </div>}
+        {showParking && mapInstance && isMapLoaded && <ParkingMap map={mapInstance} onClose={toggleParking} />}
         {showFood && mapInstance && isMapLoaded && <FoodMarkers preview={foodPreview} map={mapInstance} foods={filteredFood} onSelect={selectFoodBuilding} />}
         {showFood && !selectedBuildingId && <div aria-label="Food map filters" className="absolute left-3 top-36 z-30 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:left-5">
           <div className="flex items-center gap-2"><span className="px-2 text-sm text-emerald-800">{foodPreview ? "Preview · all spots shown open" : "Open now"}</span>

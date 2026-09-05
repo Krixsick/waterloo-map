@@ -514,7 +514,11 @@ function isHoveringEvent(
   map: mapboxgl.Map,
   point: mapboxgl.PointLike,
 ) {
-  const eventLayers = getActiveEventLayerIds(map);
+  const eventLayers = [
+    ...getActiveEventLayerIds(map),
+    "transit-stop-targets",
+    "transit-vehicle-markers",
+  ].filter((id) => map.getLayer(id));
 
   if (!eventLayers.length) return false;
 

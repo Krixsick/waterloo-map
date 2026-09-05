@@ -3,10 +3,14 @@ import type { FeatureCollection, Point, LineString } from "geojson";
 
 import type { TransitStop, TransitVehicle, TransitRoute, TransitRoutePattern } from "../types/transit";
 import { transitRouteColor } from "../utils/transitRoutes";
+import { addTransitStopHover, transitStopFromFeature } from "./transitStopHover";
 import { getActiveEventLayerIds } from "./eventLayers";
 
 const STOP_SOURCE_ID = "transit-stops";
 const STOP_MARKER_LAYER_ID = "transit-stop-markers";
+const STOP_TARGET_LAYER_ID = "transit-stop-targets";
+const STOP_HIGHLIGHT_LAYER_ID = "transit-stop-highlight";
+const clearStopHovers = new WeakMap<Map, () => void>();
 const VEHICLE_SOURCE_ID = "transit-vehicles";
 const MARKER_LAYER_ID = "transit-vehicle-markers";
 const modeColor: Expression = ["coalesce", ["get", "color"], "#475569"];
@@ -101,6 +105,27 @@ export function addTransitLayers(
   });
 
   map.addLayer({
+    id: STOP_HIGHLIGHT_LAYER_ID,
+    type: "circle",
+    source: STOP_SOURCE_ID,
+    filter: ["==", ["get", "id"], ""],
+    paint: {
+      "circle-radius": ["match", ["get", "mode"], "ion", 12, 9],
+      "circle-color": "#ffffff",
+      "circle-opacity": 0.2,
+      "circle-stroke-color": modeColor,
+      "circle-stroke-width": 2,
+    },
+  });
+  map.addLayer({
+    id: STOP_TARGET_LAYER_ID,
+    type: "circle",
+    source: STOP_SOURCE_ID,
+    minzoom: 9,
+    paint: { "circle-radius": 12, "circle-opacity": 0 },
+  });
+
+  map.addLayer({
     id: "transit-ion-station-labels",
     type: "symbol",
     source: STOP_SOURCE_ID,
@@ -161,25 +186,16 @@ export function addTransitLayers(
     paint: { "text-color": "#ffffff", "text-halo-color": modeColor },
   });
 
-  map.on("mouseenter", STOP_MARKER_LAYER_ID, () => {
-    map.getCanvas().style.cursor = "pointer";
-  });
-  map.on("mouseleave", STOP_MARKER_LAYER_ID, () => {
-    map.getCanvas().style.cursor = "";
-  });
-  map.on("click", STOP_MARKER_LAYER_ID, (event) => {
+  clearStopHovers.set(map, addTransitStopHover(
+    map, STOP_TARGET_LAYER_ID, STOP_HIGHLIGHT_LAYER_ID, MARKER_LAYER_ID, handlers.onSelectStop,
+  ));
+  map.on("remove", () => clearStopHovers.delete(map));
+  map.on("click", STOP_TARGET_LAYER_ID, (event) => {
     if (isEventOverlayAtPoint(map, [event.point.x, event.point.y])) return;
+    if (map.queryRenderedFeatures(event.point, { layers: [MARKER_LAYER_ID] }).length) return;
     const feature = event.features?.[0];
-    if (!feature || feature.geometry.type !== "Point") return;
-    const [longitude, latitude] = feature.geometry.coordinates;
-    const properties = feature.properties as StopProperties;
-
-    handlers.onSelectStop({
-      ...properties,
-      latitude,
-      longitude,
-      routeIds: properties.routeIds ? properties.routeIds.split(", ") : [],
-    });
+    const stop = feature ? transitStopFromFeature(feature) : null;
+    if (stop) handlers.onSelectStop(stop);
   });
 
   map.on("mouseenter", MARKER_LAYER_ID, () => {
@@ -203,6 +219,7 @@ export function addTransitLayers(
 }
 
 export function updateTransitStops(map: Map, stops: TransitStop[], route?: TransitRoute | null) {
+  clearStopHovers.get(map)?.();
   const source = map.getSource(STOP_SOURCE_ID) as
     | GeoJSONSource
     | undefined;

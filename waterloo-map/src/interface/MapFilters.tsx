@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  SquareParking,
   UtensilsCrossed,
   BusFront,
   CalendarDays,
@@ -21,6 +22,8 @@ type MapFiltersProps = {
   activeCategories: BuildingCategory[];
   onToggleCategory: (category: BuildingCategory) => void;
   onResetFilters: () => void;
+  showParking: boolean;
+  onToggleParking: () => void;
   showTransit: boolean;
   onToggleTransit: () => void;
   activeTransitModes: TransitMode[];
@@ -107,6 +110,8 @@ export default function MapFilters({
   activeCategories,
   onToggleCategory,
   onResetFilters,
+  showParking,
+  onToggleParking,
   showTransit,
   onToggleTransit,
   activeTransitModes,
@@ -304,6 +309,13 @@ export default function MapFilters({
           >
             <Check size={14} strokeWidth={3} />
           </span>
+        </label>
+
+        <label className={`mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 focus-within:ring-2 focus-within:ring-emerald-600 ${showParking ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50"}`}>
+          <input type="checkbox" checked={showParking} onChange={onToggleParking} className="sr-only" />
+          <SquareParking size={20} aria-hidden="true" />
+          <span className="min-w-0 flex-1"><span className="block text-sm font-medium">Parking</span><span className="text-ui-meta block text-slate-500">Free and paid campus lots</span></span>
+          <span aria-hidden="true" className={`flex size-5 items-center justify-center rounded border ${showParking ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-300 bg-white text-transparent"}`}><Check size={14} /></span>
         </label>
 
         {showTransit && (
