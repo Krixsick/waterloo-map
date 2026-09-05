@@ -67,7 +67,7 @@ export type FoodOpenStatus = {
 };
 
 type ParsedTimeRange = {
-  label?: string;
+  label: string | undefined;
   startMinutes: number;
   endMinutes: number;
 };

@@ -223,13 +223,6 @@ function Map() {
     gymInfoRef.current = gymInfo;
   }, [gymInfo]);
 
-  const selectedBuildingCategory =
-    buildings.features.find(
-      ({ properties }) =>
-        properties.id ===
-        selectedBuildingId,
-    )?.properties.category;
-  
     const supportsLiveLibraryOccupancy =
     selectedBuildingId === "dp" ||
     selectedBuildingId === "dc-library";

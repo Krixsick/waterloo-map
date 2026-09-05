@@ -1,3 +1,4 @@
+import { formatDisplayTime } from "../utils/timeFormat";
 import {
   Activity,
   Clock3,
@@ -333,7 +334,7 @@ export default function BuildingDetailsCard({
               </dd>
             ) : (
               <dd className="text-ui-value mt-1 text-slate-800">
-                {displayHours}
+                {formatDisplayTime(displayHours)}
               </dd>
             )}
 

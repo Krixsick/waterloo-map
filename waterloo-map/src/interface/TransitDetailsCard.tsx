@@ -1,3 +1,4 @@
+import { formatClockTime } from "../utils/timeFormat";
 import { BusFront, TrainFront, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { transitRouteColor } from "../utils/transitRoutes";
@@ -37,10 +38,7 @@ function departureTime(value: string | null) {
 
 function clockTime(value: string | null) {
   if (!value) return "";
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatClockTime(value);
 }
 
 function directionLabel(trip: {

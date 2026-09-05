@@ -1,3 +1,4 @@
+import { formatDisplayTime } from "../utils/timeFormat";
 import mapboxgl from "mapbox-gl";
 import type { BuildingProperties } from "../data/buildings";
 import type { GymApiResponse } from "../api/gymApi";
@@ -366,7 +367,7 @@ function buildHoursSection(
         ${clockIcon()}
 
         <div class="uw-hover-meta-text">
-          ${liveHours}
+          ${formatDisplayTime(liveHours)}
         </div>
       </div>
 

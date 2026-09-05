@@ -1,3 +1,4 @@
+import { formatDisplayTime } from "../utils/timeFormat";
 import {
   CalendarDays,
   Clock3,
@@ -133,7 +134,7 @@ export default function EventDetailsCard({
             <div>
               <dt className="text-ui-label text-slate-500">Time</dt>
               <dd className="text-ui-value mt-1 text-slate-800">
-                {event.time}
+                {formatDisplayTime(event.time)}
               </dd>
             </div>
           </div>

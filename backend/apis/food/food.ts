@@ -1,3 +1,4 @@
+import { getCollegeFood } from "./collegeFood";
 import { Router } from "express";
 
 import { getCampusFood } from "./campusFood";
@@ -16,11 +17,13 @@ router.get("/", async (_req, res) => {
         residenceFood,
         wusaFood,
         stJeromesFood,
+        collegeFood,
       ] = await Promise.all([
         getCampusFood(),
         getResidenceFood(),
         getWusaFood(),
         getStJeromesFood(),
+        getCollegeFood(),
       ]);
 
     const allFood: Record<
@@ -31,6 +34,7 @@ router.get("/", async (_req, res) => {
       ...residenceFood,
       ...wusaFood,
       ...stJeromesFood,
+      ...collegeFood,
     };
 
     res.json(allFood);
