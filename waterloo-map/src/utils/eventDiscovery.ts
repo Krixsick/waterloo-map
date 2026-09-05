@@ -13,7 +13,7 @@ export function filterEvents(events: WaterlooEvent[], filter: EventDateFilter, n
   const start = new Date(calendar);
   if (filter === "tomorrow") start.setUTCDate(start.getUTCDate() + 1);
   const end = new Date(start);
-  if (filter === "week") end.setUTCDate(end.getUTCDate() + (7 - (end.getUTCDay() || 7)));
+  if (filter === "week") end.setUTCDate(end.getUTCDate() + 7);
   const first = start.toISOString().slice(0,10), last = end.toISOString().slice(0,10);
   return upcomingEvents(events, now).filter(event => {
     if (!event.startsAtUTC) return false;
