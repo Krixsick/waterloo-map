@@ -9,6 +9,7 @@ import {
   type TimeSlot,
 } from "../types/library";
 import { withCache } from "../cache";
+import { loadCollegeLibraryHours } from "../services/collegeLibraryHours";
 
 const UW_API_KEY = process.env.UW_API_KEY;
 //main waterloo libraries
@@ -173,9 +174,15 @@ async function loadLibraryOccupancy(): Promise<LibraryOccupancyResponse> {
  */
 libraryRouter.get("/", async (req, res) => {
   try {
-    const data = await withCache("library:hours:v1", 60 * 30, () =>
-      scrap_library_information(),
-    );
+    const [mainLibraries, collegeLibraries] = await Promise.allSettled([
+      withCache("library:hours:v1", 60 * 30, scrap_library_information),
+      loadCollegeLibraryHours(),
+    ]);
+    const data = {
+      ...(mainLibraries.status === "fulfilled" ? mainLibraries.value : {}),
+      ...(collegeLibraries.status === "fulfilled" ? collegeLibraries.value : {}),
+    };
+    if (!Object.keys(data).length) throw new Error("No library hours sources available");
 
     // console.log(data);
     res.json(data);

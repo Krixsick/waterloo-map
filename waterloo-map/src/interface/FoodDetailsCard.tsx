@@ -1,3 +1,4 @@
+import { formatDisplayTime } from "../utils/timeFormat";
 import {
     ChevronDown,
     ChevronLeft,
@@ -630,7 +631,7 @@ import {
       );
 
     const mealHours =
-      parseMealHours(hours);
+      parseMealHours(formatDisplayTime(hours));
   
       const dailyMenuUrl =
       hasDailyMenu
@@ -717,7 +718,7 @@ import {
             </span>
 
             <span className="text-ui-meta shrink-0 font-medium text-slate-700">
-              {time}
+              {formatDisplayTime(time)}
             </span>
           </div>
         ),
@@ -731,7 +732,7 @@ import {
           : "text-slate-600"
       }`}
     >
-      {hours}
+      {formatDisplayTime(hours)}
     </p>
   )}
 
@@ -743,7 +744,7 @@ import {
 
 {foodStatus.timeMessage && (
   <p className="text-ui-meta mt-1 text-slate-500">
-    {foodStatus.timeMessage}
+    {formatDisplayTime(foodStatus.timeMessage)}
   </p>
 )}
 </div>

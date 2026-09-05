@@ -61,7 +61,7 @@ function getSectionText(
 
 function parseDougLetsonHours(
     $: cheerio.CheerioAPI,
-  ) {
+  ): Record<string, string> {
     const text = getSectionText(
       $,
       "Doug Letson Community Centre",
@@ -96,7 +96,7 @@ function parseDougLetsonHours(
 
   function parseFunckenCafeHours(
     $: cheerio.CheerioAPI,
-  ) {
+  ): Record<string, string> {
     const text = getSectionText(
       $,
       "Funcken Café",

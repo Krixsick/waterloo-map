@@ -1,3 +1,4 @@
+import { formatDisplayTime } from "../utils/timeFormat";
 import mapboxgl from "mapbox-gl";
 import type { FeatureCollection, Point } from "geojson";
 import type { GeoJSONSource, Map } from "mapbox-gl";
@@ -193,7 +194,7 @@ function createEventPreview(properties: EventProperties) {
 
   details.textContent = [
     properties.date,
-    properties.time,
+    formatDisplayTime(properties.time),
     properties.location,
   ]
     .filter(Boolean)
