@@ -17,6 +17,8 @@ const EVENT_POPUP_CLASS = "uw-event-popup";
 const EVENT_POPUP_STYLE_ID = "uw-event-popup-styles";
 
 type EventProperties = {
+  ids: string;
+  count: number;
   id: number;
   name: string;
   date: string;
@@ -26,15 +28,21 @@ type EventProperties = {
 
 type EventLayerHandlers = {
   onSelectEvent: (eventId: number) => void;
+  onSelectVenue: (ids: number[]) => void;
   onClearSelection?: () => void;
 };
 
 function eventsToGeoJson(
   events: MappedWaterlooEvent[],
 ): FeatureCollection<Point, EventProperties> {
+  const groups = new globalThis.Map<string, MappedWaterlooEvent[]>();
+  events.forEach(event => {
+    const key = event.buildingId ?? `${event.coordinates.latitude.toFixed(5)}:${event.coordinates.longitude.toFixed(5)}`;
+    groups.set(key, [...(groups.get(key) ?? []), event]);
+  });
   return {
     type: "FeatureCollection",
-    features: events.map((event) => ({
+    features: [...groups.values()].map((group) => { const event = group[0]; return ({
       type: "Feature",
       geometry: {
         type: "Point",
@@ -44,13 +52,15 @@ function eventsToGeoJson(
         ],
       },
       properties: {
+        ids: JSON.stringify(group.map(item => item.id)),
+        count: group.length,
         id: event.id,
-        name: event.name,
+        name: group.length > 1 ? `${group.length} events · ${event.location}` : event.name,
         date: event.date ?? "Date to be announced",
-        time: event.time ?? "",
+        time: group.length > 1 ? "Select to browse events here" : event.time ?? "",
         location: event.location,
       },
-    })),
+    }); }),
   };
 }
 
@@ -124,57 +134,27 @@ function addEventPinImage(map: Map) {
 
   const canvas = document.createElement("canvas");
   canvas.width = 64;
-  canvas.height = 76;
-
+  canvas.height = 64;
   const context = canvas.getContext("2d");
   if (!context) return;
-
-  context.shadowColor = "rgba(15, 23, 42, 0.24)";
-  context.shadowBlur = 8;
-  context.shadowOffsetY = 4;
-
   context.beginPath();
-  context.moveTo(32, 70);
-  context.bezierCurveTo(26, 59, 9, 46, 9, 28);
-  context.arc(32, 28, 23, Math.PI, 0);
-  context.bezierCurveTo(55, 46, 38, 59, 32, 70);
-  context.closePath();
-
-  context.fillStyle = "#7c3aed";
+  context.arc(32, 32, 23, 0, Math.PI * 2);
+  context.fillStyle = "#ffffff";
   context.fill();
-
-  context.shadowColor = "transparent";
-
-  context.strokeStyle = "#ffffff";
-  context.lineWidth = 4;
-  context.stroke();
-
-  context.strokeStyle = "#ffffff";
+  context.strokeStyle = "#7c3aed";
   context.lineWidth = 3;
+  context.stroke();
+  context.strokeStyle = "#7c3aed";
+  context.lineWidth = 2.5;
   context.lineCap = "round";
   context.lineJoin = "round";
-
-  context.strokeRect(21, 20, 22, 19);
-
   context.beginPath();
-  context.moveTo(21, 26);
-  context.lineTo(43, 26);
-
-  context.moveTo(26, 17);
-  context.lineTo(26, 22);
-
-  context.moveTo(38, 17);
-  context.lineTo(38, 22);
-
+  context.roundRect(22, 23, 20, 19, 3);
+  context.moveTo(22, 29); context.lineTo(42, 29);
+  context.moveTo(27, 20); context.lineTo(27, 25);
+  context.moveTo(37, 20); context.lineTo(37, 25);
   context.stroke();
-
-  map.addImage(
-    EVENT_PIN_IMAGE_ID,
-    context.getImageData(0, 0, 64, 76),
-    {
-      pixelRatio: 2,
-    },
-  );
+  map.addImage(EVENT_PIN_IMAGE_ID, context.getImageData(0, 0, 64, 64), {pixelRatio: 2});
 }
 
 function createEventPreview(properties: EventProperties) {
@@ -223,6 +203,7 @@ export function addEventLayers(
     type: "geojson",
     data: eventsToGeoJson([]),
     cluster: true,
+    clusterProperties: { eventCount: ["+", ["get", "count"]] },
     clusterMaxZoom: 16,
     clusterRadius: 46,
   });
@@ -242,8 +223,8 @@ export function addEventLayers(
         30,
         36,
       ],
-      "circle-color": "#8b5cf6",
-      "circle-opacity": 0.2,
+      "circle-color": "#7c3aed",
+      "circle-opacity": 0.08,
       "circle-blur": 0.65,
     },
   });
@@ -266,11 +247,11 @@ export function addEventLayers(
       "circle-color": [
         "step",
         ["get", "point_count"],
-        "#8b5cf6",
+        "#7c3aed",
         10,
         "#7c3aed",
         30,
-        "#6d28d9",
+        "#7c3aed",
       ],
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2.5,
@@ -283,7 +264,7 @@ export function addEventLayers(
     source: EVENT_SOURCE_ID,
     filter: ["has", "point_count"],
     layout: {
-      "text-field": ["get", "point_count_abbreviated"],
+      "text-field": ["get", "eventCount"],
       "text-font": [
         "DIN Offc Pro Medium",
         "Arial Unicode MS Bold",
@@ -312,7 +293,11 @@ export function addEventLayers(
         18,
         1,
       ],
-      "icon-anchor": "bottom",
+      "icon-anchor": "center",
+      "text-field": ["case", [">", ["get", "count"], 1], ["to-string", ["get", "count"]], ""],
+      "text-size": 12,
+      "text-offset": [1.1, -1.1],
+      "text-allow-overlap": true,
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
     },
@@ -325,7 +310,7 @@ export function addEventLayers(
     minzoom: 16.5,
     filter: ["!", ["has", "point_count"]],
     layout: {
-      "text-field": ["get", "name"],
+      "text-field": "",
       "text-font": [
         "DIN Offc Pro Medium",
         "Arial Unicode MS Regular",
@@ -343,7 +328,7 @@ export function addEventLayers(
       "text-optional": true,
     },
     paint: {
-      "text-color": "#4c1d95",
+      "text-color": "#7c3aed",
       "text-halo-color": "#ffffff",
       "text-halo-width": 1.75,
       "text-halo-blur": 0.5,
@@ -410,7 +395,9 @@ export function addEventLayers(
 
       previewPopup.remove();
 
-      handlers.onSelectEvent(eventId);
+      const ids: number[] = JSON.parse(feature?.properties?.ids ?? "[]");
+      if (ids.length > 1) handlers.onSelectVenue(ids);
+      else handlers.onSelectEvent(eventId);
     },
   );
 

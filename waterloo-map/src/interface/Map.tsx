@@ -1,3 +1,8 @@
+import { CalendarDays } from "lucide-react";
+import EventsPanel, { EventSummary } from "./EventsPanel";
+import { filterEvents, upcomingEvents, type EventDateFilter } from "../utils/eventDiscovery";
+import { matchBuilding } from "../utils/eventLocations";
+import type { WaterlooEvent } from "../types/events";
 import {
   useCallback,
   useEffect,
@@ -175,6 +180,12 @@ function Map() {
   const [showTransit, setShowTransit] =
     useState(false);
 
+  const [eventDetailsExpanded, setEventDetailsExpanded] = useState(false);
+  const [eventDateFilter, setEventDateFilter] = useState<EventDateFilter>("today");
+  const [eventSearch, setEventSearch] = useState("");
+  const [eventVenueIds, setEventVenueIds] = useState<number[] | null>(null);
+  const [eventNow, setEventNow] = useState(() => new Date());
+  useEffect(() => { const timer = window.setInterval(() => setEventNow(new Date()), 60000); return () => window.clearInterval(timer); }, []);
   const [showEvents, setShowEvents] =
     useState(false);
 
@@ -237,10 +248,11 @@ function Map() {
     );
 
   const {
+    refetch: eventsQueryRetry,
     data: eventsResponse,
     isError: isEventsError,
     isPending: isEventsPending,
-  } = useWaterlooEvents(showEvents);
+  } = useWaterlooEvents(true);
 
   const {
     data: transitResponse,
@@ -485,18 +497,21 @@ function Map() {
     [eventsResponse?.events],
   );
 
-  const selectedEvent = useMemo(
-    () =>
-      mappedEvents.find(
-        (event) =>
-          event.id ===
-          selectedEventId,
-      ) ?? null,
-    [
-      mappedEvents,
-      selectedEventId,
-    ],
-  );
+  const filteredEvents = useMemo(() => filterEvents(eventsResponse?.events ?? [], eventDateFilter, eventNow).filter(event =>
+    `${event.name} ${event.location}`.toLowerCase().includes(eventSearch.toLowerCase())
+  ), [eventsResponse?.events, eventDateFilter, eventNow, eventSearch]);
+  const visibleMappedEvents = useMemo(() => mappedEvents.filter(event => filteredEvents.some(item => item.id === event.id)), [mappedEvents, filteredEvents]);
+  const buildingEvents = useMemo(() => upcomingEvents(eventsResponse?.events ?? [], eventNow).filter(event => {
+    const building = matchBuilding(event, buildings);
+    return building && (building.properties.id === selectedBuildingId || building.properties.parentId === selectedBuildingId);
+  }), [eventsResponse?.events, eventNow, selectedBuildingId]);
+  const selectedEvent = eventsResponse?.events.find(event => event.id === selectedEventId) ?? null;
+  function selectEvent(event: WaterlooEvent) {
+    setEventDetailsExpanded(false);
+    setSelectedBuildingId(null); setSelectedTransit(null); setSelectedEventId(event.id);
+    const mapped = mappedEvents.find(item => item.id === event.id);
+    if (mapped) flyToEvent(mapped);
+  }
 
   // --------------------
   // MAP ACTIONS
@@ -592,6 +607,7 @@ function Map() {
   }
 
   function toggleTransit() {
+    setShowEvents(false);
     setSelectedTransit(null);
     setSelectedBuildingId(null);
     setSelectedEventId(null);
@@ -604,13 +620,9 @@ function Map() {
   }
 
   function toggleEvents() {
-    if (showEvents) {
-      setSelectedEventId(null);
-    }
-
-    setShowEvents(
-      (current) => !current,
-    );
+    setSelectedEventId(null); setSelectedBuildingId(null); setSelectedTransit(null);
+    setShowTransit(false); setEventVenueIds(null);
+    setShowEvents(current => !current);
   }
 
   function toggleTransitMode(
@@ -825,11 +837,13 @@ function Map() {
       });
 
       addEventLayers(map, {
+        onSelectVenue: (ids) => { setEventVenueIds(ids); setSelectedBuildingId(null); setSelectedTransit(null); setSelectedEventId(null); setShowEvents(true); },
         onSelectEvent: (
           eventId,
         ) => {
           setSelectedBuildingId(null);
           setSelectedTransit(null);
+          setEventDetailsExpanded(false);
           setSelectedEventId(eventId);
         },
 
@@ -1061,13 +1075,13 @@ function Map() {
     updateEventMarkers(
       mapInstance,
       showEvents
-        ? mappedEvents
+        ? visibleMappedEvents
         : [],
     );
   }, [
     mapInstance,
     isMapLoaded,
-    mappedEvents,
+    visibleMappedEvents,
     showEvents,
   ]);
 
@@ -1118,7 +1132,7 @@ function Map() {
             toggleEvents
           }
           eventCount={
-            mappedEvents.length
+            visibleMappedEvents.length
           }
           eventsLoading={
             showEvents &&
@@ -1148,6 +1162,8 @@ function Map() {
           }
         />
 
+        {!showTransit && <button type="button" aria-pressed={showEvents} onClick={toggleEvents} className={`absolute left-[8.25rem] top-20 z-20 flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm sm:left-[8.75rem] ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}><CalendarDays size={18} />Events</button>}
+        {showEvents && !selectedEvent && !selectedBuildingId && <EventsPanel events={eventVenueIds ? filteredEvents.filter(event => eventVenueIds.includes(event.id)) : filteredEvents} filter={eventDateFilter} search={eventSearch} venue={Boolean(eventVenueIds)} loading={isEventsPending} error={isEventsError} partial={Boolean(eventsResponse?.hasMore)} onFilter={value => {setEventDateFilter(value); setEventVenueIds(null);}} onSearch={setEventSearch} onClearVenue={() => setEventVenueIds(null)} onSelect={selectEvent} onClose={toggleEvents} onRetry={() => { void eventsQueryRetry(); }} />}
         <TransitRouteBar
           enabled={showTransit}
           showHint={!selectedTransit && !selectedBuildingId && !selectedEventId}
@@ -1183,6 +1199,10 @@ function Map() {
         )}
 
         <BuildingDetailsCard
+          events={buildingEvents}
+          eventsLoading={isEventsPending}
+          eventsError={isEventsError}
+          onSelectEvent={selectEvent}
           building={
             selectedBuilding
           }
@@ -1228,19 +1248,22 @@ function Map() {
           }}
         />
 
+        {selectedEvent && !eventDetailsExpanded && <section aria-label="Selected event preview" className="absolute inset-x-3 top-36 z-30 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg sm:left-5 sm:right-auto sm:w-[22rem]">
+          <div className="mb-2 flex items-center justify-between"><p className="text-xs font-medium text-[#7c3aed]">Event preview</p><button type="button" aria-label="Close event preview" onClick={() => setSelectedEventId(null)} className="px-2 py-1 text-sm text-slate-500">Close</button></div>
+          <EventSummary event={selectedEvent} onSelect={() => setEventDetailsExpanded(true)}/>
+          <button type="button" onClick={() => setEventDetailsExpanded(true)} className="mt-3 w-full rounded-full bg-violet-50 py-2 text-sm font-medium text-[#7c3aed]">View full details</button>
+        </section>}
         <EventDetailsCard
-          event={selectedEvent}
+          canRecenter={mappedEvents.some(event => event.id === selectedEventId)}
+          event={eventDetailsExpanded ? selectedEvent : null}
           onClose={() =>
             setSelectedEventId(
               null,
             )
           }
           onRecenter={() => {
-            if (selectedEvent) {
-              flyToEvent(
-                selectedEvent,
-              );
-            }
+            const mapped = mappedEvents.find(event => event.id === selectedEventId);
+            if (mapped) flyToEvent(mapped);
           }}
         />
 
