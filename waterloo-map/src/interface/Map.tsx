@@ -1,4 +1,3 @@
-import FoodFilters from "./FoodFilters";
 import WalkingRoutes from "./WalkingRoutes";
 import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
 import { FoodMarkers, foodIsOpen } from "./FoodMap";
@@ -7,6 +6,7 @@ import {
   UtensilsCrossed,
   BusFront,
   TrainFront,
+  SquareParking,
 } from "lucide-react";
 import EventsPanel, { EventSummary } from "./EventsPanel";
 import {
@@ -29,6 +29,7 @@ import TransitDetailsCard from "./TransitDetailsCard";
 import { SideBar } from "./sidebar/Sidebar";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
+import ParkingMap from "./ParkingMap";
 import { TransitRouteBar, TransitRouteCard } from "./TransitRoutes";
 
 // utility functions
@@ -164,7 +165,6 @@ function Map() {
     import.meta.env.DEV &&
     new URLSearchParams(window.location.search).get("foodPreview") === "1";
   const [showFood, setShowFood] = useState(foodPreview);
-  const [foodOpenOnly, setFoodOpenOnly] = useState(true);
   const [foodCategory, setFoodCategory] = useState("all");
   const [directionsMode, setDirectionsMode] = useState<"walk" | "transit">(
     "walk",
@@ -302,11 +302,13 @@ function Map() {
           : food.category === foodCategory)),
   );
   const selectFoodBuilding = useCallback((id: string) => {
+    setShowParking(false);
     setSelectedBuildingId(id);
     setSelectedEventId(null);
     setFoodFocus(id);
   }, []);
   function toggleFood() {
+    setShowParking(false);
     setShowFood((value) => !value);
     setShowEvents(false);
     setShowTransit(false);
@@ -474,6 +476,7 @@ function Map() {
     eventsResponse?.events.find((event) => event.id === selectedEventId) ??
     null;
   function selectEvent(event: WaterlooEvent) {
+    setShowParking(false);
     setEventDetailsExpanded(false);
     setSelectedBuildingId(null);
     setSelectedTransit(null);
@@ -502,6 +505,7 @@ function Map() {
   }
 
   function selectBuilding(building: BuildingFeature) {
+    setShowParking(false);
     setSelectedBuildingId(building.properties.id);
 
     setSelectedTransit(null);
@@ -532,6 +536,7 @@ function Map() {
   }
 
   function resetFilters() {
+    setShowParking(false);
     setWalkingMode(false);
     setShowFood(false);
     setFoodCategory("all");
@@ -562,6 +567,7 @@ function Map() {
   }
 
   function toggleEvents() {
+    setShowParking(false);
     setShowFood(false);
     setSelectedEventId(null);
     setSelectedBuildingId(null);
@@ -572,6 +578,7 @@ function Map() {
   }
 
   function toggleParking() {
+    setWalkingMode(false);
     setShowParking((current) => !current);
     setShowTransit(false);
     setShowFood(false);
@@ -678,6 +685,7 @@ function Map() {
   }
 
   function selectRoute(route: TransitRoute | null) {
+    setShowParking(false);
     setSelectedRoute(route);
     setSelectedPatternId(null);
     setSelectedTransit(null);
@@ -730,7 +738,7 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-    mapInstance.setMinZoom(showTransit ? 9 : 13);
+    mapInstance.setMinZoom(showTransit ? 9 : showParking ? 11 : 13);
     updateTransitRoute(
       mapInstance,
       showTransit ? selectedRoute : null,
@@ -746,6 +754,7 @@ function Map() {
     mapInstance,
     isMapLoaded,
     showTransit,
+    showParking,
     selectedRoute,
     routePattern,
     fitSelectedRoute,
@@ -848,7 +857,7 @@ function Map() {
       mapInstance,
       selectedRoute || showParking ? [] : activeCategories,
     );
-  }, [mapInstance, isMapLoaded, activeCategories, selectedRoute]);
+  }, [mapInstance, isMapLoaded, activeCategories, selectedRoute, showParking]);
 
   // --------------------
   // UWP CHILDREN + GROUP HIGHLIGHT
@@ -968,6 +977,8 @@ function Map() {
           activeCategories={activeCategories}
           onToggleCategory={toggleCategory}
           onResetFilters={resetFilters}
+          showParking={showParking}
+          onToggleParking={toggleParking}
           showTransit={showTransit}
           onToggleTransit={toggleTransit}
           activeTransitModes={activeTransitModes}
@@ -994,6 +1005,7 @@ function Map() {
           <WalkingRoutes
             onExplore={() => {
               setWalkingMode(false);
+              setShowParking(false);
               setShowTransit(true);
             }}
             preferredMode={directionsMode}
@@ -1001,6 +1013,7 @@ function Map() {
             onEnabled={(value) => {
               setWalkingMode(value);
               if (value) {
+                setShowParking(false);
                 setShowFood(false);
                 setShowEvents(false);
                 setShowTransit(false);
@@ -1050,6 +1063,7 @@ function Map() {
               onSelect: () => {
                 setShowFood(false);
                 setShowEvents(false);
+                setShowParking(false);
                 setShowTransit(true);
                 setSelectedBuildingId(null);
                 setSelectedEventId(null);
@@ -1069,6 +1083,7 @@ function Map() {
               onSelect: () => {
                 setShowFood(false);
                 setShowEvents(false);
+                setShowParking(false);
                 setShowTransit(true);
                 setSelectedBuildingId(null);
                 setSelectedEventId(null);
@@ -1102,14 +1117,14 @@ function Map() {
         />
 
         {!showTransit && !walkingMode && (
-          <div className="absolute left-3 top-20 z-20 flex items-center gap-2 sm:left-5">
+          <div className="absolute left-3 right-3 top-20 z-20 flex items-center gap-2 overflow-x-auto pb-1 sm:left-5 lg:right-auto">
             <button
               type="button"
               onClick={() => {
                 setWalkingMode(false);
                 toggleTransit();
               }}
-              className="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm"
+              className="flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm"
             >
               <BusFront size={18} />
               Transit
@@ -1121,7 +1136,7 @@ function Map() {
                 setWalkingMode(false);
                 toggleEvents();
               }}
-              className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}
+              className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}
             >
               <CalendarDays size={18} />
               Events
@@ -1133,12 +1148,24 @@ function Map() {
                 setWalkingMode(false);
                 toggleFood();
               }}
-              className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
+              className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
             >
               <UtensilsCrossed size={18} />
               Food
             </button>
+            <button
+              type="button"
+              aria-pressed={showParking}
+              onClick={toggleParking}
+              className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showParking ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
+            >
+              <SquareParking size={18} />
+              Parking
+            </button>
           </div>
+        )}
+        {showParking && mapInstance && isMapLoaded && (
+          <ParkingMap map={mapInstance} onClose={() => setShowParking(false)} />
         )}
         {showFood && mapInstance && isMapLoaded && (
           <FoodMarkers
@@ -1217,6 +1244,7 @@ function Map() {
         {showTransit && !selectedTransit && (
           <TransitRouteBar
             onPlanTrip={() => {
+              setShowParking(false);
               setDirectionsMode("transit");
               setWalkingMode(true);
               setShowTransit(false);
