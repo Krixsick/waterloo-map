@@ -355,6 +355,39 @@ import {
     return description.trim();
   }
   
+  function parseMealHours(
+    hours: string,
+  ) {
+    if (!hours.includes(" · ")) {
+      return null;
+    }
+  
+    return hours
+      .split(" · ")
+      .map((item) => {
+        const match = item.match(
+          /^(.*?)\s+(\d{1,2}:\d{2}(?:AM|PM)\s+-\s+\d{1,2}:\d{2}(?:AM|PM))$/,
+        );
+  
+        if (!match) {
+          return null;
+        }
+  
+        return {
+          label: match[1],
+          time: match[2],
+        };
+      })
+      .filter(
+        (
+          item,
+        ): item is {
+          label: string;
+          time: string;
+        } => item !== null,
+      );
+  }
+
   function MenuGallery({
     foodName,
     images,
@@ -587,10 +620,14 @@ import {
       specialHours ??
       food.hours?.[today] ??
       "Hours unavailable";
+
+    const mealHours =
+      parseMealHours(hours);
   
-    const dailyMenuUrl =
+      const dailyMenuUrl =
       hasDailyMenu
-        ? getTodayMenuUrl()
+        ? food.menu?.url ??
+          getTodayMenuUrl()
         : null;
   
     return (
@@ -660,22 +697,44 @@ import {
               </div>
   
               <div className="mt-2">
-                <p
-                  className={`text-ui-meta font-medium ${
-                    specialHours
-                      ? "text-amber-700"
-                      : "text-slate-600"
-                  }`}
-                >
-                  {hours}
-                </p>
-  
-                {specialHours && (
-                  <p className="text-ui-meta mt-0.5 font-medium text-amber-600">
-                    Special hours
-                  </p>
-                )}
-              </div>
+  {mealHours &&
+  mealHours.length > 0 ? (
+    <div className="space-y-1">
+      {mealHours.map(
+        ({ label, time }) => (
+          <div
+            key={`${label}-${time}`}
+            className="flex items-center justify-between gap-3"
+          >
+            <span className="text-ui-meta text-slate-500">
+              {label}
+            </span>
+
+            <span className="text-ui-meta shrink-0 font-medium text-slate-700">
+              {time}
+            </span>
+          </div>
+        ),
+      )}
+    </div>
+  ) : (
+    <p
+      className={`text-ui-meta font-medium ${
+        specialHours
+          ? "text-amber-700"
+          : "text-slate-600"
+      }`}
+    >
+      {hours}
+    </p>
+  )}
+
+  {specialHours && (
+    <p className="text-ui-meta mt-1 font-medium text-amber-600">
+      Special hours
+    </p>
+  )}
+</div>
             </div>
           </button>
   
@@ -707,8 +766,6 @@ import {
                     }
                   >
                     <div className="flex items-center gap-1.5">
-                      <CreditCard className="size-4 text-slate-400" />
-  
                       <p className="text-ui-label text-slate-500">
                         Payment
                       </p>

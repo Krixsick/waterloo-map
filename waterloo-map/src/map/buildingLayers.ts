@@ -184,7 +184,11 @@ export function addImportantBuildingLayers(
     id: "child-residence-building-squares",
     type: "symbol",
     source: "important-buildings",
-    filter: ["==", ["get", "parentId"], ""],
+    filter: [
+      "all",
+      ["==", ["get", "category"], "residence"],
+      ["==", ["get", "parentId"], ""],
+    ],
     layout: {
       "icon-image": "green-square",
       "icon-size": 0.55,
@@ -220,7 +224,11 @@ export function addImportantBuildingLayers(
     type: "symbol",
     source: "important-buildings",
     minzoom: 15.25,
-    filter: ["!", ["has", "parentId"]],
+    filter: [
+      "all",
+      ["==", ["get", "category"], "residence"],
+      ["==", ["get", "parentId"], ""],
+    ],
     layout: {
       "text-field": ["get", "abbreviation"],
       "text-font": [

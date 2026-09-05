@@ -760,6 +760,21 @@ export const buildings: BuildingsGeoJSON = {
     {
       type: "Feature",
       properties: {
+        id: "st-jeromes-library",
+        name: "St. Jerome's University Library",
+        abbreviation: "SJU Library",
+        category: "library",
+        parentId: "sju",
+        description: "Library and study space located in St. Jerome's University.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.54586956, 43.468942418],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
         id: "renison",
         name: "Renison University College",
         abbreviation: "REN",
@@ -769,6 +784,21 @@ export const buildings: BuildingsGeoJSON = {
       geometry: {
         type: "Point",
         coordinates: [-80.547673, 43.469549],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "lusi-wong-library",
+        name: "Lusi Wong Library",
+        abbreviation: "LWL",
+        category: "library",
+        parentId: "renison",
+        description: "Library and study space located in Renison University College.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5473295, 43.46918143],
       },
     },
     {
@@ -797,6 +827,21 @@ export const buildings: BuildingsGeoJSON = {
       geometry: {
         type: "Point",
         coordinates: [-80.545029, 43.466235],
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "milton-good-library",
+        name: "Milton Good Library",
+        abbreviation: "MGL",
+        category: "library",
+        parentId: "grebel",
+        description: "Library located on the third floor of the academic building of Conrad Grebel University College.",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [-80.5456403, 43.466708272],
       },
     },
     {
