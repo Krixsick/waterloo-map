@@ -11,8 +11,8 @@ const BUILDING_ALIASES: Record<string, string[]> = {
   qnc: ["quantum nano", "quantum-nano"],
   rch: ["coutts hall", "engineering lecture hall"],
   sju: ["st jeromes", "saint jeromes"],
-  ren: ["renison"],
-  cguc: ["conrad grebel"],
+  renison: ["renison"],
+  grebel: ["conrad grebel"],
 };
 
 function normalizeLocation(value: string) {
@@ -29,7 +29,7 @@ function includesPhrase(location: string, phrase: string) {
   return ` ${location} `.includes(` ${phrase} `);
 }
 
-function matchBuilding(
+export function matchBuilding(
   event: WaterlooEvent,
   buildings: BuildingsGeoJSON,
 ): BuildingFeature | null {
@@ -65,44 +65,6 @@ function isValidCoordinate(value: number, minimum: number, maximum: number) {
   return Number.isFinite(value) && value >= minimum && value <= maximum;
 }
 
-function spreadEventsAtSharedVenues(events: MappedWaterlooEvent[]) {
-  const venueGroups = new Map<string, MappedWaterlooEvent[]>();
-
-  events.forEach((event) => {
-    const { latitude, longitude } = event.coordinates;
-    const key = `${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
-    const group = venueGroups.get(key) ?? [];
-    group.push(event);
-    venueGroups.set(key, group);
-  });
-
-  return [...venueGroups.values()].flatMap((group) => {
-    if (group.length === 1) return group;
-
-    return [...group]
-      .sort((left, right) => left.id - right.id)
-      .map((event, index) => {
-        const ring = Math.floor(index / 8);
-        const position = index % 8;
-        const itemsOnRing = Math.min(8, group.length - ring * 8);
-        const angle = (position / itemsOnRing) * Math.PI * 2 - Math.PI / 2;
-        const radiusMeters = 18 + ring * 12;
-        const latitudeOffset = (Math.sin(angle) * radiusMeters) / 111_320;
-        const longitudeOffset =
-          (Math.cos(angle) * radiusMeters) /
-          (111_320 * Math.cos((event.coordinates.latitude * Math.PI) / 180));
-
-        return {
-          ...event,
-          coordinates: {
-            latitude: event.coordinates.latitude + latitudeOffset,
-            longitude: event.coordinates.longitude + longitudeOffset,
-          },
-        };
-      });
-  });
-}
-
 export function mapEventsToCampus(
   events: WaterlooEvent[],
   buildings: BuildingsGeoJSON,
@@ -113,7 +75,8 @@ export function mapEventsToCampus(
       isValidCoordinate(event.coordinates.latitude, -90, 90) &&
       isValidCoordinate(event.coordinates.longitude, -180, 180)
     ) {
-      return [event as MappedWaterlooEvent];
+      const building = matchBuilding(event, buildings);
+      return [{ ...event, buildingId: building?.properties.id, coordinates: building ? { longitude: building.geometry.coordinates[0], latitude: building.geometry.coordinates[1] } : event.coordinates }];
     }
 
     const building = matchBuilding(event, buildings);
@@ -123,10 +86,11 @@ export function mapEventsToCampus(
     return [
       {
         ...event,
+        buildingId: building.properties.id,
         coordinates: { latitude, longitude },
       },
     ];
   });
 
-  return spreadEventsAtSharedVenues(mappedEvents);
+  return mappedEvents;
 }

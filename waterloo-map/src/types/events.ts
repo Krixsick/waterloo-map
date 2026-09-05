@@ -32,5 +32,6 @@ export interface WaterlooEventsResponse {
 }
 
 export type MappedWaterlooEvent = WaterlooEvent & {
+  buildingId?: string;
   coordinates: { latitude: number; longitude: number };
 };
