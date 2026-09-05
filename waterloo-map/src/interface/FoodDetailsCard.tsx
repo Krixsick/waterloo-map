@@ -2,7 +2,6 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
-    CreditCard,
     ExternalLink,
     X,
   } from "lucide-react";
@@ -12,6 +11,7 @@ import {
   
   import type { FoodInfo } from "../api/foodApi";
   import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
+  import { getFoodOpenStatus } from "../utils/timeUtils";
   
   type FoodDetailsCardProps = {
     food: FoodInfo;
@@ -621,6 +621,14 @@ import {
       food.hours?.[today] ??
       "Hours unavailable";
 
+    const foodStatus =
+      getFoodOpenStatus(
+        hours ===
+          "Hours unavailable"
+          ? null
+          : hours,
+      );
+
     const mealHours =
       parseMealHours(hours);
   
@@ -636,15 +644,10 @@ import {
           <button
             type="button"
             onClick={() => {
-              if (
-                hasExpandableContent
-              ) {
                 setIsExpanded(
-                  (current) =>
-                    !current,
+                  (current) => !current,
                 );
-              }
-            }}
+              }}
             aria-expanded={
               hasExpandableContent
                 ? isExpanded
@@ -669,32 +672,35 @@ import {
             </div>
   
             <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-ui-value text-slate-900">
-                    {food.name}
-                  </p>
-  
-                  {!isExpanded &&
-                    descriptionText && (
-                      <p className="text-ui-meta mt-1 line-clamp-2 text-slate-500">
-                        {
-                          descriptionText
-                        }
-                      </p>
-                    )}
-                </div>
-  
-                {hasExpandableContent && (
-                  <ChevronDown
-                    className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
-                      isExpanded
-                        ? "rotate-180"
-                        : ""
-                    }`}
-                  />
-                )}
-              </div>
+            <div className="flex items-start justify-between gap-3">
+  <div className="min-w-0 flex-1">
+    <p className="text-ui-value text-slate-900">
+      {food.name}
+    </p>
+  </div>
+
+  <div className="flex shrink-0 items-center gap-2">
+    {hours !== "Hours unavailable" && (
+      <span
+        className={`text-ui-meta rounded-full px-2.5 py-1 font-medium ${
+          foodStatus.isOpen
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-rose-50 text-rose-700"
+        }`}
+      >
+        {foodStatus.status}
+      </span>
+    )}
+
+<ChevronDown
+  className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
+    isExpanded
+      ? "rotate-180"
+      : ""
+  }`}
+/>
+  </div>
+</div>
   
               <div className="mt-2">
   {mealHours &&
@@ -734,6 +740,12 @@ import {
       Special hours
     </p>
   )}
+
+{foodStatus.timeMessage && (
+  <p className="text-ui-meta mt-1 text-slate-500">
+    {foodStatus.timeMessage}
+  </p>
+)}
 </div>
             </div>
           </button>
