@@ -206,6 +206,11 @@ export default function BuildingDetailsCard({
   const abbreviation =
     properties.abbreviation?.toUpperCase();
 
+    const supportsLiveLibraryOccupancy =
+    isLibrary &&
+    (properties.id === "dp" ||
+      properties.id === "dc-library");
+
   const gymKey =
     abbreviation === "PAC"
       ? "PAC"
@@ -343,7 +348,7 @@ export default function BuildingDetailsCard({
           </div>
         </div>
 
-        {isLibrary && (
+        {supportsLiveLibraryOccupancy && (
           <div className="flex gap-4 py-4">
             <Activity className="mt-0.5 size-5 shrink-0 text-amber-600" />
 
