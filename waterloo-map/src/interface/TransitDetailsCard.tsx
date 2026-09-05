@@ -90,7 +90,7 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="absolute left-3 right-3 top-20 z-30 max-h-[calc(100svh-6rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-md sm:left-5 sm:right-auto sm:w-[25rem]">
+    <section className="absolute left-3 right-3 top-36 z-30 max-h-[calc(100svh-10rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-md sm:left-5 sm:right-auto sm:w-[25rem]">
       <button type="button" onClick={onClose} className="m-3 mb-0 flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-[#13735a] hover:bg-emerald-50"><ArrowLeft size={16} />Back to routes</button>
       <header className="flex items-start gap-3 border-b border-slate-200 p-4">
         <span

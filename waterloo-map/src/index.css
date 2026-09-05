@@ -260,3 +260,12 @@
     font-weight: 500;
   }
 }
+/* Mapbox's default font must not override the app's hover-card typography. */
+.mapboxgl-popup,
+.mapboxgl-popup-content {
+  font-family: var(--font-title);
+}
+.food-hover-popup .mapboxgl-popup-content,
+.journey-stop-popup .mapboxgl-popup-content {
+  font-family: var(--font-title);
+}
