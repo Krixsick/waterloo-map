@@ -643,6 +643,10 @@ async function scrapeWusaFood(): Promise<
         category:
           config.category,
 
+        ...(config.id === "flock-stop" ? {
+          location: "Student Life Centre (SLC)",
+          description: "Student-run convenience store with affordable meals, coffee, snacks, drinks, and campus essentials. Offers hot grab-and-go food, salads, sandwiches, wraps, veggie bowls, baked goods, daily fresh Wasabi Sushi, Jamaican beef patties, and M&M Express Meals. Monthly deals and limited-time products are available. Contact: 519-888-4567 ext. 33371 or b2yeung@wusa.ca (Brandon Yeung).",
+        } : {}),
         hours,
 
         exceptions,
@@ -676,7 +680,7 @@ async function scrapeWusaFood(): Promise<
 
 export async function getWusaFood() {
   return withCache(
-    "wusafood:full-info:v5",
+    "wusafood:full-info:v6",
     60 * 5,
     scrapeWusaFood,
   );

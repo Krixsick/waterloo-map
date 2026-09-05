@@ -1,3 +1,4 @@
+import GraduateHouseInfo, { graduateHouseHours } from "./GraduateHouseInfo";
 import { useState } from "react";
 import { EventSummary } from "./EventsPanel";
 import type { WaterlooEvent } from "../types/events";
@@ -250,7 +251,7 @@ export default function BuildingDetailsCard({
       : [];
 
   const displayHours =
-    isGym
+    properties.id === "gh" ? graduateHouseHours() : isGym
       ? gymHours ??
         "Hours unavailable"
       : properties.liveHours ??
@@ -358,6 +359,8 @@ export default function BuildingDetailsCard({
               )}
           </div>
         </div>
+
+        {properties.id === "gh" && <GraduateHouseInfo />}
 
         {supportsLiveLibraryOccupancy && (
           <div className="flex gap-4 py-4">
@@ -641,7 +644,7 @@ export default function BuildingDetailsCard({
         )}
 
         {foodLocations.length > 0 && (
-          <div className="flex gap-4 py-4">
+          <div id="building-food-section" className="flex gap-4 py-4">
             <UtensilsCrossed className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
 
             <div className="min-w-0 flex-1">

@@ -20,44 +20,14 @@ export function getTodaysLibraryHours(slots?: TimeSlot[]): string | null {
   );
 }
 
-export function getTimeRemaining(hours: string | null): string | null {
+export function getTimeRemaining(hours: string | null, now = new Date()): string | null {
   if (!hours) return null;
-
-  // Example input: "12pm – 11pm"
-  const parts = hours.split("–");
-
-  if (parts.length !== 2) return null;
-
-  const closingString = parts[1].trim();
-  const match = closingString.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
-
-  if (!match) return null;
-
-  let hour = Number(match[1]);
-  const minute = Number(match[2] ?? "0");
-  const period = match[3].toLowerCase();
-
-  if (period === "pm" && hour !== 12) hour += 12;
-  if (period === "am" && hour === 12) hour = 0;
-
-  const now = new Date();
-  const closingTime = new Date(now);
-  closingTime.setHours(hour, minute, 0, 0);
-
-  if (closingTime <= now) return null;
-
-  const diffMs = closingTime.getTime() - now.getTime();
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const hoursLeft = Math.floor(totalMinutes / 60);
-  const minutesLeft = totalMinutes % 60;
-
-  if (hoursLeft > 0 && minutesLeft > 0) {
-    return `${hoursLeft}h ${minutesLeft}m left`;
-  }
-
-  if (hoursLeft > 0) return `${hoursLeft}h left`;
-
-  return `${minutesLeft}m left`;
+  const nowMinutes = getTorontoMinutesNow(now);
+  const currentRange = parseFoodTimeRanges(hours).find(
+    ({ startMinutes, endMinutes }) => nowMinutes >= startMinutes && nowMinutes < endMinutes,
+  );
+  if (!currentRange) return null;
+  return `${formatDuration(currentRange.endMinutes - nowMinutes)} left`;
 }
 
 export type FoodOpenStatus = {
@@ -187,7 +157,7 @@ function parseFoodTimeRanges(
     );
 }
 
-function getTorontoMinutesNow() {
+function getTorontoMinutesNow(now = new Date()) {
   const formatter =
     new Intl.DateTimeFormat(
       "en-CA",
@@ -196,13 +166,13 @@ function getTorontoMinutesNow() {
           "America/Toronto",
         hour: "numeric",
         minute: "numeric",
-        hour12: false,
+        hourCycle: "h23",
       },
     );
 
   const parts =
     formatter.formatToParts(
-      new Date(),
+      now,
     );
 
   const hour = Number(
@@ -268,6 +238,18 @@ export function getFoodOpenStatus(
     };
   }
 
+  if (/^(?:open )?24(?: hours|\/7)$/i.test(hours.trim())) {
+    return { isOpen: true, status: "Open", timeMessage: null };
+  }
+  const opening = hours.match(/^Opening at (.+)$/i);
+  const closing = hours.match(/^Closing at (.+)$/i);
+  if (opening || closing) {
+    const boundary = parseTimeToMinutes((opening ?? closing)![1]);
+    if (boundary !== null) {
+      const isOpen = opening ? getTorontoMinutesNow() >= boundary : getTorontoMinutesNow() < boundary;
+      return { isOpen, status: isOpen ? "Open" : "Closed", timeMessage: opening && !isOpen ? `Opens at ${formatMinutesAsTime(boundary)}` : closing && isOpen ? `${formatDuration(boundary - getTorontoMinutesNow())} left` : null };
+    }
+  }
   const ranges =
     parseFoodTimeRanges(hours);
 

@@ -1,3 +1,4 @@
+import FoodHours from "./FoodHours";
 import { formatDisplayTime } from "../utils/timeFormat";
 import {
     ChevronDown,
@@ -186,7 +187,7 @@ import {
     return null;
   }
   
-  function getSpecialFoodHoursForToday(
+  export function getSpecialFoodHoursForToday(
     food: FoodInfo,
   ) {
     const today =
@@ -596,16 +597,19 @@ import {
   
     const hasDailyMenu =
       food.menu?.type === "daily";
+    const hasWeeklyMenu = food.menu?.type === "weekly" && Boolean(food.menu.url);
   
     const hasStaticMenu =
       staticMenuImages.length > 0;
   
     const hasMenu =
       hasDailyMenu ||
+      hasWeeklyMenu ||
       hasStaticMenu;
   
     const hasExpandableContent =
       Boolean(descriptionText) ||
+      Object.keys(food.hours ?? {}).length > 0 ||
       hasMenu ||
       (food.payment?.length ??
         0) > 0;
@@ -634,7 +638,7 @@ import {
       parseMealHours(formatDisplayTime(hours));
   
       const dailyMenuUrl =
-      hasDailyMenu
+      (hasDailyMenu || hasWeeklyMenu)
         ? food.menu?.url ??
           getTodayMenuUrl()
         : null;
@@ -754,6 +758,7 @@ import {
           {hasExpandableContent &&
             isExpanded && (
               <div className="border-t border-slate-100 px-3 pb-3 pt-3">
+                <FoodHours hours={food.hours} exceptions={food.exceptions} />
                 {descriptionText && (
                   <div>
                     <p className="text-ui-label text-slate-500">
@@ -821,7 +826,7 @@ import {
                         : ""
                     }`}
                   >
-                    View today's menu
+                    {hasWeeklyMenu ? "View weekly menu" : "View today's menu"}
   
                     <ExternalLink className="size-3.5" />
                   </a>
