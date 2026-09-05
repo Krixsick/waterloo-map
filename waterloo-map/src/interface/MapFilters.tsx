@@ -271,7 +271,7 @@ export default function MapFilters({
           />
           <BusFront size={20} aria-hidden="true" />
           <span className="min-w-0 flex-1">
-            <span className="font-title block text-sm font-medium">Live transit</span>
+            <span className="font-title block text-sm font-medium">Transit routes</span>
             <span
               className={`text-ui-meta block ${
                 transitStatus === "error"
@@ -281,7 +281,7 @@ export default function MapFilters({
                     : "text-slate-500"
               }`}
             >
-              {showTransit ? transitMessage : "Stops and vehicles"}
+              {showTransit ? transitMessage : "Routes, stops and live vehicles"}
             </span>
           </span>
           <span

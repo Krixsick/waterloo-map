@@ -101,7 +101,7 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
   return (
     <div
       ref={containerRef}
-      className="absolute left-3 right-3 top-3 z-1 sm:left-5 sm:right-auto sm:w-[25rem]"
+      className="absolute left-3 right-3 top-3 z-40 sm:left-5 sm:right-auto sm:w-[25rem]"
     >
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.18)]">
         <form

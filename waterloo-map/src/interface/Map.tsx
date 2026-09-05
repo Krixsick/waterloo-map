@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -16,6 +17,7 @@ import TransitDetailsCard from "./TransitDetailsCard";
 import { SideBar } from "./sidebar/Sidebar";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
+import { TransitRouteBar, TransitRouteCard } from "./TransitRoutes";
 
 // utility functions
 import { buildings } from "../data/buildings";
@@ -29,6 +31,7 @@ import {
   addTransitLayers,
   updateTransitStops,
   updateTransitVehicles,
+  updateTransitRoute,
 } from "../map/transitLayers";
 
 import {
@@ -52,6 +55,8 @@ import {
 import { useWaterlooEvents } from "../api/events";
 
 import {
+  useTransitRoutes,
+  useTransitRouteDetail,
   useTransitStops,
   useTransitVehicles,
 } from "../api/transitApi";
@@ -73,6 +78,7 @@ import type {
 } from "../data/buildings";
 
 import type {
+  TransitRoute,
   TransitMode,
   TransitStatus,
   TransitSelection,
@@ -154,6 +160,11 @@ function Map() {
     DEFAULT_CATEGORIES,
   );
 
+  const [selectedRoute, setSelectedRoute] = useState<TransitRoute | null>(null);
+  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
+  const fittedPatternRef = useRef<string | null>(null);
+  const routeCardRef = useRef<HTMLElement | null>(null);
+
   const [showTransit, setShowTransit] =
     useState(false);
 
@@ -201,7 +212,9 @@ function Map() {
     data: foodData = {},
   } = useFood();
 
-  gymInfoRef.current = gymInfo;
+  useEffect(() => {
+    gymInfoRef.current = gymInfo;
+  }, [gymInfo]);
 
   const selectedBuildingCategory =
     buildings.features.find(
@@ -236,6 +249,14 @@ function Map() {
     isError: isTransitStopsError,
     isPending: isTransitStopsPending,
   } = useTransitStops(showTransit);
+
+  const routesQuery = useTransitRoutes(showTransit);
+  const routeDetailQuery = useTransitRouteDetail(showTransit ? selectedRoute : null);
+  const routeDetail = routeDetailQuery.data?.data ?? null;
+  const routePattern = routeDetail?.patterns.find((pattern) => pattern.id === selectedPatternId)
+    ?? routeDetail?.patterns[0] ?? null;
+  const availableRoutes = (routesQuery.data?.data ?? []).filter((route) => activeTransitModes.includes(route.mode));
+
 
   // --------------------
   // BUILDING DATA
@@ -364,28 +385,28 @@ console.log(
       () =>
         transitVehicles.filter(
           (vehicle) =>
-            activeTransitModes.includes(
-              vehicle.mode,
-            ),
+            activeTransitModes.includes(vehicle.mode) &&
+            (!selectedRoute || (vehicle.mode === selectedRoute.mode && vehicle.routeId === selectedRoute.routeId)),
         ),
       [
         activeTransitModes,
         transitVehicles,
+        selectedRoute,
       ],
     );
 
   const visibleTransitStops =
     useMemo(
       () =>
-        transitStops.filter(
-          (stop) =>
-            activeTransitModes.includes(
-              stop.mode,
-            ),
+        (selectedRoute && routePattern ? routePattern.stops : transitStops).filter(
+          (stop) => activeTransitModes.includes(stop.mode) &&
+            (!selectedRoute || (stop.mode === selectedRoute.mode && stop.routeIds.includes(selectedRoute.routeId))),
         ),
       [
         activeTransitModes,
         transitStops,
+        selectedRoute,
+        routePattern,
       ],
     );
 
@@ -555,6 +576,8 @@ console.log(
     );
 
     setShowTransit(false);
+    setSelectedRoute(null);
+    setSelectedPatternId(null);
     setShowEvents(false);
     setSelectedBuildingId(null);
     setSelectedTransit(null);
@@ -562,9 +585,11 @@ console.log(
   }
 
   function toggleTransit() {
-    if (showTransit) {
-      setSelectedTransit(null);
-    }
+    setSelectedTransit(null);
+    setSelectedBuildingId(null);
+    setSelectedEventId(null);
+    setSelectedRoute(null);
+    setSelectedPatternId(null);
 
     setShowTransit(
       (current) => !current,
@@ -584,6 +609,11 @@ console.log(
   function toggleTransitMode(
     mode: TransitMode,
   ) {
+    if (selectedRoute?.mode === mode) {
+      setSelectedRoute(null);
+      setSelectedPatternId(null);
+      setSelectedTransit(null);
+    }
     const selectedMode =
       selectedTransit?.type === "vehicle"
         ? selectedTransit.vehicle.mode
@@ -692,6 +722,45 @@ console.log(
     );
   }
 
+  function selectRoute(route: TransitRoute | null) {
+    setSelectedRoute(route);
+    setSelectedPatternId(null);
+    setSelectedTransit(null);
+    setSelectedBuildingId(null);
+    setSelectedEventId(null);
+    setIs3D(false);
+    if (!route) mapInstance?.easeTo({ center: [-80.544, 43.471], zoom: 13.5, pitch: 0, bearing: 0, duration: 700 });
+  }
+
+  const fitSelectedRoute = useCallback(() => {
+    if (!mapInstance || !routePattern) return;
+    const coordinates = routePattern.coordinates.length > 1
+      ? routePattern.coordinates
+      : routePattern.stops.map((stop): [number, number] => [stop.longitude, stop.latitude]);
+    if (!coordinates.length) return;
+    const bounds = new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]);
+    coordinates.forEach((coordinate) => bounds.extend(coordinate));
+    const width = mapInstance.getContainer().clientWidth;
+    const height = mapInstance.getContainer().clientHeight;
+    const wide = width >= 900;
+    const cardBottom = routeCardRef.current
+      ? routeCardRef.current.getBoundingClientRect().bottom - mapInstance.getContainer().getBoundingClientRect().top
+      : 350;
+    mapInstance.fitBounds(bounds, {
+      padding: { top: wide ? 170 : Math.min(cardBottom + 16, height - 180), bottom: 85, left: wide ? 425 : 24, right: wide ? 90 : 76 },
+      maxZoom: 15, pitch: 0, bearing: 0, retainPadding: false, duration: 900,
+    });
+  }, [mapInstance, routePattern]);
+
+  useEffect(() => {
+    if (!mapInstance || !isMapLoaded) return;
+    mapInstance.setMinZoom(showTransit ? 9 : 13);
+    updateTransitRoute(mapInstance, showTransit ? selectedRoute : null, showTransit ? routePattern : null);
+    const key = showTransit && selectedRoute && routePattern ? `${selectedRoute.id}:${routePattern.id}` : null;
+    if (key && key !== fittedPatternRef.current) fitSelectedRoute();
+    fittedPatternRef.current = key;
+  }, [mapInstance, isMapLoaded, showTransit, selectedRoute, routePattern, fitSelectedRoute]);
+
   // --------------------
   // INITIALIZE MAP
   // --------------------
@@ -793,12 +862,13 @@ console.log(
 
     updateBuildingFilters(
       mapInstance,
-      activeCategories,
+      selectedRoute ? [] : activeCategories,
     );
   }, [
     mapInstance,
     isMapLoaded,
     activeCategories,
+    selectedRoute,
   ]);
 
   // --------------------
@@ -954,12 +1024,14 @@ console.log(
       showTransit
         ? visibleTransitStops
         : [],
+      selectedRoute,
     );
   }, [
     mapInstance,
     isMapLoaded,
     showTransit,
     visibleTransitStops,
+    selectedRoute,
   ]);
 
   // --------------------
@@ -1048,7 +1120,7 @@ console.log(
         />
       )}
     >
-      <div className="relative h-screen w-full overflow-hidden">
+      <div className="relative h-svh w-full overflow-hidden">
         <LoadingScreen
           isComplete={
             isMapLoaded
@@ -1063,6 +1135,40 @@ console.log(
             selectBuilding
           }
         />
+
+        <TransitRouteBar
+          enabled={showTransit}
+          showHint={!selectedTransit && !selectedBuildingId && !selectedEventId}
+          routes={availableRoutes}
+          selectedRoute={selectedRoute}
+          loading={routesQuery.isPending}
+          error={routesQuery.isError}
+          partial={Boolean(routesQuery.data?.feeds.some((feed) => feed.error))}
+          onToggle={toggleTransit}
+          onSelect={selectRoute}
+          onRetry={() => { void routesQuery.refetch(); }}
+        />
+        {showTransit && selectedRoute && !selectedTransit && !selectedBuildingId && !selectedEventId && (
+          <TransitRouteCard
+            key={selectedRoute.id}
+            route={selectedRoute}
+            panelRef={routeCardRef}
+            detail={routeDetail}
+            pattern={routePattern}
+            loading={routeDetailQuery.isPending}
+            error={routeDetailQuery.isError}
+            vehicles={visibleTransitVehicles.length}
+            liveUnavailable={isTransitError || isTransitPending || Boolean(transitResponse?.feeds.some((feed) => feed.mode === selectedRoute.mode && (feed.error || feed.isStale)))}
+            onPattern={(id) => { setSelectedPatternId(id); setSelectedTransit(null); setIs3D(false); }}
+            onFit={() => { setIs3D(false); fitSelectedRoute(); }}
+            onClear={() => selectRoute(null)}
+            onStop={(stop) => {
+              setSelectedTransit({ type: "stop", stop });
+              mapInstance?.easeTo({ center: [stop.longitude, stop.latitude], zoom: 16, padding: { top: 250, bottom: 50, left: 20, right: 20 }, retainPadding: false, duration: 700 });
+            }}
+            onRetry={() => { void routeDetailQuery.refetch(); }}
+          />
+        )}
 
         <BuildingDetailsCard
           building={
@@ -1129,6 +1235,7 @@ console.log(
         />
 
         <TransitDetailsCard
+          route={selectedRoute}
           selection={
             currentTransitSelection
           }

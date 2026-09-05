@@ -102,3 +102,24 @@ export type TransitAlert = {
   routeIds: string[];
   stopIds: string[];
 };
+
+export type TransitRoute = {
+  id: string;
+  mode: TransitMode;
+  routeId: string;
+  name: string;
+  destinations: string[];
+};
+
+export type TransitRoutePattern = {
+  id: string;
+  headsign: string;
+  directionId: number | null;
+  coordinates: [number, number][];
+  stops: TransitStop[];
+  tripIds: string[];
+};
+
+export type TransitRouteDetail = TransitRoute & {
+  patterns: TransitRoutePattern[];
+};
