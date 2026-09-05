@@ -1,4 +1,4 @@
-import { Search, X } from "lucide-react";
+import { Search, X, MapPin, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   BuildingFeature,
@@ -6,12 +6,15 @@ import type {
 } from "../../data/buildings";
 import { buildingCategoryDetails } from "../buildingCategoryDetails";
 
+export type SearchItem = { icon?: LucideIcon; iconStyles?: string; id: string; name: string; subtitle: string; keywords: string; onSelect: () => void };
+
 type SearchBarProps = {
+  items?: SearchItem[];
   buildings: BuildingsGeoJSON;
   onSelectBuilding: (building: BuildingFeature) => void;
 };
 
-export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
+export function SearchBar({ buildings, onSelectBuilding, items = [] }: SearchBarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -19,17 +22,19 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const results = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    const matches = search
-      ? buildings.features.filter(({ properties }) =>
-          [properties.name, properties.abbreviation, properties.category].some(
-            (value) => value.toLowerCase().includes(search),
-          ),
-        )
-      : buildings.features;
-
-    return matches.slice(0, 6);
-  }, [buildings, query]);
+    const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const search = normalize(query);
+    const all: SearchItem[] = [...buildings.features.map(feature => ({
+      icon: buildingCategoryDetails[feature.properties.category].icon, iconStyles: buildingCategoryDetails[feature.properties.category].styles,
+      id: `building:${feature.properties.id}`, name: feature.properties.name,
+      subtitle: `${feature.properties.abbreviation} · ${buildingCategoryDetails[feature.properties.category].label}`,
+      keywords: `${feature.properties.abbreviation} ${feature.properties.category} ${feature.properties.description ?? ""}`,
+      onSelect: () => onSelectBuilding(feature),
+    })), ...items];
+    if (!search) return all.slice(0, 6);
+    return all.filter(item => search.split(" ").every(word => normalize(`${item.name} ${item.subtitle} ${item.keywords}`).includes(word)))
+      .sort((a,b) => Number(normalize(b.name) === search) - Number(normalize(a.name) === search) || Number(normalize(b.name).startsWith(search)) - Number(normalize(a.name).startsWith(search)));
+  }, [buildings, query, items, onSelectBuilding]);
 
   useEffect(() => {
     function closeOnOutsideClick(event: PointerEvent) {
@@ -44,9 +49,9 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
       document.removeEventListener("pointerdown", closeOnOutsideClick);
   }, []);
 
-  function selectBuilding(feature: BuildingFeature) {
-    onSelectBuilding(feature);
-    setQuery(feature.properties.name);
+  function selectBuilding(feature: SearchItem) {
+    feature.onSelect();
+    setQuery(feature.name);
     setIsOpen(false);
     setActiveIndex(-1);
     inputRef.current?.blur();
@@ -129,7 +134,7 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
               setIsOpen(true);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search Waterloo campus"
+            placeholder="Search places, food, transit…"
             aria-label="Search Waterloo campus"
             aria-controls="campus-search-results"
             aria-expanded={isOpen}
@@ -160,13 +165,11 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
             </p>
 
             {results.map((feature, index) => {
-              const category =
-                buildingCategoryDetails[feature.properties.category];
-              const Icon = category.icon;
+              const Icon = feature.icon ?? MapPin;
 
               return (
                 <button
-                  key={feature.properties.id}
+                  key={feature.id}
                   type="button"
                   role="option"
                   aria-selected={activeIndex === index}
@@ -177,17 +180,17 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
                   }`}
                 >
                   <span
-                    className={`flex size-10 shrink-0 items-center justify-center rounded-full ${category.styles}`}
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-full ${feature.iconStyles ?? "bg-slate-100 text-slate-600"}`}
                   >
                     <Icon className="size-5" strokeWidth={2} />
                   </span>
 
                   <span className="min-w-0 flex-1">
                     <span className="font-title block truncate text-sm font-semibold text-slate-900">
-                      {feature.properties.name}
+                      {feature.name}
                     </span>
                     <span className="text-ui-meta block truncate text-slate-500">
-                      {feature.properties.abbreviation} · {category.label}
+                      {feature.subtitle}
                     </span>
                   </span>
                 </button>
@@ -196,7 +199,7 @@ export function SearchBar({ buildings, onSelectBuilding }: SearchBarProps) {
 
             {query && !results.length && (
               <p className="font-title px-3 py-6 text-center text-sm text-slate-500">
-                No campus places found
+                No matching places, food, routes, stops, or events
               </p>
             )}
           </div>
