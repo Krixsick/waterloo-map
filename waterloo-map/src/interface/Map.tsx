@@ -1,5 +1,7 @@
+import WalkingRoutes from "./WalkingRoutes";
+import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
 import { FoodMarkers, foodIsOpen } from "./FoodMap";
-import { CalendarDays, UtensilsCrossed, BusFront } from "lucide-react";
+import { CalendarDays, UtensilsCrossed, BusFront, TrainFront } from "lucide-react";
 import EventsPanel, { EventSummary } from "./EventsPanel";
 import { filterEvents, upcomingEvents, type EventDateFilter } from "../utils/eventDiscovery";
 import { matchBuilding } from "../utils/eventLocations";
@@ -190,6 +192,8 @@ function Map() {
   const foodPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("foodPreview") === "1";
   const [showFood, setShowFood] = useState(foodPreview);
   const [foodCategory, setFoodCategory] = useState("all");
+  const [directionsMode, setDirectionsMode] = useState<"walk" | "transit">("walk");
+  const [walkingMode, setWalkingMode] = useState(false);
   const [foodFocus, setFoodFocus] = useState<string | null>(null);
   const [showEvents, setShowEvents] =
     useState(false);
@@ -271,9 +275,9 @@ function Map() {
     data: transitStopsResponse,
     isError: isTransitStopsError,
     isPending: isTransitStopsPending,
-  } = useTransitStops(showTransit);
+  } = useTransitStops(true);
 
-  const routesQuery = useTransitRoutes(showTransit);
+  const routesQuery = useTransitRoutes(true);
   const routeDetailQuery = useTransitRouteDetail(showTransit ? selectedRoute : null);
   const routeDetail = routeDetailQuery.data?.data ?? null;
   const routePattern = routeDetail?.patterns.find((pattern) => pattern.id === selectedPatternId)
@@ -605,6 +609,7 @@ function Map() {
   }
 
   function resetFilters() {
+    setWalkingMode(false);
     setShowFood(false); setFoodCategory("all");
     setActiveCategories(
       DEFAULT_CATEGORIES,
@@ -1173,7 +1178,14 @@ function Map() {
           }
         />
 
+        {mapInstance && isMapLoaded && <WalkingRoutes onExplore={() => { setWalkingMode(false); setShowTransit(true); }} preferredMode={directionsMode} enabled={walkingMode} onEnabled={value => { setWalkingMode(value); if (value) { setShowFood(false); setShowEvents(false); setShowTransit(false); setSelectedEventId(null); setSelectedTransit(null); } }} onConsumeSelection={() => setSelectedBuildingId(null)} map={mapInstance} selectedId={selectedBuildingId} />}
         <SearchBar
+          items={[
+            ...mappedFood.map(food => ({ id: `food:${food.id}`, name: food.name, icon: FOOD_CATEGORY_DETAILS[food.category].icon, iconStyles: "bg-emerald-50 text-[#13735a]", subtitle: `${FOOD_CATEGORY_DETAILS[food.category].label} · ${buildings.features.find(b => b.properties.id === food.buildingId)?.properties.abbreviation ?? food.buildingId.toUpperCase()}`, keywords: `${food.location ?? ""} ${food.description ?? ""} ${food.category === "cafe" ? "coffee cafe café espresso tea" : ""} ${food.category === "convenience" ? "snacks convenience store" : "meals restaurant eat"}`, onSelect: () => { setShowFood(false); setShowTransit(false); setShowEvents(false); selectFoodBuilding(food.buildingId); const b = buildings.features.find(b => b.properties.id === food.buildingId); if (b) mapInstance?.flyTo({center: b.geometry.coordinates as [number, number], zoom: 17}); } })),
+            ...(routesQuery.data?.data ?? []).map(route => ({ id: `route:${route.id}`, icon: route.mode === "ion" ? TrainFront : BusFront, iconStyles: route.mode === "ion" ? "bg-pink-50 text-pink-700" : "bg-blue-50 text-blue-700", name: `${route.routeId} ${route.name}`, subtitle: `${route.mode === "ion" ? "ION light rail" : "Bus"} route`, keywords: `transit grt ${route.mode === "ion" || route.routeId === "301" ? "ion train light rail 301" : "bus"}`, onSelect: () => { setShowFood(false); setShowEvents(false); setShowTransit(true); setSelectedBuildingId(null); setSelectedEventId(null); selectRoute(route); } })),
+            ...transitStops.map(stop => ({ id: `stop:${stop.id}`, icon: stop.mode === "ion" ? TrainFront : BusFront, iconStyles: stop.mode === "ion" ? "bg-pink-50 text-pink-700" : "bg-blue-50 text-blue-700", name: stop.name, subtitle: `${stop.mode === "ion" ? "ION station" : "Bus stop"} · ${stop.stopId}`, keywords: `transit stop station ${stop.routeIds.join(" ")}`, onSelect: () => { setShowFood(false); setShowEvents(false); setShowTransit(true); setSelectedBuildingId(null); setSelectedEventId(null); setSelectedRoute(null); setSelectedTransit({type: "stop", stop}); mapInstance?.flyTo({center: [stop.longitude, stop.latitude], zoom: 17}); } })),
+            ...upcomingEvents(eventsResponse?.events ?? [], eventNow).map(event => ({ id: `event:${event.id}`, icon: CalendarDays, iconStyles: "bg-violet-50 text-[#7c3aed]", name: event.name, subtitle: `Event · ${event.location ?? ""}`, keywords: `${event.organizer ?? ""} ${event.description ?? ""}`, onSelect: () => { setShowFood(false); setShowTransit(false); setShowEvents(true); selectEvent(event); } })),
+          ]}
           buildings={
             buildingsWithBackendInfo
           }
@@ -1182,10 +1194,10 @@ function Map() {
           }
         />
 
-        {!showTransit && <div className="absolute left-3 top-20 z-20 flex items-center gap-2 sm:left-5">
-          <button type="button" onClick={toggleTransit} className="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm"><BusFront size={18} />Transit</button>
-          <button type="button" aria-pressed={showEvents} onClick={toggleEvents} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}><CalendarDays size={18} />Events</button>
-          <button type="button" aria-pressed={showFood} onClick={toggleFood} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}><UtensilsCrossed size={18} />Food</button>
+        {!showTransit && !walkingMode && <div className="absolute left-3 top-20 z-20 flex items-center gap-2 sm:left-5">
+          <button type="button" onClick={() => { setWalkingMode(false); toggleTransit(); }} className="flex h-11 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm"><BusFront size={18} />Transit</button>
+          <button type="button" aria-pressed={showEvents} onClick={() => { setWalkingMode(false); toggleEvents(); }} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}><CalendarDays size={18} />Events</button>
+          <button type="button" aria-pressed={showFood} onClick={() => { setWalkingMode(false); toggleFood(); }} className={`flex h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}><UtensilsCrossed size={18} />Food</button>
         </div>}
         {showFood && mapInstance && isMapLoaded && <FoodMarkers preview={foodPreview} map={mapInstance} foods={filteredFood} onSelect={selectFoodBuilding} />}
         {showFood && !selectedBuildingId && <div aria-label="Food map filters" className="absolute left-3 top-36 z-30 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:left-5">
@@ -1196,7 +1208,8 @@ function Map() {
           {!foodLoading && !foodError && !filteredFood.length && <p className="px-3 pb-1 pt-2 text-xs text-slate-500">No food spots match these filters.</p>}
         </div>}
         {showEvents && !selectedEvent && !selectedBuildingId && <EventsPanel events={eventVenueIds ? filteredEvents.filter(event => eventVenueIds.includes(event.id)) : filteredEvents} filter={eventDateFilter} search={eventSearch} venue={Boolean(eventVenueIds)} loading={isEventsPending} error={isEventsError} partial={Boolean(eventsResponse?.hasMore)} onFilter={value => {setEventDateFilter(value); setEventVenueIds(null);}} onSearch={setEventSearch} onClearVenue={() => setEventVenueIds(null)} onSelect={selectEvent} onClose={toggleEvents} onRetry={() => { void eventsQueryRetry(); }} />}
-        {showTransit && <TransitRouteBar
+        {showTransit && !selectedTransit && <TransitRouteBar
+          onPlanTrip={() => { setDirectionsMode("transit"); setWalkingMode(true); setShowTransit(false); setSelectedBuildingId(null); setSelectedTransit(null); setSelectedEventId(null); }}
           enabled={showTransit}
           showHint={!selectedTransit && !selectedBuildingId && !selectedEventId}
           routes={availableRoutes}
@@ -1230,7 +1243,7 @@ function Map() {
           />
         )}
 
-        <BuildingDetailsCard
+        {!walkingMode && <BuildingDetailsCard
           events={buildingEvents}
           eventsLoading={isEventsPending}
           eventsError={isEventsError}
@@ -1278,7 +1291,7 @@ function Map() {
               );
             }
           }}
-        />
+        />}
 
         {selectedEvent && !eventDetailsExpanded && <section aria-label="Selected event preview" className="absolute inset-x-3 top-36 z-30 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg sm:left-5 sm:right-auto sm:w-[22rem]">
           <div className="mb-2 flex items-center justify-between"><p className="text-xs font-medium text-[#7c3aed]">Event preview</p><button type="button" aria-label="Close event preview" onClick={() => setSelectedEventId(null)} className="px-2 py-1 text-sm text-slate-500">Close</button></div>

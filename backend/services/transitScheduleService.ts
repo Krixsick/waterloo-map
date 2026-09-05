@@ -468,9 +468,10 @@ export async function getScheduledDepartures(
   stopId: string,
   limit: number,
   route?: { mode: TransitMode; routeId: string },
+  after = Date.now() - 60_000,
 ): Promise<TransitResponse<TransitDeparture>> {
   const { networks, feeds } = collectNetworks(await loadNetworks());
-  const earliestDeparture = Date.now() - 60_000;
+  const earliestDeparture = after;
   const departures = networks
     .flatMap((network) => network.departuresByStop.get(stopId) ?? [])
     .filter((departure) => !route || (departure.mode === route.mode && departure.routeId === route.routeId))
@@ -492,6 +493,7 @@ export async function getScheduledTripDetail(
   tripId: string,
   currentStopSequence: number | null,
   currentStopId: string | null,
+  stopLimit = 3,
 ): Promise<TransitItemResponse<TransitTripDetail>> {
   const feed = STATIC_FEEDS.find((item) => item.mode === mode);
   if (!feed) return { data: null, feeds: [], generatedAt: new Date().toISOString() };
@@ -528,7 +530,7 @@ export async function getScheduledTripDetail(
         tripId,
         headsign: trip.headsign,
         directionId: trip.directionId,
-        nextStops: trip.stops.slice(startIndex, startIndex + 3),
+        nextStops: trip.stops.slice(startIndex, startIndex + stopLimit),
       },
       feeds: [feedStatus(mode, network)],
       generatedAt: new Date().toISOString(),
