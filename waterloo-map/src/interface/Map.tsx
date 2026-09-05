@@ -1,3 +1,4 @@
+import FoodFilters from "./FoodFilters";
 import WalkingRoutes from "./WalkingRoutes";
 import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
 import { FoodMarkers, foodIsOpen } from "./FoodMap";
@@ -163,6 +164,7 @@ function Map() {
     import.meta.env.DEV &&
     new URLSearchParams(window.location.search).get("foodPreview") === "1";
   const [showFood, setShowFood] = useState(foodPreview);
+  const [foodOpenOnly, setFoodOpenOnly] = useState(true);
   const [foodCategory, setFoodCategory] = useState("all");
   const [directionsMode, setDirectionsMode] = useState<"walk" | "transit">(
     "walk",
@@ -560,7 +562,6 @@ function Map() {
   }
 
   function toggleEvents() {
-    setShowParking(false);
     setShowFood(false);
     setSelectedEventId(null);
     setSelectedBuildingId(null);
