@@ -32,7 +32,7 @@ export function getTimeRemaining(hours: string | null, now = new Date()): string
 
 export type FoodOpenStatus = {
   isOpen: boolean;
-  status: "Open" | "Closed";
+  status: "Open" | "Closed" | "Hours unconfirmed";
   timeMessage: string | null;
 };
 
@@ -222,7 +222,7 @@ export function getFoodOpenStatus(
   if (!hours) {
     return {
       isOpen: false,
-      status: "Closed",
+      status: "Hours unconfirmed",
       timeMessage: null,
     };
   }
@@ -256,7 +256,7 @@ export function getFoodOpenStatus(
   if (!ranges.length) {
     return {
       isOpen: false,
-      status: "Closed",
+      status: "Hours unconfirmed",
       timeMessage: null,
     };
   }
@@ -323,4 +323,18 @@ export function getFoodOpenStatus(
     status: "Closed",
     timeMessage: null,
   };
+}
+// A business-day range may finish the following morning. Check yesterday's spillover first.
+export function getWeeklyFoodStatus(hours: Record<string,string> | undefined, todayHours: string | null, now = new Date()): FoodOpenStatus {
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const day = new Intl.DateTimeFormat("en-CA", {weekday:"long",timeZone:"America/Toronto"}).format(now);
+  const minutes = getTorontoMinutesNow(now);
+  const previous = hours?.[days[(days.indexOf(day)+6)%7]];
+  const spill = parseFoodTimeRanges(previous ?? "").find(r => r.endMinutes < r.startMinutes && minutes < r.endMinutes);
+  const evening = parseFoodTimeRanges(todayHours ?? "").find(r => r.endMinutes < r.startMinutes && minutes >= r.startMinutes);
+  if (spill || evening) {
+    const remaining = spill ? spill.endMinutes-minutes : 1440-minutes+evening!.endMinutes;
+    return {isOpen:true,status:"Open",timeMessage:`${formatDuration(remaining)} left`};
+  }
+  return getFoodOpenStatus(todayHours);
 }

@@ -29,6 +29,16 @@ const CAMPUS_FOOD_LOCATIONS: Record<
   string,
   CampusFoodConfig
 > = {
+  "Chef and the Farmer: Smokehouse": { id: "chef-farmer-smokehouse", buildingId: "slc", category: "restaurant", searchName: "Chef and the Farmer: Smokehouse Student Life Centre (SLC)" },
+  "DC Bytes": { id: "dc-bytes", buildingId: "dc-building", category: "cafe", searchName: "DC Bytes - Closed for M4 Construction Davis Centre (DC)" },
+  "Jugo Juice": { id: "jugo-juice", buildingId: "slc", category: "cafe", searchName: "Jugo Juice Student Life Centre (SLC)" },
+  "Masala": { id: "masala", buildingId: "slc", category: "restaurant", searchName: "Masala Student Life Centre (SLC)" },
+  "Pizza Pizza": { id: "pizza-pizza-slc", buildingId: "slc", category: "restaurant", searchName: "Pizza Pizza Student Life Centre (SLC)" },
+  "Quesada": { id: "quesada", buildingId: "slc", category: "restaurant", searchName: "Quesada Student Life Centre (SLC)" },
+  "Shawarma Hub": { id: "shawarma-hub-slc", buildingId: "slc", category: "restaurant", searchName: "Shawarma Hub Student Life Centre (SLC)" },
+  "Subway": { id: "subway-slc", buildingId: "slc", category: "restaurant", searchName: "Subway Student Life Centre (SLC)" },
+  "Teriyaki Experience": { id: "teriyaki-experience", buildingId: "slc", category: "restaurant", searchName: "Teriyaki Experience Student Life Centre (SLC)" },
+  "Warriors Fuel": { id: "warriors-fuel", buildingId: "cif", category: "convenience", searchName: "Warriors Fuel Columbia Ice Fields (CIF)" },
   "Brubakers Food Court": {
     id: "brubakers",
     buildingId: "slc",
@@ -165,6 +175,10 @@ async function scrapeCampusFood(): Promise<
   const html =
     await response.text();
 
+  return parseCampusFood(html);
+}
+
+export function parseCampusFood(html: string): Record<string, FoodLocation> {
   const $ = cheerio.load(html);
 
   const results: Record<
@@ -220,7 +234,7 @@ async function scrapeCampusFood(): Promise<
         category:
           config.category,
 
-        description,
+        description: config.id === "dc-bytes" ? "Closed for M4 construction." : description,
 
         hours,
 
@@ -243,7 +257,7 @@ async function scrapeCampusFood(): Promise<
 
 export async function getCampusFood() {
   return withCache(
-    "campusfood:full-info:v6",
+    "campusfood:full-info:v7",
     60 * 5,
     scrapeCampusFood,
   );

@@ -1,6 +1,8 @@
+import FoodFilters from "./FoodFilters";
+import FoodDetailsCard from "./FoodDetailsCard";
 import WalkingRoutes, { type DirectionsDestination } from "./WalkingRoutes";
 import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
-import { FoodMarkers, foodIsOpen } from "./FoodMap";
+import { FoodMarkers, foodIsOpen, foodMapKey } from "./FoodMap";
 import {
   CalendarDays,
   UtensilsCrossed,
@@ -287,29 +289,33 @@ function Map() {
   // FOOD DATA
   // --------------------
 
+  const [selectedOffCampus, setSelectedOffCampus] = useState<string | null>(null);
+  const [foodOpenOnly, setFoodOpenOnly] = useState(true);
   const mappedFood = useMemo(
     () =>
       Object.values(foodData).filter((food) =>
-        buildings.features.some((b) => b.properties.id === food.buildingId),
+        food.coordinates || buildings.features.some((b) => b.properties.id === food.buildingId),
       ),
     [foodData],
   );
   const openFoodCount = mappedFood.filter(foodIsOpen).length;
   const filteredFood = mappedFood.filter(
     (food) =>
-      (foodPreview || foodIsOpen(food)) &&
+      (foodPreview || !foodOpenOnly || foodIsOpen(food)) &&
       (foodCategory === "all" ||
         (foodCategory === "meals"
-          ? !["cafe", "convenience"].includes(food.category)
-          : food.category === foodCategory)),
+          ? (food.categories ?? [food.category]).some(category => !["cafe", "convenience", "dessert"].includes(category))
+          : (food.categories ?? [food.category]).some(category => category === foodCategory))),
   );
   const selectFoodBuilding = useCallback((id: string) => {
     setShowParking(false);
-    setSelectedBuildingId(id);
+    setSelectedOffCampus(id.startsWith("off-campus:") ? id : null);
+    setSelectedBuildingId(id.startsWith("off-campus:") ? null : id);
     setSelectedEventId(null);
     setFoodFocus(id);
   }, []);
   function toggleFood() {
+    setSelectedOffCampus(null);
     setShowParking(false);
     setShowFood((value) => !value);
     setShowEvents(false);
@@ -340,7 +346,7 @@ function Map() {
 
     console.log("matched food:", matchedFood);
 
-    return matchedFood;
+    return matchedFood.sort((a, b) => Number(foodIsOpen(b)) - Number(foodIsOpen(a)));
   }, [foodData, selectedBuilding]);
 
   // --------------------
@@ -1057,19 +1063,19 @@ function Map() {
               name: food.name,
               icon: FOOD_CATEGORY_DETAILS[food.category].icon,
               iconStyles: "bg-emerald-50 text-[#13735a]",
-              subtitle: `${FOOD_CATEGORY_DETAILS[food.category].label} · ${buildings.features.find((b) => b.properties.id === food.buildingId)?.properties.abbreviation ?? food.buildingId.toUpperCase()}`,
-              keywords: `${food.location ?? ""} ${food.description ?? ""} ${food.category === "cafe" ? "coffee cafe café espresso tea" : ""} ${food.category === "convenience" ? "snacks convenience store" : "meals restaurant eat"}`,
+              subtitle: `${FOOD_CATEGORY_DETAILS[food.category].label} · ${buildings.features.find((b) => b.properties.id === food.buildingId)?.properties.abbreviation ?? (food.buildingId?.toUpperCase() ?? "Off campus")}`,
+              keywords: `${food.location ?? ""} ${food.description ?? ""} ${food.categories?.join(" ") ?? ""} ${food.categories?.includes("cafe") ? "coffee" : ""} ${food.category === "cafe" ? "coffee cafe café espresso tea" : ""} ${food.category === "convenience" ? "snacks convenience store" : "meals restaurant eat"}`,
               onSelect: () => {
                 setShowFood(false);
                 setShowTransit(false);
                 setShowEvents(false);
-                selectFoodBuilding(food.buildingId);
+                selectFoodBuilding(foodMapKey(food));
                 const b = buildings.features.find(
                   (b) => b.properties.id === food.buildingId,
                 );
-                if (b)
+                if (b || food.coordinates)
                   mapInstance?.flyTo({
-                    center: b.geometry.coordinates as [number, number],
+                    center: food.coordinates ?? b!.geometry.coordinates as [number, number],
                     zoom: 17,
                   });
               },
@@ -1191,35 +1197,32 @@ function Map() {
         {showParking && mapInstance && isMapLoaded && (
           <ParkingMap map={mapInstance} onClose={() => setShowParking(false)} />
         )}
+        {selectedOffCampus && !showTransit && !showEvents && !showParking && !selectedBuildingId && (
+          <section aria-label="Off-campus food details" className="absolute left-3 top-36 z-30 max-h-[calc(100%-10rem)] w-[380px] max-w-[calc(100%-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-lg sm:left-5">
+            <div className="mb-3 flex items-center justify-between"><div><h2 className="text-ui-title text-emerald-800">{mappedFood.filter(food => foodMapKey(food) === selectedOffCampus).length > 1 ? "Food at this location" : mappedFood.find(food => foodMapKey(food) === selectedOffCampus)?.name}</h2><span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-ui-meta text-emerald-700">Off campus</span></div><button aria-label="Close food details" className="cursor-pointer rounded-full px-3 py-1 text-xl" onClick={() => setSelectedOffCampus(null)}>×</button></div>
+            <p className="mb-4 text-ui-meta text-slate-500">{mappedFood.find(food => foodMapKey(food) === selectedOffCampus)?.location?.replace(/, Unit[^,]*/i, "")}</p>
+            {mappedFood.filter(food => foodMapKey(food) === selectedOffCampus).sort((a, b) => Number(foodIsOpen(b)) - Number(foodIsOpen(a))).map(food => <div key={food.id} className="mb-4">
+              {food.location?.match(/Unit[^,]*/i) && <p className="mb-2 text-ui-meta text-slate-500">{food.location.match(/Unit[^,]*/i)?.[0]}</p>}
+              <FoodDetailsCard food={food} defaultExpanded />
+              <a className="mt-2 inline-block text-sm text-emerald-700 underline" href={food.url} target="_blank" rel="noreferrer">Visit website</a>
+            </div>)}
+          </section>
+        )}
         {showFood && mapInstance && isMapLoaded && (
           <FoodMarkers
             preview={foodPreview}
             map={mapInstance}
             foods={filteredFood}
+            allFoods={mappedFood}
             onSelect={selectFoodBuilding}
           />
         )}
-        {showFood && !selectedBuildingId && (
+        {showFood && !selectedBuildingId && !selectedOffCampus && (
           <div
             aria-label="Food map filters"
             className="absolute left-3 top-36 z-30 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:left-5"
           >
-            <div className="flex items-center gap-2">
-              <span className="px-2 text-sm text-emerald-800">
-                {foodPreview ? "Preview · all spots shown open" : "Open now"}
-              </span>
-              <select
-                aria-label="Food category"
-                value={foodCategory}
-                onChange={(e) => setFoodCategory(e.target.value)}
-                className="cursor-pointer rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700"
-              >
-                <option value="all">All food</option>
-                <option value="meals">Meals</option>
-                <option value="cafe">Coffee</option>
-                <option value="convenience">Convenience</option>
-              </select>
-            </div>
+            <FoodFilters openOnly={foodOpenOnly} onOpenOnly={setFoodOpenOnly} category={foodCategory} onCategory={setFoodCategory} />
             {foodLoading && (
               <p className="px-3 pt-2 text-xs text-slate-500">
                 Loading food spots…

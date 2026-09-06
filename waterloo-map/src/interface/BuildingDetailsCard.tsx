@@ -1,3 +1,4 @@
+import { buildingAccess } from "../data/buildingAccess";
 import GraduateHouseInfo, { graduateHouseHours } from "./GraduateHouseInfo";
 import { useState } from "react";
 import { EventSummary } from "./EventsPanel";
@@ -250,11 +251,13 @@ export default function BuildingDetailsCard({
         )
       : [];
 
+  const access = buildingAccess[properties.id];
+  const accessDay = new Intl.DateTimeFormat("en-CA", {weekday:"long", timeZone:"America/Toronto"}).format(new Date());
   const displayHours =
     properties.id === "gh" ? graduateHouseHours() : isGym
       ? gymHours ??
         "Hours unavailable"
-      : properties.liveHours ??
+      : access?.hours[accessDay] ?? properties.liveHours ??
         "Hours unavailable";
 
 
@@ -337,7 +340,11 @@ export default function BuildingDetailsCard({
               </dd>
             )}
 
-            {!isGym &&
+            {access && <div className="mt-2 space-y-1">
+              <p className="text-ui-meta text-slate-500">{access.note}</p>
+              <a className="text-ui-meta text-emerald-700 underline" href={access.source} target="_blank" rel="noreferrer">Official building hours</a>
+            </div>}
+            {!access && !isGym &&
               properties.timeRemaining && (
                 <p className="text-ui-meta mt-1 text-emerald-700">
                   {
