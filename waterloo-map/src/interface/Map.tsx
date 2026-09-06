@@ -1,4 +1,4 @@
-import WalkingRoutes from "./WalkingRoutes";
+import WalkingRoutes, { type DirectionsDestination } from "./WalkingRoutes";
 import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
 import { FoodMarkers, foodIsOpen } from "./FoodMap";
 import {
@@ -170,6 +170,8 @@ function Map() {
     "walk",
   );
   const [walkingMode, setWalkingMode] = useState(false);
+  const [directionsRequest, setDirectionsRequest] = useState<{ id: number; destination: DirectionsDestination } | null>(null);
+  const directionsRequestId = useRef(0);
   const [foodFocus, setFoodFocus] = useState<string | null>(null);
   const [showEvents, setShowEvents] = useState(false);
 
@@ -504,6 +506,25 @@ function Map() {
     });
   }
 
+  function openDirections(destination: DirectionsDestination) {
+    setDirectionsRequest({ id: ++directionsRequestId.current, destination });
+    setDirectionsMode("walk");
+    setWalkingMode(true);
+    setShowParking(false);
+    setShowFood(false);
+    setShowEvents(false);
+    setShowTransit(false);
+    setSelectedBuildingId(null);
+    setSelectedEventId(null);
+    setSelectedTransit(null);
+    setSelectedRoute(null);
+    setSelectedPatternId(null);
+    setIs3D(false);
+    if (destination.coordinates) {
+      mapInstance?.easeTo({ center: destination.coordinates, zoom: 16, pitch: 0, bearing: 0 });
+    }
+  }
+
   function selectBuilding(building: BuildingFeature) {
     setShowParking(false);
     setSelectedBuildingId(building.properties.id);
@@ -738,7 +759,7 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-    mapInstance.setMinZoom(showTransit ? 9 : showParking ? 11 : 13);
+    mapInstance.setMinZoom(walkingMode ? 5 : showTransit ? 9 : showParking ? 11 : 13);
     updateTransitRoute(
       mapInstance,
       showTransit ? selectedRoute : null,
@@ -755,6 +776,7 @@ function Map() {
     isMapLoaded,
     showTransit,
     showParking,
+    walkingMode,
     selectedRoute,
     routePattern,
     fitSelectedRoute,
@@ -1003,6 +1025,8 @@ function Map() {
 
         {mapInstance && isMapLoaded && (
           <WalkingRoutes
+            key={`${directionsRequest?.id ?? "manual"}:${directionsMode}`}
+            initialDestination={directionsRequest?.destination}
             onExplore={() => {
               setWalkingMode(false);
               setShowParking(false);
@@ -1244,6 +1268,7 @@ function Map() {
         {showTransit && !selectedTransit && (
           <TransitRouteBar
             onPlanTrip={() => {
+              setDirectionsRequest(null);
               setShowParking(false);
               setDirectionsMode("transit");
               setWalkingMode(true);
@@ -1328,6 +1353,12 @@ function Map() {
             eventsError={isEventsError}
             onSelectEvent={selectEvent}
             building={selectedBuilding}
+            onDirections={() => {
+              if (selectedBuilding) openDirections({
+                name: selectedBuilding.properties.name,
+                coordinates: selectedBuilding.geometry.coordinates as [number, number],
+              });
+            }}
             foodLocations={selectedBuildingFood}
             libraryOccupancy={selectedLibraryOccupancy}
             libraryOccupancyLoading={
@@ -1385,6 +1416,14 @@ function Map() {
             (event) => event.id === selectedEventId,
           )}
           event={eventDetailsExpanded ? selectedEvent : null}
+          onDirections={() => {
+            if (!selectedEvent) return;
+            const mapped = mappedEvents.find((event) => event.id === selectedEvent.id);
+            openDirections({
+              name: selectedEvent.location || selectedEvent.name,
+              coordinates: mapped ? [mapped.coordinates.longitude, mapped.coordinates.latitude] : undefined,
+            });
+          }}
           onClose={() => setSelectedEventId(null)}
           onRecenter={() => {
             const mapped = mappedEvents.find(
