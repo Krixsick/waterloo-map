@@ -1,5 +1,6 @@
 import {
   Coffee,
+  IceCreamBowl,
   CupSoda,
   Sandwich,
   ShoppingBasket,
@@ -19,6 +20,7 @@ export const FOOD_CATEGORY_DETAILS: Record<
   FoodCategory,
   FoodCategoryDetails
 > = {
+  dessert: {label: "Desserts", icon: IceCreamBowl},
   restaurant: {
     label: "Restaurant",
     icon: UtensilsCrossed,
@@ -48,4 +50,13 @@ export const FOOD_CATEGORY_DETAILS: Record<
     label: "Bar",
     icon: CupSoda,
   },
+};
+export const FOOD_CATEGORY_COLOURS: Record<FoodCategory, string> = {
+  dessert: "bg-pink-50 text-pink-700",
+  cafe: "bg-amber-50 text-amber-800",
+  convenience: "bg-sky-50 text-sky-700",
+  restaurant: "bg-emerald-50 text-emerald-700",
+  "dining-hall": "bg-orange-50 text-orange-700",
+  "food-court": "bg-teal-50 text-teal-700",
+  bar: "bg-violet-50 text-violet-700",
 };

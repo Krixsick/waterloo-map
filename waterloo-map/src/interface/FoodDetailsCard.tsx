@@ -12,11 +12,12 @@ import {
   import { createPortal } from "react-dom";
   
   import type { FoodInfo } from "../api/foodApi";
-  import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
-  import { getFoodOpenStatus } from "../utils/timeUtils";
+  import { FOOD_CATEGORY_DETAILS, FOOD_CATEGORY_COLOURS } from "../data/foodCategoryDetails";
+  import { getWeeklyFoodStatus } from "../utils/timeUtils";
   
   type FoodDetailsCardProps = {
     food: FoodInfo;
+    defaultExpanded?: boolean;
   };
   
   const MONTHS: Record<string, number> = {
@@ -547,9 +548,10 @@ import {
   
   export default function FoodDetailsCard({
     food,
+    defaultExpanded = false,
   }: FoodDetailsCardProps) {
     const [isExpanded, setIsExpanded] =
-      useState(false);
+      useState(defaultExpanded);
   
     const [
       isMenuGalleryOpen,
@@ -627,7 +629,8 @@ import {
       "Hours unavailable";
 
     const foodStatus =
-      getFoodOpenStatus(
+      getWeeklyFoodStatus(
+        food.hours,
         hours ===
           "Hours unavailable"
           ? null
@@ -645,7 +648,7 @@ import {
   
     return (
       <>
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors hover:border-slate-300">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition-colors hover:border-slate-300">
           <button
             type="button"
             onClick={() => {
@@ -658,13 +661,13 @@ import {
                 ? isExpanded
                 : undefined
             }
-            className={`flex w-full items-start gap-3 p-3 text-left ${
+            className={`flex w-full items-start gap-3 p-4 text-left ${
               hasExpandableContent
                 ? "cursor-pointer"
                 : "cursor-default"
             }`}
           >
-            <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-emerald-50 text-[#13735a]">
+            <div className={`flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl ${FOOD_CATEGORY_COLOURS[food.category]}`}>
               {food.logo ? (
                 <img
                   src={food.logo}
@@ -682,6 +685,7 @@ import {
     <p className="text-ui-value text-slate-900">
       {food.name}
     </p>
+    <span className={`mt-1 inline-block rounded-md px-2 py-0.5 text-ui-meta ${FOOD_CATEGORY_COLOURS[food.category]}`}>{categoryDetails.label}</span>
   </div>
 
   <div className="flex shrink-0 items-center gap-2">
@@ -736,7 +740,7 @@ import {
           : "text-slate-600"
       }`}
     >
-      {formatDisplayTime(hours)}
+      {hours.trim().toLowerCase() !== "closed" ? formatDisplayTime(hours) : null}
     </p>
   )}
 
@@ -747,7 +751,7 @@ import {
   )}
 
 {foodStatus.timeMessage && (
-  <p className="text-ui-meta mt-1 text-slate-500">
+  <p className={`text-ui-meta mt-2 inline-block rounded-lg px-2 py-1 font-medium ${foodStatus.isOpen ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
     {formatDisplayTime(foodStatus.timeMessage)}
   </p>
 )}
@@ -757,8 +761,9 @@ import {
   
           {hasExpandableContent &&
             isExpanded && (
-              <div className="border-t border-slate-100 px-3 pb-3 pt-3">
+              <div className="border-t border-slate-100 px-4 pb-4 pt-4">
                 <FoodHours hours={food.hours} exceptions={food.exceptions} />
+                {food.hoursSource && <a className="mb-3 block text-ui-meta text-emerald-700 underline" href={food.hoursSource.url} target="_blank" rel="noreferrer">Hours source · {food.hoursSource.name}</a>}
                 {descriptionText && (
                   <div>
                     <p className="text-ui-label text-slate-500">
@@ -785,7 +790,7 @@ import {
                   >
                     <div className="flex items-center gap-1.5">
                       <p className="text-ui-label text-slate-500">
-                        Payment
+                        {food.coordinates ? "Confirmed payment options" : "Payment"}
                       </p>
                     </div>
   
@@ -807,6 +812,7 @@ import {
                         ),
                       )}
                     </div>
+                    {food.paymentNote && <p className="mt-2 text-ui-meta text-slate-500">{food.paymentNote}</p>}
                   </div>
                 )}
   

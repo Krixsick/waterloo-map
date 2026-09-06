@@ -495,7 +495,7 @@ export function addBuildingHoverPopup(
 
   HOVER_LAYERS.forEach((layerId) => {
     map.on("mouseenter", layerId, (event) => {
-      if (isHoveringEvent(map, event.point)) return;
+      if ((event.originalEvent.target as Element)?.closest?.("[data-food-marker]") || isHoveringEvent(map, event.point)) { hoverPopup.remove(); clearBuildingHover(map); return; }
 
       const feature = event.features?.[0];
 
@@ -526,7 +526,7 @@ export function addBuildingHoverPopup(
     });
 
     map.on("click", layerId, (event) => {
-      if (isHoveringEvent(map, event.point)) return;
+      if ((event.originalEvent.target as Element)?.closest?.("[data-food-marker]") || isHoveringEvent(map, event.point)) { hoverPopup.remove(); clearBuildingHover(map); return; }
 
       const feature = event.features?.[0];
 
