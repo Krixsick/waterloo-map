@@ -46,6 +46,7 @@ type BuildingDetailsCardProps = {
   gymError: boolean;
   onClose: () => void;
   onRecenter: () => void;
+  onDirections: () => void;
 };
 
 const occupancyLabels: Record<
@@ -179,14 +180,16 @@ export default function BuildingDetailsCard({
   gymError,
   onClose,
   onRecenter,
+  onDirections,
 }: BuildingDetailsCardProps) {
   const [expandedEventsFor, setExpandedEventsFor] = useState<string | null>(null);
   if (!building) return null;
 
   const {
     properties,
-    geometry,
   } = building;
+
+  const [longitude, latitude] = building.geometry.coordinates;
 
   const category =
     buildingCategoryDetails[
@@ -195,9 +198,6 @@ export default function BuildingDetailsCard({
 
   const CategoryIcon =
     category.icon;
-
-  const [longitude, latitude] =
-    geometry.coordinates;
 
   const isLibrary =
     properties.category ===
@@ -257,18 +257,6 @@ export default function BuildingDetailsCard({
       : properties.liveHours ??
         "Hours unavailable";
 
-  function openDirections() {
-    const destination =
-      encodeURIComponent(
-        `${latitude},${longitude}`,
-      );
-
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
-  }
 
   return (
     <section
@@ -314,7 +302,7 @@ export default function BuildingDetailsCard({
         <ActionButton
           icon={Navigation}
           label="Directions"
-          onClick={openDirections}
+          onClick={onDirections}
         />
 
         <ActionButton

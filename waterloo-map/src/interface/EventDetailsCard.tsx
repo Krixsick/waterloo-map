@@ -18,6 +18,7 @@ type EventDetailsCardProps = {
   event: WaterlooEvent | null;
   onClose: () => void;
   onRecenter: () => void;
+  onDirections: () => void;
   canRecenter?: boolean;
 };
 
@@ -55,6 +56,7 @@ export default function EventDetailsCard({
   event,
   onClose,
   onRecenter,
+  onDirections,
   canRecenter = true,
 }: EventDetailsCardProps) {
   if (!event) return null;
@@ -104,11 +106,11 @@ export default function EventDetailsCard({
       </header>
 
       <div className="flex justify-center gap-3 border-b border-slate-200 px-3 py-3">
-        {event.mapURL && (
+        {(canRecenter || event.mapURL) && (
           <ActionButton
             icon={Navigation}
             label="Directions"
-            onClick={() => openExternal(event.mapURL!)}
+            onClick={onDirections}
           />
         )}
         {canRecenter && <ActionButton icon={LocateFixed} label="Recenter" onClick={onRecenter} />}
