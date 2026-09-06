@@ -6,7 +6,7 @@ import {
   getTransitVehicles,
   hasAvailableFeed,
 } from "../services/transitService";
-import { getTransitStops } from "../services/transitScheduleService";
+import { getScheduledDepartures, getScheduledTripDetail, getTransitStops, getTransitRoutes, getTransitRouteDetail } from "../services/transitScheduleService";
 import {
   getTransitDepartures,
   getTransitTripDetail,
@@ -51,6 +51,22 @@ transitRouter.get("/stops", async (req, res) => {
   res.status(hasAvailableFeed(result) ? 200 : 503).json(result);
 });
 
+transitRouter.get("/routes", async (_req, res) => {
+  const result = await getTransitRoutes();
+  res.status(hasAvailableFeed(result) ? 200 : 503).json(result);
+});
+
+transitRouter.get("/route", async (req, res) => {
+  const mode = req.query.mode;
+  const routeId = typeof req.query.routeId === "string" ? req.query.routeId.trim() : "";
+  if ((mode !== "bus" && mode !== "ion") || !routeId || routeId.length > 64) {
+    res.status(400).json({ error: "Valid mode and routeId are required" });
+    return;
+  }
+  const result = await getTransitRouteDetail(mode, routeId);
+  res.status(!hasAvailableFeed(result) ? 503 : result.data ? 200 : 404).json(result);
+});
+
 transitRouter.get("/vehicles", async (_req, res) => {
   const result = await getTransitVehicles();
   res.status(hasAvailableFeed(result) ? 200 : 503).json(result);
@@ -66,8 +82,30 @@ transitRouter.get("/departures", async (req, res) => {
     return;
   }
 
-  const result = await getTransitDepartures(stopId, limit);
+  const routeId = typeof req.query.routeId === "string" ? req.query.routeId.trim() : "";
+  const mode = req.query.mode;
+  if (routeId && (mode !== "bus" && mode !== "ion")) {
+    res.status(400).json({ error: "mode is required when filtering by routeId" });
+    return;
+  }
+  const result = await getTransitDepartures(stopId, limit,
+    routeId ? { mode: mode as TransitMode, routeId } : undefined);
   res.status(hasAvailableFeed(result) ? 200 : 503).json(result);
+});
+
+transitRouter.get("/planning-departures", async (req, res) => {
+  const stopId = typeof req.query.stopId === "string" ? req.query.stopId : "";
+  const after = Number(req.query.after);
+  if (!stopId || !Number.isFinite(after) || Math.abs(after-Date.now()) > 2*60*60*1000) { res.status(400).json({error:"Invalid departure search"}); return; }
+  const result = await getScheduledDepartures(stopId, 100, undefined, after);
+  res.status(hasAvailableFeed(result) ? 200 : 503).json(result);
+});
+
+transitRouter.get("/planning-trip", async (req, res) => {
+  const { mode, tripId, currentStopId } = req.query;
+  if ((mode !== "bus" && mode !== "ion") || typeof tripId !== "string" || typeof currentStopId !== "string") { res.status(400).json({ error: "Invalid trip" }); return; }
+  const result = await getScheduledTripDetail(mode, tripId, null, currentStopId, 500);
+  res.status(result.data ? 200 : 404).json(result);
 });
 
 transitRouter.get("/trip", async (req, res) => {

@@ -26,9 +26,10 @@ function tripKey(mode: TransitMode, tripId: string | null) {
 export async function getTransitDepartures(
   stopId: string,
   limit: number,
+  route?: { mode: TransitMode; routeId: string },
 ): Promise<TransitResponse<TransitDeparture>> {
   const [scheduled, realtime] = await Promise.all([
-    getScheduledDepartures(stopId, limit * 2),
+    getScheduledDepartures(stopId, limit * 2, route),
     getTransitArrivals(stopId),
   ]);
   const liveByTrip = new Map(
@@ -54,6 +55,7 @@ export async function getTransitDepartures(
   });
 
   realtime.data.forEach((arrival) => {
+    if (route && (arrival.mode !== route.mode || arrival.routeId !== route.routeId)) return;
     const key = tripKey(arrival.mode, arrival.tripId);
     const predictedAt = arrivalTime(arrival);
     if (!key || !predictedAt || scheduledTrips.has(key)) return;

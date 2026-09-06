@@ -38,6 +38,13 @@ export function updateBuildingFilters(
       ["get", "category"],
       ["literal", activeCategories],
     ],
-    ["!", ["has", "parentId"]],
+    [
+      "!",
+      [
+        "all",
+        ["==", ["get", "category"], "residence"],
+        ["has", "parentId"],
+      ],
+    ],
   ]);
 }

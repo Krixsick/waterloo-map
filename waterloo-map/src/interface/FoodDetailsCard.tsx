@@ -1,13 +1,19 @@
+import FoodHours from "./FoodHours";
+import { formatDisplayTime } from "../utils/timeFormat";
 import {
     ChevronDown,
-    CreditCard,
+    ChevronLeft,
+    ChevronRight,
     ExternalLink,
-    UtensilsCrossed,
+    X,
   } from "lucide-react";
   
   import { useState } from "react";
+  import { createPortal } from "react-dom";
   
   import type { FoodInfo } from "../api/foodApi";
+  import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
+  import { getFoodOpenStatus } from "../utils/timeUtils";
   
   type FoodDetailsCardProps = {
     food: FoodInfo;
@@ -48,6 +54,34 @@ import {
         timeZone: "America/Toronto",
       },
     ).format(new Date());
+  }
+  
+  function getTodayMenuUrl() {
+    const formatter =
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Toronto",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+  
+    const parts = formatter.formatToParts(
+      new Date(),
+    );
+  
+    const year = parts.find(
+      (part) => part.type === "year",
+    )?.value;
+  
+    const month = parts.find(
+      (part) => part.type === "month",
+    )?.value;
+  
+    const day = parts.find(
+      (part) => part.type === "day",
+    )?.value;
+  
+    return `https://uwaterloo.ca/food-services/daily-menu?date=${year}-${month}-${day}`;
   }
   
   function getTorontoDateParts() {
@@ -153,7 +187,7 @@ import {
     return null;
   }
   
-  function getSpecialFoodHoursForToday(
+  export function getSpecialFoodHoursForToday(
     food: FoodInfo,
   ) {
     const today =
@@ -166,9 +200,21 @@ import {
         today.day,
       );
   
+    /*
+     * Check from newest / most specific
+     * exception backwards.
+     *
+     * This allows something like:
+     *
+     * Aug 20 - Sep 28: 11am - 3pm
+     * Sep 7: Closed
+     *
+     * to correctly resolve Sep 7 as Closed.
+     */
     for (
-      const exception of
-      food.exceptions ?? []
+      const exception of [
+        ...(food.exceptions ?? []),
+      ].reverse()
     ) {
       const colonIndex =
         exception.indexOf(":");
@@ -311,188 +357,522 @@ import {
     return description.trim();
   }
   
+  function parseMealHours(
+    hours: string,
+  ) {
+    if (!hours.includes(" · ")) {
+      return null;
+    }
+  
+    return hours
+      .split(" · ")
+      .map((item) => {
+        const match = item.match(
+          /^(.*?)\s+(\d{1,2}:\d{2}(?:AM|PM)\s+-\s+\d{1,2}:\d{2}(?:AM|PM))$/,
+        );
+  
+        if (!match) {
+          return null;
+        }
+  
+        return {
+          label: match[1],
+          time: match[2],
+        };
+      })
+      .filter(
+        (
+          item,
+        ): item is {
+          label: string;
+          time: string;
+        } => item !== null,
+      );
+  }
+
+  function MenuGallery({
+    foodName,
+    images,
+    initialIndex,
+    onClose,
+  }: {
+    foodName: string;
+    images: string[];
+    initialIndex: number;
+    onClose: () => void;
+  }) {
+    const [currentIndex, setCurrentIndex] =
+      useState(initialIndex);
+  
+    const currentImage =
+      images[currentIndex];
+  
+    const hasMultipleImages =
+      images.length > 1;
+  
+    function showPrevious() {
+      setCurrentIndex((current) =>
+        current === 0
+          ? images.length - 1
+          : current - 1,
+      );
+    }
+  
+    function showNext() {
+      setCurrentIndex((current) =>
+        current ===
+        images.length - 1
+          ? 0
+          : current + 1,
+      );
+    }
+  
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${foodName} menu`}
+          className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+          onClick={(event) =>
+            event.stopPropagation()
+          }
+        >
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h2 className="text-ui-title text-slate-950">
+                {foodName} menu
+              </h2>
+  
+              {hasMultipleImages && (
+                <p className="text-ui-meta mt-0.5 text-slate-500">
+                  {currentIndex + 1} of{" "}
+                  {images.length}
+                </p>
+              )}
+            </div>
+  
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close menu"
+              title="Close"
+              className="flex size-9 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+  
+          <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50 p-4 sm:p-6">
+            {hasMultipleImages && (
+              <button
+                type="button"
+                onClick={showPrevious}
+                aria-label="Previous menu image"
+                className="absolute left-3 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:bg-white hover:text-slate-950 sm:left-5"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+            )}
+  
+            <img
+              src={currentImage}
+              alt={`${foodName} menu ${
+                currentIndex + 1
+              }`}
+              className="max-h-[68vh] max-w-full rounded-lg object-contain shadow-sm"
+            />
+  
+            {hasMultipleImages && (
+              <button
+                type="button"
+                onClick={showNext}
+                aria-label="Next menu image"
+                className="absolute right-3 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-sm transition hover:bg-white hover:text-slate-950 sm:right-5"
+              >
+                <ChevronRight className="size-5" />
+              </button>
+            )}
+          </div>
+  
+          <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">
+            {hasMultipleImages ? (
+              <div className="flex gap-1.5">
+                {images.map(
+                  (_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() =>
+                        setCurrentIndex(
+                          index,
+                        )
+                      }
+                      aria-label={`Show menu image ${
+                        index + 1
+                      }`}
+                      className={`size-2 cursor-pointer rounded-full transition-colors ${
+                        index ===
+                        currentIndex
+                          ? "bg-[#13735a]"
+                          : "bg-slate-300 hover:bg-slate-400"
+                      }`}
+                    />
+                  ),
+                )}
+              </div>
+            ) : (
+              <span />
+            )}
+  
+            <a
+              href={currentImage}
+              target="_blank"
+              rel="noreferrer"
+              className="text-ui-action inline-flex items-center gap-1.5 text-[#13735a] hover:text-[#0f604b]"
+            >
+              Open image
+  
+              <ExternalLink className="size-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+  
   export default function FoodDetailsCard({
     food,
   }: FoodDetailsCardProps) {
     const [isExpanded, setIsExpanded] =
       useState(false);
   
+    const [
+      isMenuGalleryOpen,
+      setIsMenuGalleryOpen,
+    ] = useState(false);
+  
+    const categoryDetails =
+      FOOD_CATEGORY_DETAILS[
+        food.category
+      ];
+  
+    const CategoryIcon =
+      categoryDetails.icon;
+  
     const descriptionText =
       getDescriptionText(
         food.description,
       );
   
+    /*
+     * Static menus may come back as:
+     *
+     * url  -> one image, e.g. Bomber
+     * urls -> one or many scraped images
+     *
+     * Combine both formats and remove duplicates.
+     */
+    const staticMenuImages =
+      food.menu?.type === "static"
+        ? Array.from(
+            new Set(
+              [
+                ...(food.menu
+                  ?.urls ?? []),
+                food.menu?.url,
+              ].filter(
+                (
+                  value,
+                ): value is string =>
+                  Boolean(value),
+              ),
+            ),
+          )
+        : [];
+  
+    const hasDailyMenu =
+      food.menu?.type === "daily";
+    const hasWeeklyMenu = food.menu?.type === "weekly" && Boolean(food.menu.url);
+  
+    const hasStaticMenu =
+      staticMenuImages.length > 0;
+  
+    const hasMenu =
+      hasDailyMenu ||
+      hasWeeklyMenu ||
+      hasStaticMenu;
+  
     const hasExpandableContent =
       Boolean(descriptionText) ||
-      Boolean(food.menu?.url) ||
-      (food.payment?.length ?? 0) > 0;
+      Object.keys(food.hours ?? {}).length > 0 ||
+      hasMenu ||
+      (food.payment?.length ??
+        0) > 0;
   
     const today = getToday();
   
     const specialHours =
-      getSpecialFoodHoursForToday(food);
+      getSpecialFoodHoursForToday(
+        food,
+      );
   
     const hours =
       specialHours ??
       food.hours?.[today] ??
       "Hours unavailable";
+
+    const foodStatus =
+      getFoodOpenStatus(
+        hours ===
+          "Hours unavailable"
+          ? null
+          : hours,
+      );
+
+    const mealHours =
+      parseMealHours(formatDisplayTime(hours));
+  
+      const dailyMenuUrl =
+      (hasDailyMenu || hasWeeklyMenu)
+        ? food.menu?.url ??
+          getTodayMenuUrl()
+        : null;
   
     return (
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors hover:border-slate-300">
-        <button
-          type="button"
-          onClick={() => {
-            if (hasExpandableContent) {
-              setIsExpanded(
-                (current) => !current,
-              );
+      <>
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors hover:border-slate-300">
+          <button
+            type="button"
+            onClick={() => {
+                setIsExpanded(
+                  (current) => !current,
+                );
+              }}
+            aria-expanded={
+              hasExpandableContent
+                ? isExpanded
+                : undefined
             }
-          }}
-          aria-expanded={
-            hasExpandableContent
-              ? isExpanded
-              : undefined
-          }
-          className={`flex w-full items-start gap-3 p-3 text-left ${
-            hasExpandableContent
-              ? "cursor-pointer"
-              : "cursor-default"
-          }`}
-        >
-          <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-emerald-50 text-[#13735a]">
-            {food.logo ? (
-              <img
-                src={food.logo}
-                alt={`${food.name} logo`}
-                className="h-full w-full object-contain p-1.5"
-              />
-            ) : (
-              <UtensilsCrossed className="size-5" />
-            )}
-          </div>
-  
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-ui-value text-slate-900">
-                  {food.name}
-                </p>
-  
-                {!isExpanded &&
-                  descriptionText && (
-                    <p className="text-ui-meta mt-1 line-clamp-2 text-slate-500">
-                      {descriptionText}
-                    </p>
-                  )}
-              </div>
-  
-              {hasExpandableContent && (
-                <ChevronDown
-                  className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
-                    isExpanded
-                      ? "rotate-180"
-                      : ""
-                  }`}
+            className={`flex w-full items-start gap-3 p-3 text-left ${
+              hasExpandableContent
+                ? "cursor-pointer"
+                : "cursor-default"
+            }`}
+          >
+            <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-emerald-50 text-[#13735a]">
+              {food.logo ? (
+                <img
+                  src={food.logo}
+                  alt={`${food.name} logo`}
+                  className="h-full w-full object-contain p-1.5"
                 />
+              ) : (
+                <CategoryIcon className="size-5" />
               )}
             </div>
   
-            <div className="mt-2">
-              <p
-                className={`text-ui-meta font-medium ${
-                  specialHours
-                    ? "text-amber-700"
-                    : "text-slate-600"
-                }`}
-              >
-                {hours}
-              </p>
+            <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+  <div className="min-w-0 flex-1">
+    <p className="text-ui-value text-slate-900">
+      {food.name}
+    </p>
+  </div>
+
+  <div className="flex shrink-0 items-center gap-2">
+    {hours !== "Hours unavailable" && (
+      <span
+        className={`text-ui-meta rounded-full px-2.5 py-1 font-medium ${
+          foodStatus.isOpen
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-rose-50 text-rose-700"
+        }`}
+      >
+        {foodStatus.status}
+      </span>
+    )}
+
+<ChevronDown
+  className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
+    isExpanded
+      ? "rotate-180"
+      : ""
+  }`}
+/>
+  </div>
+</div>
   
-              {specialHours && (
-                <p className="text-ui-meta mt-0.5 font-medium text-amber-600">
-                  Special hours
-                </p>
-              )}
-            </div>
+              <div className="mt-2">
+  {mealHours &&
+  mealHours.length > 0 ? (
+    <div className="space-y-1">
+      {mealHours.map(
+        ({ label, time }) => (
+          <div
+            key={`${label}-${time}`}
+            className="flex items-center justify-between gap-3"
+          >
+            <span className="text-ui-meta text-slate-500">
+              {label}
+            </span>
+
+            <span className="text-ui-meta shrink-0 font-medium text-slate-700">
+              {formatDisplayTime(time)}
+            </span>
           </div>
-        </button>
+        ),
+      )}
+    </div>
+  ) : (
+    <p
+      className={`text-ui-meta font-medium ${
+        specialHours
+          ? "text-amber-700"
+          : "text-slate-600"
+      }`}
+    >
+      {formatDisplayTime(hours)}
+    </p>
+  )}
+
+  {specialHours && (
+    <p className="text-ui-meta mt-1 font-medium text-amber-600">
+      Special hours
+    </p>
+  )}
+
+{foodStatus.timeMessage && (
+  <p className="text-ui-meta mt-1 text-slate-500">
+    {formatDisplayTime(foodStatus.timeMessage)}
+  </p>
+)}
+</div>
+            </div>
+          </button>
   
-        {hasExpandableContent &&
-          isExpanded && (
-            <div className="border-t border-slate-100 px-3 pb-3 pt-3">
-              {descriptionText && (
-                <div>
-                  <p className="text-ui-label text-slate-500">
-                    About
-                  </p>
-  
-                  <p className="text-ui-meta mt-1 leading-relaxed text-slate-600">
-                    {descriptionText}
-                  </p>
-                </div>
-              )}
-  
-              {(food.payment?.length ??
-                0) > 0 && (
-                <div
-                  className={
-                    descriptionText
-                      ? "mt-4"
-                      : ""
-                  }
-                >
-                  <div className="flex items-center gap-1.5">
-                    <CreditCard className="size-4 text-slate-400" />
-  
+          {hasExpandableContent &&
+            isExpanded && (
+              <div className="border-t border-slate-100 px-3 pb-3 pt-3">
+                <FoodHours hours={food.hours} exceptions={food.exceptions} />
+                {descriptionText && (
+                  <div>
                     <p className="text-ui-label text-slate-500">
-                      Payment
+                      About
+                    </p>
+  
+                    <p className="text-ui-meta mt-1 leading-relaxed text-slate-600">
+                      {
+                        descriptionText
+                      }
                     </p>
                   </div>
+                )}
   
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {food.payment?.map(
-                      (
-                        paymentMethod,
-                      ) => (
-                        <span
-                          key={
-                            paymentMethod
-                          }
-                          className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
-                        >
-                          {
-                            paymentMethod
-                          }
-                        </span>
-                      ),
-                    )}
+                {(food.payment
+                  ?.length ??
+                  0) > 0 && (
+                  <div
+                    className={
+                      descriptionText
+                        ? "mt-4"
+                        : ""
+                    }
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-ui-label text-slate-500">
+                        Payment
+                      </p>
+                    </div>
+  
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {food.payment?.map(
+                        (
+                          paymentMethod,
+                        ) => (
+                          <span
+                            key={
+                              paymentMethod
+                            }
+                            className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+                          >
+                            {
+                              paymentMethod
+                            }
+                          </span>
+                        ),
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
   
-              {food.menu?.url && (
-                <a
-                  href={food.menu.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`text-ui-action inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-3 py-2 text-[#13735a] transition-colors hover:bg-emerald-100 ${
-                    descriptionText ||
-                    (food.payment
-                      ?.length ??
-                      0) > 0
-                      ? "mt-4"
-                      : ""
-                  }`}
-                >
-                  {food.menu.label ??
-                    "View menu"}
+                {dailyMenuUrl && (
+                  <a
+                    href={
+                      dailyMenuUrl
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`text-ui-action inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-3 py-2 text-[#13735a] transition-colors hover:bg-emerald-100 ${
+                      descriptionText ||
+                      (food.payment
+                        ?.length ??
+                        0) > 0
+                        ? "mt-4"
+                        : ""
+                    }`}
+                  >
+                    {hasWeeklyMenu ? "View weekly menu" : "View today's menu"}
   
-                  <ExternalLink className="size-3.5" />
-                </a>
-              )}
-            </div>
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                )}
+  
+                {hasStaticMenu && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIsMenuGalleryOpen(
+                        true,
+                      )
+                    }
+                    className={`text-ui-action inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-emerald-50 px-3 py-2 text-[#13735a] transition-colors hover:bg-emerald-100 ${
+                      descriptionText ||
+                      (food.payment
+                        ?.length ??
+                        0) > 0
+                        ? "mt-4"
+                        : ""
+                    }`}
+                  >
+                    View menu
+  
+                    <ExternalLink className="size-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+        </div>
+  
+        {isMenuGalleryOpen &&
+          hasStaticMenu && (
+            <MenuGallery
+              foodName={food.name}
+              images={
+                staticMenuImages
+              }
+              initialIndex={0}
+              onClose={() =>
+                setIsMenuGalleryOpen(
+                  false,
+                )
+              }
+            />
           )}
-      </div>
+      </>
     );
   }
-  

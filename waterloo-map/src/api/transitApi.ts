@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
 import type {
+  TransitRoute,
+  TransitRouteDetail,
   TransitAlert,
   TransitArrival,
   TransitDeparture,
@@ -55,11 +57,11 @@ export function useTransitVehicles(enabled: boolean) {
   });
 }
 
-export function useTransitDepartures(stopId: string | null) {
+export function useTransitDepartures(stopId: string | null, route?: TransitRoute | null) {
   return useQuery({
-    queryKey: ["transit", "departures", stopId],
+    queryKey: ["transit", "departures", stopId, route?.id],
     queryFn: () =>
-      getTransit<TransitDeparture>("departures", { stopId: stopId! }),
+      getTransit<TransitDeparture>("departures", { stopId: stopId!, ...(route ? { mode: route.mode, routeId: route.routeId } : {}) }),
     enabled: Boolean(stopId),
     staleTime: 10_000,
     refetchInterval: 15_000,
@@ -107,5 +109,25 @@ export function useTransitAlerts(enabled = true) {
     enabled,
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+export function useTransitRoutes(enabled: boolean) {
+  return useQuery({
+    queryKey: ["transit", "routes", "uw-campus"],
+    queryFn: () => getTransit<TransitRoute>("routes"),
+    enabled,
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+export function useTransitRouteDetail(route: TransitRoute | null) {
+  return useQuery({
+    queryKey: ["transit", "route", route?.mode, route?.routeId],
+    queryFn: () => getTransitItem<TransitRouteDetail>("route", { mode: route!.mode, routeId: route!.routeId }),
+    enabled: Boolean(route),
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
   });
 }

@@ -1,3 +1,4 @@
+import { formatDisplayTime } from "../utils/timeFormat";
 import mapboxgl from "mapbox-gl";
 import type { BuildingProperties } from "../data/buildings";
 import type { GymApiResponse } from "../api/gymApi";
@@ -158,40 +159,29 @@ function hourglassIcon() {
   `;
 }
 
-function getOpenStatus(
-  liveHours: string | null | undefined,
-) {
+function getOpenStatus(liveHours: string | null | undefined) {
   if (!liveHours) return null;
 
-  const normalized =
-    liveHours.trim().toLowerCase();
+  const normalized = liveHours.trim().toLowerCase();
 
   if (normalized === "closed") {
     return {
       label: "Closed",
-      className:
-        "uw-hover-status uw-hover-status-closed",
+      className: "uw-hover-status uw-hover-status-closed",
     };
   }
 
-  const times = liveHours.split(
-    /\s*[–—-]\s*/,
-  );
+  const times = liveHours.split(/\s*[–—-]\s*/);
 
   if (times.length !== 2) {
     return null;
   }
 
-  const openMinutes =
-    parseTimeToMinutes(times[0]);
+  const openMinutes = parseTimeToMinutes(times[0]);
 
-  let closeMinutes =
-    parseTimeToMinutes(times[1]);
+  let closeMinutes = parseTimeToMinutes(times[1]);
 
-  if (
-    openMinutes === null ||
-    closeMinutes === null
-  ) {
+  if (openMinutes === null || closeMinutes === null) {
     return null;
   }
 
@@ -205,9 +195,7 @@ function getOpenStatus(
     }
   }
 
-  const isOpen =
-    now >= openMinutes &&
-    now < closeMinutes;
+  const isOpen = now >= openMinutes && now < closeMinutes;
 
   return {
     label: isOpen ? "Open" : "Closed",
@@ -232,23 +220,17 @@ function getTorontoMinutesNow() {
     hour12: false,
   }).formatToParts(new Date());
 
-  const hour = Number(
-    parts.find((part) => part.type === "hour")
-      ?.value ?? 0,
-  );
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
 
   const minute = Number(
-    parts.find((part) => part.type === "minute")
-      ?.value ?? 0,
+    parts.find((part) => part.type === "minute")?.value ?? 0,
   );
 
   return hour * 60 + minute;
 }
 
 function parseTimeToMinutes(value: string) {
-  const match = value
-    .trim()
-    .match(/(\d{1,2})(?::(\d{2}))?\s*([AP]M)/i);
+  const match = value.trim().match(/(\d{1,2})(?::(\d{2}))?\s*([AP]M)/i);
 
   if (!match) return null;
 
@@ -273,10 +255,7 @@ function getGymHoverInfo(
 ) {
   const abbreviation = properties.abbreviation;
 
-  if (
-    abbreviation !== "PAC" &&
-    abbreviation !== "CIF"
-  ) {
+  if (abbreviation !== "PAC" && abbreviation !== "CIF") {
     return null;
   }
 
@@ -310,10 +289,7 @@ function getGymHoverInfo(
   const openMinutes = parseTimeToMinutes(times[0]);
   const closeMinutes = parseTimeToMinutes(times[1]);
 
-  if (
-    openMinutes === null ||
-    closeMinutes === null
-  ) {
+  if (openMinutes === null || closeMinutes === null) {
     return {
       liveHours,
       timeRemaining: null,
@@ -323,8 +299,7 @@ function getGymHoverInfo(
 
   const now = getTorontoMinutesNow();
 
-  const isOpen =
-    now >= openMinutes && now < closeMinutes;
+  const isOpen = now >= openMinutes && now < closeMinutes;
 
   if (!isOpen) {
     return {
@@ -336,16 +311,12 @@ function getGymHoverInfo(
 
   const remainingMinutes = closeMinutes - now;
 
-  const hours = Math.floor(
-    remainingMinutes / 60,
-  );
+  const hours = Math.floor(remainingMinutes / 60);
 
   const minutes = remainingMinutes % 60;
 
   const timeRemaining =
-    hours > 0
-      ? `${hours}h ${minutes}m left`
-      : `${minutes}m left`;
+    hours > 0 ? `${hours}h ${minutes}m left` : `${minutes}m left`;
 
   return {
     liveHours,
@@ -366,7 +337,7 @@ function buildHoursSection(
         ${clockIcon()}
 
         <div class="uw-hover-meta-text">
-          ${liveHours}
+          ${formatDisplayTime(liveHours)}
         </div>
       </div>
 
@@ -391,32 +362,23 @@ function buildPopupHTML(
   properties: BuildingProperties,
   gymInfo?: GymApiResponse,
 ) {
-  const gymHoverInfo = getGymHoverInfo(
-    properties,
-    gymInfo,
-  );
+  const gymHoverInfo = getGymHoverInfo(properties, gymInfo);
 
-  const liveHours =
-    gymHoverInfo?.liveHours ??
-    properties.liveHours;
+  const liveHours = gymHoverInfo?.liveHours ?? properties.liveHours;
 
-  const timeRemaining =
-    gymHoverInfo?.timeRemaining ??
-    properties.timeRemaining;
+  const timeRemaining = gymHoverInfo?.timeRemaining ?? properties.timeRemaining;
 
   let status;
 
   if (gymHoverInfo?.isOpen === true) {
     status = {
       label: "Open",
-      className:
-        "uw-hover-status uw-hover-status-open",
+      className: "uw-hover-status uw-hover-status-open",
     };
   } else if (gymHoverInfo?.isOpen === false) {
     status = {
       label: "Closed",
-      className:
-        "uw-hover-status uw-hover-status-closed",
+      className: "uw-hover-status uw-hover-status-closed",
     };
   } else {
     status = getOpenStatus(liveHours);
@@ -452,29 +414,18 @@ function buildPopupHTML(
         }
       </div>
 
-      ${buildHoursSection(
-        liveHours,
-        timeRemaining,
-      )}
+      ${buildHoursSection(liveHours, timeRemaining)}
     </div>
   `;
 }
 
 function clearBuildingHover(map: mapboxgl.Map) {
   if (map.getLayer("campus-building-hover")) {
-    map.setFilter("campus-building-hover", [
-      "==",
-      ["get", "id"],
-      "",
-    ]);
+    map.setFilter("campus-building-hover", ["==", ["get", "id"], ""]);
   }
 
   if (map.getLayer("residence-building-hover")) {
-    map.setFilter("residence-building-hover", [
-      "==",
-      ["get", "id"],
-      "",
-    ]);
+    map.setFilter("residence-building-hover", ["==", ["get", "id"], ""]);
   }
 }
 
@@ -487,18 +438,12 @@ function setBuildingHover(
     layerId === "campus-building-circles" &&
     map.getLayer("campus-building-hover")
   ) {
-    map.setFilter("campus-building-hover", [
-      "==",
-      ["get", "id"],
-      buildingId,
-    ]);
+    map.setFilter("campus-building-hover", ["==", ["get", "id"], buildingId]);
   }
 
   if (
-    (
-      layerId === "residence-building-squares" ||
-      layerId === "child-residence-building-squares"
-    ) &&
+    (layerId === "residence-building-squares" ||
+      layerId === "child-residence-building-squares") &&
     map.getLayer("residence-building-hover")
   ) {
     map.setFilter("residence-building-hover", [
@@ -509,11 +454,16 @@ function setBuildingHover(
   }
 }
 
-function isHoveringEvent(
-  map: mapboxgl.Map,
-  point: mapboxgl.PointLike,
-) {
-  const eventLayers = getActiveEventLayerIds(map);
+function isHoveringEvent(map: mapboxgl.Map, point: mapboxgl.PointLike) {
+  if (map.getContainer().dataset.foodHover === "true") return true;
+  const eventLayers = [
+    ...getActiveEventLayerIds(map),
+    ...[
+      "journey-stops",
+      "transit-stop-markers",
+      "transit-vehicle-markers",
+    ].filter((id) => map.getLayer(id)),
+  ];
 
   if (!eventLayers.length) return false;
 
@@ -526,9 +476,7 @@ function isHoveringEvent(
 
 export function addBuildingHoverPopup(
   map: mapboxgl.Map,
-  onBuildingClick?: (
-    properties: BuildingProperties,
-  ) => void,
+  onBuildingClick?: (properties: BuildingProperties) => void,
   getGymInfo?: () => GymApiResponse | undefined,
 ) {
   addPopupStyles();
@@ -540,6 +488,11 @@ export function addBuildingHoverPopup(
     className: POPUP_CLASS,
   });
 
+  map.getContainer().addEventListener("food-preview-open", () => {
+    hoverPopup.remove();
+    clearBuildingHover(map);
+  });
+
   HOVER_LAYERS.forEach((layerId) => {
     map.on("mouseenter", layerId, (event) => {
       if (isHoveringEvent(map, event.point)) return;
@@ -548,34 +501,19 @@ export function addBuildingHoverPopup(
 
       if (!feature) return;
 
-      const geometry =
-        feature.geometry as GeoJSON.Point;
+      const geometry = feature.geometry as GeoJSON.Point;
 
-      const coordinates =
-        geometry.coordinates.slice() as [
-          number,
-          number,
-        ];
+      const coordinates = geometry.coordinates.slice() as [number, number];
 
-      const properties =
-        feature.properties as BuildingProperties;
+      const properties = feature.properties as BuildingProperties;
 
       map.getCanvas().style.cursor = "pointer";
 
-      setBuildingHover(
-        map,
-        layerId,
-        properties.id,
-      );
+      setBuildingHover(map, layerId, properties.id);
 
       hoverPopup
         .setLngLat(coordinates)
-        .setHTML(
-          buildPopupHTML(
-            properties,
-            getGymInfo?.(),
-          ),
-        )
+        .setHTML(buildPopupHTML(properties, getGymInfo?.()))
         .addTo(map);
     });
 
@@ -594,8 +532,7 @@ export function addBuildingHoverPopup(
 
       if (!feature) return;
 
-      const properties =
-        feature.properties as BuildingProperties;
+      const properties = feature.properties as BuildingProperties;
 
       hoverPopup.remove();
 

@@ -1,5 +1,7 @@
 import {
   BookOpen,
+  SquareParking,
+  UtensilsCrossed,
   BusFront,
   CalendarDays,
   Check,
@@ -9,7 +11,6 @@ import {
   RotateCcw,
   TrainFront,
   Users,
-  Utensils,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -21,6 +22,8 @@ type MapFiltersProps = {
   activeCategories: BuildingCategory[];
   onToggleCategory: (category: BuildingCategory) => void;
   onResetFilters: () => void;
+  showParking: boolean;
+  onToggleParking: () => void;
   showTransit: boolean;
   onToggleTransit: () => void;
   activeTransitModes: TransitMode[];
@@ -28,6 +31,9 @@ type MapFiltersProps = {
   transitStopCount: number;
   transitVehicleCount: number;
   transitStatus: TransitStatus;
+  showFood: boolean;
+  onToggleFood: () => void;
+  openFoodCount: number;
   showEvents: boolean;
   onToggleEvents: () => void;
   eventCount: number;
@@ -104,6 +110,8 @@ export default function MapFilters({
   activeCategories,
   onToggleCategory,
   onResetFilters,
+  showParking,
+  onToggleParking,
   showTransit,
   onToggleTransit,
   activeTransitModes,
@@ -111,6 +119,7 @@ export default function MapFilters({
   transitStopCount,
   transitVehicleCount,
   transitStatus,
+  showFood, onToggleFood, openFoodCount,
   showEvents,
   onToggleEvents,
   eventCount,
@@ -210,6 +219,11 @@ export default function MapFilters({
         <h3 className="text-ui-label mb-2 px-2 text-slate-500">
           Explore
         </h3>
+        <label className={`mb-1 flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 focus-within:ring-2 focus-within:ring-emerald-600 ${showFood ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50"}`}>
+          <input type="checkbox" checked={showFood} onChange={onToggleFood} className="sr-only" />
+          <UtensilsCrossed size={20} aria-hidden="true" /><span className="flex-1"><span className="block text-sm font-medium">Food spots</span><span className="text-ui-meta block text-slate-500">{openFoodCount} spots open now</span></span>
+          <span aria-hidden="true" className={`flex size-5 items-center justify-center rounded border ${showFood ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-300 bg-white text-transparent"}`}><Check size={14} /></span>
+        </label>
         <label
           className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-violet-600/40 ${
             showEvents
@@ -272,7 +286,7 @@ export default function MapFilters({
           />
           <BusFront size={20} aria-hidden="true" />
           <span className="min-w-0 flex-1">
-            <span className="font-title block text-sm font-medium">Live transit</span>
+            <span className="font-title block text-sm font-medium">Transit routes</span>
             <span
               className={`text-ui-meta block ${
                 transitStatus === "error"
@@ -282,7 +296,7 @@ export default function MapFilters({
                     : "text-slate-500"
               }`}
             >
-              {showTransit ? transitMessage : "Stops and vehicles"}
+              {showTransit ? transitMessage : "Routes, stops and live vehicles"}
             </span>
           </span>
           <span
@@ -295,6 +309,13 @@ export default function MapFilters({
           >
             <Check size={14} strokeWidth={3} />
           </span>
+        </label>
+
+        <label className={`mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 focus-within:ring-2 focus-within:ring-emerald-600 ${showParking ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50"}`}>
+          <input type="checkbox" checked={showParking} onChange={onToggleParking} className="sr-only" />
+          <SquareParking size={20} aria-hidden="true" />
+          <span className="min-w-0 flex-1"><span className="block text-sm font-medium">Parking</span><span className="text-ui-meta block text-slate-500">Free and paid campus lots</span></span>
+          <span aria-hidden="true" className={`flex size-5 items-center justify-center rounded border ${showParking ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-300 bg-white text-transparent"}`}><Check size={14} /></span>
         </label>
 
         {showTransit && (

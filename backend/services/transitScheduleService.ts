@@ -4,6 +4,9 @@ import "dotenv/config";
 
 import { withMemoryCache } from "../cache";
 import type {
+  TransitRoute,
+  TransitRouteDetail,
+  TransitRoutePattern,
   TransitDeparture,
   TransitFeedStatus,
   TransitItemResponse,
@@ -55,6 +58,8 @@ type StopRow = {
 type RouteRow = {
   route_id: string;
   route_short_name: string;
+  route_long_name: string;
+  route_type: string;
 };
 
 type TripRow = {
@@ -63,6 +68,7 @@ type TripRow = {
   trip_id: string;
   trip_headsign: string;
   direction_id: string;
+  shape_id: string;
 };
 
 type StopTimeRow = {
@@ -82,6 +88,7 @@ type CalendarDateRow = {
 type ScheduledTrip = {
   routeId: string;
   tripId: string;
+  shapeId: string;
   headsign: string | null;
   directionId: number | null;
   stops: TransitTripStop[];
@@ -92,6 +99,7 @@ type ScheduledNetwork = {
   loadedAt: string;
   serviceDate: string;
   stops: TransitStop[];
+  routes: TransitRouteDetail[];
   trips: Map<string, ScheduledTrip>;
   departuresByStop: Map<string, TransitDeparture[]>;
 };
@@ -181,7 +189,7 @@ function routeSorter(left: string, right: string) {
   return left.localeCompare(right, undefined, { numeric: true });
 }
 
-function parseNetwork(
+export function parseNetwork(
   buffer: Buffer,
   mode: TransitMode,
   serviceDate: string,
@@ -197,23 +205,28 @@ function parseNetwork(
     if (date.exception_type === "2") activeServices.delete(date.service_id);
   });
 
+  const routeRows = readRows<RouteRow>(archive, "routes.txt");
   const routeNames = new Map(
-    readRows<RouteRow>(archive, "routes.txt").map((route) => [
+    routeRows.map((route) => [
       route.route_id,
       route.route_short_name || route.route_id,
     ]),
   );
+  const routeTypes = new Map(routeRows.map((route) => [route.route_id, route.route_type]));
   const trips = new Map<string, ScheduledTrip>();
 
   readRows<TripRow>(archive, "trips.txt").forEach((trip) => {
     if (!activeServices.has(trip.service_id)) return;
+    // GRT's bus archive also contains ION; the dedicated rail feed supplies it.
+    if (mode === "bus" && ["0", "1", "2"].includes(routeTypes.get(trip.route_id) ?? "")) return;
     const routeId = routeNames.get(trip.route_id) ?? trip.route_id;
 
     trips.set(trip.trip_id, {
       routeId,
       tripId: trip.trip_id,
+      shapeId: trip.shape_id || "",
       headsign: trip.trip_headsign || null,
-      directionId: Number.isFinite(Number(trip.direction_id))
+      directionId: trip.direction_id !== "" && Number.isFinite(Number(trip.direction_id))
         ? Number(trip.direction_id)
         : null,
       stops: [],
@@ -294,9 +307,68 @@ function parseNetwork(
     ];
   });
 
+  // Only keep shapes used by today's service. Never infer road geometry from stops.
+  const usedShapes = new Set([...trips.values()].map((trip) => trip.shapeId));
+  const shapePoints = new Map<string, { sequence: number; coordinate: [number, number] }[]>();
+  if (archive.getEntry("shapes.txt")) {
+    visitRows<{ shape_id: string; shape_pt_sequence: string; shape_pt_lat: string; shape_pt_lon: string }>(
+      archive, "shapes.txt", (row) => {
+        if (!usedShapes.has(row.shape_id)) return;
+        const latitude = Number(row.shape_pt_lat);
+        const longitude = Number(row.shape_pt_lon);
+        const sequence = Number(row.shape_pt_sequence);
+        if (!row.shape_pt_lat || !row.shape_pt_lon || !Number.isFinite(sequence) ||
+            !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+            Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return;
+        const points = shapePoints.get(row.shape_id) ?? [];
+        points.push({ sequence, coordinate: [longitude, latitude] });
+        shapePoints.set(row.shape_id, points);
+      },
+    );
+  }
+  const shapes = new Map([...shapePoints].map(([id, points]) => [
+    id, points.sort((a, b) => a.sequence - b.sequence).map((point) => point.coordinate),
+  ]));
+  const publicStops = new Map(stops.map((stop) => [stop.stopId, stop]));
+  const patternsByRoute = new Map<string, Map<string, TransitRoutePattern>>();
+  trips.forEach((trip) => {
+    const routePatterns = patternsByRoute.get(trip.routeId) ?? new Map<string, TransitRoutePattern>();
+    const patternId = JSON.stringify([trip.shapeId, trip.directionId, trip.headsign, trip.stops.map((stop) => stop.stopId)]);
+    const existing = routePatterns.get(patternId);
+    if (existing) {
+      existing.tripIds.push(trip.tripId);
+      return;
+    }
+    routePatterns.set(patternId, {
+      id: trip.tripId,
+      headsign: trip.headsign ?? "Destination unavailable",
+      directionId: trip.directionId,
+      coordinates: shapes.get(trip.shapeId) ?? [],
+      stops: trip.stops.flatMap((stop) => {
+        const publicStop = publicStops.get(stop.stopId);
+        return publicStop ? [publicStop] : [];
+      }),
+      tripIds: [trip.tripId],
+    });
+    patternsByRoute.set(trip.routeId, routePatterns);
+  });
+  const routes = routeRows.flatMap((route) => {
+    const routeId = routeNames.get(route.route_id) ?? route.route_id;
+    const patterns = [...(patternsByRoute.get(routeId)?.values() ?? [])]
+      .sort((a, b) => b.tripIds.length - a.tripIds.length || a.headsign.localeCompare(b.headsign));
+    if (!patterns.length) return [];
+    return [{
+      id: `${mode}:${routeId}`, mode, routeId,
+      name: route.route_long_name || `Route ${routeId}`,
+      destinations: [...new Set(patterns.map((pattern) => pattern.headsign))],
+      patterns,
+    } satisfies TransitRouteDetail];
+  });
+
   return {
     mode,
     stops,
+    routes,
     trips,
     departuresByStop,
     serviceDate,
@@ -395,11 +467,14 @@ export async function getTransitStops(
 export async function getScheduledDepartures(
   stopId: string,
   limit: number,
+  route?: { mode: TransitMode; routeId: string },
+  after = Date.now() - 60_000,
 ): Promise<TransitResponse<TransitDeparture>> {
   const { networks, feeds } = collectNetworks(await loadNetworks());
-  const earliestDeparture = Date.now() - 60_000;
+  const earliestDeparture = after;
   const departures = networks
     .flatMap((network) => network.departuresByStop.get(stopId) ?? [])
+    .filter((departure) => !route || (departure.mode === route.mode && departure.routeId === route.routeId))
     .filter(
       (departure) =>
         departure.scheduledAt &&
@@ -418,6 +493,7 @@ export async function getScheduledTripDetail(
   tripId: string,
   currentStopSequence: number | null,
   currentStopId: string | null,
+  stopLimit = 3,
 ): Promise<TransitItemResponse<TransitTripDetail>> {
   const feed = STATIC_FEEDS.find((item) => item.mode === mode);
   if (!feed) return { data: null, feeds: [], generatedAt: new Date().toISOString() };
@@ -454,7 +530,7 @@ export async function getScheduledTripDetail(
         tripId,
         headsign: trip.headsign,
         directionId: trip.directionId,
-        nextStops: trip.stops.slice(startIndex, startIndex + 3),
+        nextStops: trip.stops.slice(startIndex, startIndex + stopLimit),
       },
       feeds: [feedStatus(mode, network)],
       generatedAt: new Date().toISOString(),
@@ -465,5 +541,32 @@ export async function getScheduledTripDetail(
       feeds: [feedStatus(mode, undefined, error)],
       generatedAt: new Date().toISOString(),
     };
+  }
+}
+
+export async function getTransitRoutes(): Promise<TransitResponse<TransitRoute>> {
+  const { networks, feeds } = collectNetworks(await loadNetworks());
+  const data = networks.flatMap((network) => {
+    const nearbyRoutes = new Set(network.stops
+      .filter((stop) => distanceMeters(43.471, -80.544, stop) <= 3_000)
+      .flatMap((stop) => stop.routeIds));
+    return network.routes.filter((route) => nearbyRoutes.has(route.routeId))
+      .map(({ patterns: _patterns, ...route }) => route);
+  }).sort((a, b) => routeSorter(a.routeId, b.routeId) || a.mode.localeCompare(b.mode));
+  return { data, feeds, generatedAt: new Date().toISOString() };
+}
+
+export async function getTransitRouteDetail(
+  mode: TransitMode, routeId: string,
+): Promise<TransitItemResponse<TransitRouteDetail>> {
+  const feed = STATIC_FEEDS.find((item) => item.mode === mode)!;
+  try {
+    const network = await loadNetwork(mode, feed.url, currentServiceDate());
+    return {
+      data: network.routes.find((route) => route.routeId === routeId) ?? null,
+      feeds: [feedStatus(mode, network)], generatedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    return { data: null, feeds: [feedStatus(mode, undefined, error)], generatedAt: new Date().toISOString() };
   }
 }

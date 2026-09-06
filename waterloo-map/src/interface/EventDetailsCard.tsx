@@ -1,3 +1,4 @@
+import { formatDisplayTime } from "../utils/timeFormat";
 import {
   CalendarDays,
   Clock3,
@@ -11,12 +12,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { MappedWaterlooEvent } from "../types/events";
+import type { WaterlooEvent } from "../types/events";
 
 type EventDetailsCardProps = {
-  event: MappedWaterlooEvent | null;
+  event: WaterlooEvent | null;
   onClose: () => void;
   onRecenter: () => void;
+  canRecenter?: boolean;
 };
 
 function ActionButton({
@@ -32,7 +34,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="text-ui-action flex min-w-20 cursor-pointer flex-col items-center gap-1.5 rounded-md px-3 py-2 text-violet-700 transition-colors hover:bg-violet-50"
+      className="text-ui-action flex min-w-20 cursor-pointer flex-col items-center gap-1.5 rounded-md px-3 py-2 text-[#7c3aed] transition-colors hover:bg-violet-50"
     >
       <span className="flex size-10 items-center justify-center rounded-full bg-violet-100">
         <Icon className="size-5" />
@@ -53,6 +55,7 @@ export default function EventDetailsCard({
   event,
   onClose,
   onRecenter,
+  canRecenter = true,
 }: EventDetailsCardProps) {
   if (!event) return null;
 
@@ -69,12 +72,12 @@ export default function EventDetailsCard({
     >
       <header className="border-b border-slate-200 p-5">
         <div className="flex items-start gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[#7c3aed]">
             <CalendarDays className="size-6" />
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-ui-label text-violet-600">
+            <p className="text-ui-label text-[#7c3aed]">
               Campus event
             </p>
             <h2 className="text-ui-title mt-1 text-slate-950">
@@ -94,7 +97,7 @@ export default function EventDetailsCard({
         </div>
 
         {description && (
-          <p className="text-ui-body mt-4 line-clamp-5 text-slate-600">
+          <p className="text-ui-body mt-4 text-slate-600">
             {description}
           </p>
         )}
@@ -108,7 +111,7 @@ export default function EventDetailsCard({
             onClick={() => openExternal(event.mapURL!)}
           />
         )}
-        <ActionButton icon={LocateFixed} label="Recenter" onClick={onRecenter} />
+        {canRecenter && <ActionButton icon={LocateFixed} label="Recenter" onClick={onRecenter} />}
         <ActionButton
           icon={ExternalLink}
           label="Event page"
@@ -118,7 +121,7 @@ export default function EventDetailsCard({
 
       <dl className="divide-y divide-slate-100 px-5">
         <div className="flex gap-4 py-4">
-          <CalendarDays className="mt-0.5 size-5 shrink-0 text-violet-600" />
+          <CalendarDays className="mt-0.5 size-5 shrink-0 text-[#7c3aed]" />
           <div>
             <dt className="text-ui-label text-slate-500">Date</dt>
             <dd className="text-ui-value mt-1 text-slate-800">
@@ -129,18 +132,18 @@ export default function EventDetailsCard({
 
         {event.time && (
           <div className="flex gap-4 py-4">
-            <Clock3 className="mt-0.5 size-5 shrink-0 text-violet-600" />
+            <Clock3 className="mt-0.5 size-5 shrink-0 text-[#7c3aed]" />
             <div>
               <dt className="text-ui-label text-slate-500">Time</dt>
               <dd className="text-ui-value mt-1 text-slate-800">
-                {event.time}
+                {formatDisplayTime(event.time)}
               </dd>
             </div>
           </div>
         )}
 
         <div className="flex gap-4 py-4">
-          <MapPin className="mt-0.5 size-5 shrink-0 text-violet-600" />
+          <MapPin className="mt-0.5 size-5 shrink-0 text-[#7c3aed]" />
           <div>
             <dt className="text-ui-label text-slate-500">Location</dt>
             <dd className="text-ui-value mt-1 text-slate-800">
@@ -151,13 +154,12 @@ export default function EventDetailsCard({
 
         {(event.cost || event.registration) && (
           <div className="flex gap-4 py-4">
-            <Ticket className="mt-0.5 size-5 shrink-0 text-violet-600" />
+            <Ticket className="mt-0.5 size-5 shrink-0 text-[#7c3aed]" />
             <div>
               <dt className="text-ui-label text-slate-500">Entry</dt>
               <dd className="text-ui-value mt-1 text-slate-800">
-                {[event.cost, event.registration ? "Registration required" : null]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {event.cost}
+                {event.registration && <span className="mt-2 block w-fit rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">Registration required</span>}
               </dd>
             </div>
           </div>
@@ -165,7 +167,7 @@ export default function EventDetailsCard({
 
         {event.organizer && (
           <div className="flex gap-4 py-4">
-            <UserRound className="mt-0.5 size-5 shrink-0 text-violet-600" />
+            <UserRound className="mt-0.5 size-5 shrink-0 text-[#7c3aed]" />
             <div>
               <dt className="text-ui-label text-slate-500">Organizer</dt>
               <dd className="text-ui-value mt-1 text-slate-800">

@@ -1,5 +1,11 @@
+import GraduateHouseInfo, { graduateHouseHours } from "./GraduateHouseInfo";
+import { useState } from "react";
+import { EventSummary } from "./EventsPanel";
+import type { WaterlooEvent } from "../types/events";
+import { formatDisplayTime } from "../utils/timeFormat";
 import {
   Activity,
+  CalendarDays,
   Clock3,
   ExternalLink,
   Info,
@@ -25,6 +31,10 @@ import { buildingCategoryDetails } from "./buildingCategoryDetails";
 import FoodDetailsCard from "./FoodDetailsCard";
 
 type BuildingDetailsCardProps = {
+  events?: WaterlooEvent[];
+  eventsLoading?: boolean;
+  eventsError?: boolean;
+  onSelectEvent: (event: WaterlooEvent) => void;
   building: BuildingFeature | null;
   foodLocations?: FoodInfo[];
   libraryOccupancy: LibraryOccupancyLocation | null;
@@ -158,6 +168,7 @@ function ActionButton({
 
 export default function BuildingDetailsCard({
   building,
+  events = [], eventsLoading, eventsError, onSelectEvent,
   foodLocations = [],
   libraryOccupancy,
   libraryOccupancyLoading,
@@ -169,6 +180,7 @@ export default function BuildingDetailsCard({
   onClose,
   onRecenter,
 }: BuildingDetailsCardProps) {
+  const [expandedEventsFor, setExpandedEventsFor] = useState<string | null>(null);
   if (!building) return null;
 
   const {
@@ -206,6 +218,11 @@ export default function BuildingDetailsCard({
   const abbreviation =
     properties.abbreviation?.toUpperCase();
 
+    const supportsLiveLibraryOccupancy =
+    isLibrary &&
+    (properties.id === "dp" ||
+      properties.id === "dc-library");
+
   const gymKey =
     abbreviation === "PAC"
       ? "PAC"
@@ -234,7 +251,7 @@ export default function BuildingDetailsCard({
       : [];
 
   const displayHours =
-    isGym
+    properties.id === "gh" ? graduateHouseHours() : isGym
       ? gymHours ??
         "Hours unavailable"
       : properties.liveHours ??
@@ -328,7 +345,7 @@ export default function BuildingDetailsCard({
               </dd>
             ) : (
               <dd className="text-ui-value mt-1 text-slate-800">
-                {displayHours}
+                {formatDisplayTime(displayHours)}
               </dd>
             )}
 
@@ -343,7 +360,9 @@ export default function BuildingDetailsCard({
           </div>
         </div>
 
-        {isLibrary && (
+        {properties.id === "gh" && <GraduateHouseInfo />}
+
+        {supportsLiveLibraryOccupancy && (
           <div className="flex gap-4 py-4">
             <Activity className="mt-0.5 size-5 shrink-0 text-amber-600" />
 
@@ -625,7 +644,7 @@ export default function BuildingDetailsCard({
         )}
 
         {foodLocations.length > 0 && (
-          <div className="flex gap-4 py-4">
+          <div id="building-food-section" className="flex gap-4 py-4">
             <UtensilsCrossed className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
 
             <div className="min-w-0 flex-1">
@@ -649,6 +668,12 @@ export default function BuildingDetailsCard({
           </div>
         )}
 
+        <div className="py-4">
+          <dt className="text-ui-label flex items-center gap-3 text-slate-500"><CalendarDays aria-hidden="true" className="size-5 shrink-0 text-[#7c3aed]" />Upcoming events</dt>
+          <dd className="mt-3 space-y-2">
+            {eventsLoading ? <p className="text-sm text-slate-500">Loading events…</p> : eventsError ? <p className="text-sm text-slate-500">Events unavailable.</p> : !events.length ? <p className="text-sm text-slate-500">No upcoming events listed.</p> : <>{(expandedEventsFor === building.properties.id ? events : events.slice(0,3)).map(event => <EventSummary key={event.id} event={event} onSelect={onSelectEvent}/>)}{events.length > 3 && <button className="text-sm text-[#7c3aed] underline" onClick={() => setExpandedEventsFor(expandedEventsFor === building.properties.id ? null : building.properties.id)}>{expandedEventsFor === building.properties.id ? "Show fewer" : `View all ${events.length} events`}</button>}</>}
+          </dd>
+        </div>
         <div className="flex gap-4 py-4">
           <MapPin className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
 

@@ -1,38 +1,28 @@
 import * as cheerio from "cheerio";
-import express from "express";
+
 import { withCache } from "../../cache";
 
-const residence_food_router = express.Router();
+import {
+  findLocationContainer,
+  getCleanLines,
+  parseDescription,
+  parseExceptions,
+  parseHours,
+} from "./foodServicesUtils";
 
-const FOOD_SERVICES_URL =
+import type {
+  FoodCategory,
+  FoodLocation,
+} from "./types";
+
+const SOURCE_URL =
   "https://uwaterloo.ca/food-services/locations-and-hours";
 
-const DAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-] as const;
-
-type Day = (typeof DAYS)[number];
-
 type ResidenceFoodConfig = {
-  residenceId: string;
+  id: string;
+  buildingId: string;
+  category: FoodCategory;
   searchName: string;
-};
-
-type ResidenceFoodInfo = {
-  name: string;
-  residenceId: string;
-  location: string;
-  description: string[];
-  payment: string[];
-  hours: Record<string, string>;
-  exceptions: string[];
-  url: string;
 };
 
 const RESIDENCE_FOOD_LOCATIONS: Record<
@@ -40,257 +30,47 @@ const RESIDENCE_FOOD_LOCATIONS: Record<
   ResidenceFoodConfig
 > = {
   "Mudie’s - Village 1": {
-    residenceId: "v1",
-    searchName: "Mudie's - Residence Dining Hall",
+    id: "mudies",
+    buildingId: "v1",
+    category: "dining-hall",
+    searchName: "Mudie's",
   },
 
   "REVelation - Ron Eydt Village": {
-    residenceId: "rev",
-    searchName: "REVelation - Residence Dining Hall",
+    id: "revelation",
+    buildingId: "rev",
+    category: "dining-hall",
+    searchName: "REVelation",
   },
 
   "The Market": {
-    residenceId: "cmh",
-    searchName: "The Market - Residence Dining Hall",
+    id: "the-market",
+    buildingId: "cmh",
+    category: "dining-hall",
+    searchName: "The Market",
   },
 };
 
+async function scrapeResidenceFood(): Promise<
+  Record<string, FoodLocation>
+> {
+  const response =
+    await fetch(SOURCE_URL);
 
-function expandDayLabel(label: string): Day[] {
-  const cleaned = label
-    .replace(":", "")
-    .trim();
-  if (cleaned.includes(",")) {
-    return cleaned
-      .split(",")
-      .map((day) => day.trim())
-      .filter((day): day is Day =>
-        DAYS.includes(day as Day),
-      );
-  }
-  const rangeParts = cleaned
-    .split(/\s*[-–—]\s*/)
-    .map((day) => day.trim());
-
-  if (rangeParts.length === 1) {
-    const day = rangeParts[0] as Day;
-
-    return DAYS.includes(day)
-      ? [day]
-      : [];
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch UW Food Services page: ${response.status}`,
+    );
   }
 
-  if (rangeParts.length !== 2) {
-    return [];
-  }
+  const html =
+    await response.text();
 
-  const startDay =
-    rangeParts[0] as Day;
+  const $ = cheerio.load(html);
 
-  const endDay =
-    rangeParts[1] as Day;
-
-  const startIndex =
-    DAYS.indexOf(startDay);
-
-  let endIndex =
-    DAYS.indexOf(endDay);
-
-  if (
-    startIndex === -1 ||
-    endIndex === -1
-  ) {
-    return [];
-  }
-
-  if (endIndex < startIndex) {
-    endIndex += DAYS.length;
-  }
-
-  const twoWeeks = [
-    ...DAYS,
-    ...DAYS,
-  ];
-
-  return twoWeeks.slice(
-    startIndex,
-    endIndex + 1,
-  );
-}
-
-function getCleanLines(text: string) {
-  return text
-    .split("\n")
-    .map((line) =>
-      line.replace(/\s+/g, " ").trim(),
-    )
-    .filter(Boolean);
-}
-
-function findLocationContainer(
-  $: cheerio.CheerioAPI,
-  anchor: cheerio.Cheerio<any>,
-) {
-  let current =
-    anchor.parent();
-
-  for (let i = 0; i < 10; i++) {
-    if (!current.length) break;
-
-    const text =
-      current.text();
-
-    if (
-      text.includes(
-        "Hours of operation",
-      )
-    ) {
-      return current;
-    }
-
-    current = current.parent();
-  }
-
-  return null;
-}
-
-/**
- * Parse regular weekly hours.
- */
-function parseHours(
-  lines: string[],
-) {
-  const hours: Record<
+  const results: Record<
     string,
-    string
-  > = {};
-
-  const hoursHeadingIndex =
-    lines.findIndex(
-      (line) =>
-        line === "Hours of operation",
-    );
-
-  if (hoursHeadingIndex === -1) {
-    return hours;
-  }
-
-  let index =
-    hoursHeadingIndex + 1;
-
-  while (index < lines.length) {
-    const line = lines[index];
-
-    if (
-      line === "Exceptions" ||
-      line === "Description"
-    ) {
-      break;
-    }
-
-    const days =
-      expandDayLabel(line);
-
-    if (days.length > 0) {
-      const time =
-        lines[index + 1];
-
-      if (time) {
-        for (const day of days) {
-          hours[day] = time;
-        }
-
-        index += 2;
-        continue;
-      }
-    }
-
-    index++;
-  }
-
-  return hours;
-}
-
-function parseExceptions(
-  lines: string[],
-) {
-  const exceptions: string[] = [];
-
-  const exceptionsHeadingIndex =
-    lines.findIndex(
-      (line) => line === "Exceptions",
-    );
-
-  if (
-    exceptionsHeadingIndex === -1
-  ) {
-    return exceptions;
-  }
-
-  let index =
-    exceptionsHeadingIndex + 1;
-
-  while (index < lines.length) {
-    const line = lines[index];
-
-    if (
-      line === "Description" ||
-      line === "Hours of operation"
-    ) {
-      break;
-    }
-
-    
-    if (line.endsWith(":")) {
-      const value =
-        lines[index + 1];
-
-      if (value) {
-        exceptions.push(
-          `${line} ${value}`,
-        );
-
-        index += 2;
-        continue;
-      }
-    }
-
-    index++;
-  }
-
-  return exceptions;
-}
-
-
-function parseDescription(
-  lines: string[],
-) {
-  const descriptionIndex =
-    lines.findIndex(
-      (line) => line === "Description",
-    );
-
-  if (
-    descriptionIndex === -1 ||
-    !lines[descriptionIndex + 1]
-  ) {
-    return [];
-  }
-
-  return [
-    lines[descriptionIndex + 1],
-  ];
-}
-
-async function scrapeResidenceFood() {
-  const $ =
-    await cheerio.fromURL(
-      FOOD_SERVICES_URL,
-    );
-
-  const response: Record<
-    string,
-    ResidenceFoodInfo
+    FoodLocation
   > = {};
 
   for (
@@ -301,62 +81,16 @@ async function scrapeResidenceFood() {
       RESIDENCE_FOOD_LOCATIONS,
     )
   ) {
-    
-    const anchor = $("a")
-      .filter((_, element) => {
-        const text = $(element)
-          .text()
-          .replace(/\s+/g, " ")
-          .trim();
-
-        return text.includes(
-          config.searchName,
-        );
-      })
-      .first();
-
-    if (!anchor.length) {
-      console.warn(
-        `Could not find residence food location: ${displayName}`,
-      );
-
-      response[displayName] = {
-        name: displayName,
-        residenceId:
-          config.residenceId,
-        location: "",
-        description: [],
-        payment: [],
-        hours: {},
-        exceptions: [],
-        url: FOOD_SERVICES_URL,
-      };
-
-      continue;
-    }
-
     const container =
       findLocationContainer(
         $,
-        anchor,
+        config.searchName,
       );
 
     if (!container) {
       console.warn(
-        `Could not find content container for: ${displayName}`,
+        `Could not find residence food location: ${displayName}`,
       );
-
-      response[displayName] = {
-        name: displayName,
-        residenceId:
-          config.residenceId,
-        location: "",
-        description: [],
-        payment: [],
-        hours: {},
-        exceptions: [],
-        url: FOOD_SERVICES_URL,
-      };
 
       continue;
     }
@@ -375,58 +109,44 @@ async function scrapeResidenceFood() {
     const description =
       parseDescription(lines);
 
-    
-    const location =
-      config.residenceId === "v1"
-        ? "Village 1 (V1)"
-        : config.residenceId ===
-            "rev"
-          ? "Ron Eydt Village (REV)"
-          : config.residenceId ===
-              "cmh"
-            ? "Claudette Millar Hall (CMH)"
-            : "";
+      const foodLocation: FoodLocation = {
+        id: config.id,
+      
+        name: displayName,
+      
+        buildingId: config.buildingId,
+      
+        category: config.category,
+      
+        description,
+      
+        hours,
+      
+        exceptions,
+      
+        menu: {
+          type: "daily",
+        },
+      
+        source: {
+          name: "UW Food Services",
+          url: SOURCE_URL,
+        },
+      
+        url: SOURCE_URL,
+      };
 
-    response[displayName] = {
-      name: displayName,
-      residenceId:
-        config.residenceId,
-      location,
-      description,
-      payment: [],
-      hours,
-      exceptions,
-      url: FOOD_SERVICES_URL,
-    };
+    results[config.id] =
+      foodLocation;
   }
 
-  return response;
+  return results;
 }
 
-residence_food_router.get(
-  "/",
-  async (req, res) => {
-    try {
-      const response =
-        await withCache(
-          "residencefood:full-info:v3",
-          60 * 5,
-          scrapeResidenceFood,
-        );
-
-      res.json(response);
-    } catch (error) {
-      console.error(
-        "Residence food scrape failed:",
-        error,
-      );
-
-      res.status(500).json({
-        error:
-          "Failed to scrape residence food",
-      });
-    }
-  },
-);
-
-export default residence_food_router;
+export async function getResidenceFood() {
+  return withCache(
+    "residencefood:full-info:v6",
+    60 * 5,
+    scrapeResidenceFood,
+  );
+}

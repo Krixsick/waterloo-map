@@ -1,11 +1,14 @@
-import { BusFront, TrainFront, X } from "lucide-react";
+import { formatClockTime } from "../utils/timeFormat";
+import { BusFront, TrainFront, ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { transitRouteColor } from "../utils/transitRoutes";
 
 import {
   useTransitDepartures,
   useTransitTripDetails,
 } from "../api/transitApi";
 import type {
+  TransitRoute,
   TransitDeparture,
   TransitMode,
   TransitSelection,
@@ -13,6 +16,7 @@ import type {
 } from "../types/transit";
 
 type TransitDetailsCardProps = {
+  route?: TransitRoute | null;
   selection: TransitSelection | null;
   onClose: () => void;
 };
@@ -34,10 +38,7 @@ function departureTime(value: string | null) {
 
 function clockTime(value: string | null) {
   if (!value) return "";
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatClockTime(value);
 }
 
 function directionLabel(trip: {
@@ -67,9 +68,8 @@ function ModeIcon({ mode }: { mode: TransitMode }) {
 function RouteBadge({ mode, routeId }: { mode: TransitMode; routeId: string }) {
   return (
     <span
-      className={`font-title flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md px-2 text-xs font-bold text-white ${
-        mode === "ion" ? "bg-pink-600" : "bg-blue-600"
-      }`}
+      style={{ backgroundColor: transitRouteColor(mode, routeId) }}
+      className="font-title flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md px-2 text-xs font-bold text-white"
     >
       {routeId}
     </span>
@@ -90,7 +90,8 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="absolute left-3 top-24 z-30 max-h-[calc(100vh-8rem)] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl sm:left-5 sm:w-[calc(100%-2.5rem)]">
+    <section className="absolute left-3 right-3 top-36 z-30 max-h-[calc(100svh-10rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-md sm:left-5 sm:right-auto sm:w-[25rem]">
+      <button type="button" onClick={onClose} className="m-3 mb-0 flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-[#13735a] hover:bg-emerald-50"><ArrowLeft size={16} />Back to routes</button>
       <header className="flex items-start gap-3 border-b border-slate-200 p-4">
         <span
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white ${
@@ -101,20 +102,13 @@ function Panel({
         </span>
 
         <div className="min-w-0 flex-1">
-          <h2 className="text-ui-title truncate text-slate-900">
+          <h2 className="text-ui-title leading-snug text-slate-900">
             {title}
           </h2>
           <p className="text-ui-meta mt-0.5 text-slate-500">{subtitle}</p>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-          aria-label="Close transit details"
-        >
-          <X size={18} />
-        </button>
+
       </header>
 
       {children}
@@ -166,14 +160,16 @@ function DepartureRow({ departure }: { departure: TransitDeparture }) {
 function StopDetails({
   selection,
   onClose,
+  route,
 }: {
+  route?: TransitRoute | null;
   selection: Extract<TransitSelection, { type: "stop" }>;
   onClose: () => void;
 }) {
   const { stop } = selection;
-  const { data, isPending, isError } = useTransitDepartures(stop.stopId);
+  const { data, isPending, isError } = useTransitDepartures(stop.stopId, route);
   const departures = data?.data ?? [];
-  const routes = stop.routeIds.join(", ");
+  const routes = route ? route.routeId : stop.routeIds.join(", ");
 
   return (
     <Panel
@@ -183,7 +179,7 @@ function StopDetails({
       onClose={onClose}
     >
       <div className="text-ui-label px-4 pt-4 text-slate-500">
-        Upcoming departures
+        {route ? `Route ${route.routeId} departures` : "Upcoming departures"}
       </div>
       {isPending ? (
         <LoadingRows />
@@ -294,10 +290,11 @@ function VehicleDetails({
 export default function TransitDetailsCard({
   selection,
   onClose,
+  route,
 }: TransitDetailsCardProps) {
   if (!selection) return null;
   return selection.type === "stop" ? (
-    <StopDetails selection={selection} onClose={onClose} />
+    <StopDetails selection={selection} onClose={onClose} route={route} />
   ) : (
     <VehicleDetails selection={selection} onClose={onClose} />
   );
