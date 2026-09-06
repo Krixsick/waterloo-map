@@ -1,3 +1,6 @@
+import { buildingAccess } from "../data/buildingAccess";
+import { graduateHouseHours } from "../interface/GraduateHouseInfo";
+import { getTimeRemaining } from "../utils/timeUtils";
 import { formatDisplayTime } from "../utils/timeFormat";
 import mapboxgl from "mapbox-gl";
 import type { BuildingProperties } from "../data/buildings";
@@ -69,6 +72,9 @@ function addPopupStyles() {
       font-weight: 500;
     }
 
+    .uw-hover-abbreviation { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+    .uw-hover-type { border-radius:999px; padding:2px 8px; font-size:11px; font-weight:500; }
+    .uw-hover-status::before {content:"";display:inline-block;width:6px;height:6px;margin-right:5px;border-radius:50%;background:currentColor;}
     .uw-hover-status {
       flex-shrink: 0;
       padding: 3px 8px;
@@ -164,7 +170,9 @@ function getOpenStatus(liveHours: string | null | undefined) {
 
   const normalized = liveHours.trim().toLowerCase();
 
-  if (normalized === "closed") {
+  if (/^(?:open )?24(?: hours|\/7)$/.test(normalized)) return {label: "Open", className: "uw-hover-status uw-hover-status-open"};
+
+  if (normalized.startsWith("closed")) {
     return {
       label: "Closed",
       className: "uw-hover-status uw-hover-status-closed",
@@ -364,9 +372,11 @@ function buildPopupHTML(
 ) {
   const gymHoverInfo = getGymHoverInfo(properties, gymInfo);
 
-  const liveHours = gymHoverInfo?.liveHours ?? properties.liveHours;
+  const accessHours = properties.id === "gh" ? graduateHouseHours() : buildingAccess[properties.id]?.hours[getTorontoDayName()];
+  const liveHours = accessHours ?? gymHoverInfo?.liveHours ?? properties.liveHours;
 
-  const timeRemaining = gymHoverInfo?.timeRemaining ?? properties.timeRemaining;
+  const timeRemaining = accessHours ? getTimeRemaining(accessHours) : gymHoverInfo?.timeRemaining ?? properties.timeRemaining;
+  const category = {academic:["Academic", "#0369a1", "#f0f9ff"], library:["Library", "#b45309", "#fffbeb"], gym:["Gym", "#6d28d9", "#f5f3ff"], "student-life":["Student life", "#0f766e", "#f0fdfa"], residence:["Residence", "#047857", "#ecfdf5"]}[properties.category];
 
   let status;
 
@@ -397,6 +407,7 @@ function buildPopupHTML(
               ? `
                 <div class="uw-hover-abbreviation">
                   ${properties.abbreviation}
+                  <span class="uw-hover-type" style="color:${category[1]};background:${category[2]}">${category[0]}</span>
                 </div>
               `
               : ""

@@ -9,7 +9,6 @@ import {
   CalendarDays,
   Clock3,
   ExternalLink,
-  Info,
   LocateFixed,
   MapPin,
   Navigation,
@@ -514,6 +513,10 @@ export default function BuildingDetailsCard({
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Live occupancy is unavailable right now.
                 </dd>
+              ) : gymHours?.trim().toLowerCase() === "closed" ? (
+                <dd className="text-ui-meta mt-2 text-slate-500">
+                  Closed today. Occupancy is hidden during scheduled closures.
+                </dd>
               ) : !gymOccupancy ? (
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Live occupancy is unavailable right now.
@@ -688,19 +691,6 @@ export default function BuildingDetailsCard({
           </div>
         </div>
 
-        <div className="flex gap-4 py-4">
-          <Info className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
-
-          <div>
-            <dt className="text-ui-label text-slate-500">
-              Location type
-            </dt>
-
-            <dd className="text-ui-value mt-1 text-slate-800">
-              {category.label}
-            </dd>
-          </div>
-        </div>
       </dl>
     </section>
   );

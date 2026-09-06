@@ -533,7 +533,9 @@ function Map() {
 
   function selectBuilding(building: BuildingFeature) {
     setShowParking(false);
-    setSelectedBuildingId(building.properties.id);
+    setSelectedBuildingId(previous =>
+      ["sju", "uwp"].includes(building.properties.id) && getExpandedParentId(previous) === building.properties.id ? null : building.properties.id,
+    );
 
     setSelectedTransit(null);
     setSelectedEventId(null);
@@ -809,7 +811,9 @@ function Map() {
         ({ id }) => {
           if (!id) return;
 
-          setSelectedBuildingId(id);
+          setSelectedBuildingId(previous =>
+            ["sju", "uwp"].includes(id) && getExpandedParentId(previous) === id ? null : id,
+          );
           setSelectedTransit(null);
           setSelectedEventId(null);
         },
