@@ -32,6 +32,9 @@ import { SideBar } from "./sidebar/Sidebar";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 import ParkingMap from "./ParkingMap";
+import MapLegend from "./MapLegend";
+import type { LegendEntry } from "../utils/mapLegend";
+import type { ParkingStatus } from "../types/parking";
 import { TransitRouteBar, TransitRouteCard } from "./TransitRoutes";
 
 // utility functions
@@ -150,6 +153,9 @@ function Map() {
   const routeCardRef = useRef<HTMLElement | null>(null);
 
   const [showParking, setShowParking] = useState(false);
+  const [parkingLegend, setParkingLegend] = useState<ParkingStatus[]>([]);
+  const [journeyLegend, setJourneyLegend] = useState<LegendEntry[]>([]);
+  const [journeyTransitLegend, setJourneyTransitLegend] = useState<LegendEntry[]>([]);
 
   const [showTransit, setShowTransit] = useState(false);
 
@@ -900,11 +906,12 @@ function Map() {
       return;
     }
 
-    const childFilter = expandedParentId
+    const visibleParentId = !selectedRoute && !showParking && activeCategories.includes("residence") ? expandedParentId : null;
+    const childFilter = visibleParentId
       ? [
           "all",
           ["==", ["get", "category"], "residence"],
-          ["==", ["get", "parentId"], expandedParentId],
+          ["==", ["get", "parentId"], visibleParentId],
         ]
       : [
           "all",
@@ -921,21 +928,21 @@ function Map() {
     }
 
     if (mapInstance.getLayer("selected-residence-group")) {
-      const selectedGroupFilter = expandedParentId
+      const selectedGroupFilter = visibleParentId
         ? [
             "any",
-            ["==", ["get", "id"], expandedParentId],
+            ["==", ["get", "id"], visibleParentId],
             [
               "all",
               ["==", ["get", "category"], "residence"],
-              ["==", ["get", "parentId"], expandedParentId],
+              ["==", ["get", "parentId"], visibleParentId],
             ],
           ]
         : ["==", ["get", "id"], ""];
 
       mapInstance.setFilter("selected-residence-group", selectedGroupFilter);
     }
-  }, [mapInstance, isMapLoaded, expandedParentId]);
+  }, [mapInstance, isMapLoaded, expandedParentId, activeCategories, selectedRoute, showParking]);
 
   // --------------------
   // UPDATE BUILDING SOURCE
@@ -1035,6 +1042,8 @@ function Map() {
 
         {mapInstance && isMapLoaded && (
           <WalkingRoutes
+            onLegendChange={setJourneyLegend}
+            onTransitLegendChange={setJourneyTransitLegend}
             key={`${directionsRequest?.id ?? "manual"}:${directionsMode}`}
             initialDestination={directionsRequest?.destination}
             onExplore={() => {
@@ -1151,7 +1160,7 @@ function Map() {
         />
 
         {!showTransit && !walkingMode && (
-          <div className="absolute left-3 right-3 top-20 z-20 flex items-center gap-2 overflow-x-auto pb-1 sm:left-5 lg:right-auto">
+          <div className="absolute left-3 right-32 top-20 z-20 flex items-center gap-2 overflow-x-auto pb-1 sm:left-5 lg:right-auto">
             <button
               type="button"
               onClick={() => {
@@ -1199,7 +1208,7 @@ function Map() {
           </div>
         )}
         {showParking && mapInstance && isMapLoaded && (
-          <ParkingMap map={mapInstance} onClose={() => setShowParking(false)} />
+          <ParkingMap onStatusesChange={setParkingLegend} map={mapInstance} onClose={() => setShowParking(false)} />
         )}
         {selectedOffCampus && !showTransit && !showEvents && !showParking && !selectedBuildingId && (
           <section aria-label="Off-campus food details" className="absolute left-3 top-36 z-30 max-h-[calc(100%-10rem)] w-[380px] max-w-[calc(100%-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-lg sm:left-5">
@@ -1445,6 +1454,15 @@ function Map() {
           selection={currentTransitSelection}
           onClose={() => setSelectedTransit(null)}
         />
+
+        <MapLegend options={{
+          categories: selectedRoute || showParking ? [] : activeCategories,
+          transit: showTransit ? { modes: activeTransitModes, route: selectedRoute } : undefined,
+          eventCount: showEvents ? visibleMappedEvents.length : 0,
+          food: showFood ? filteredFood.map(food => ({ group: foodMapKey(food), category: food.category, open: foodPreview || foodIsOpen(food) })) : [],
+          parking: showParking ? parkingLegend : [],
+          journey: walkingMode ? [...journeyLegend, ...journeyTransitLegend] : [],
+        }} />
 
         <MapControls
           is3D={is3D}

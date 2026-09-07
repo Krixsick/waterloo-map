@@ -1,3 +1,4 @@
+import type { LegendEntry } from "../utils/mapLegend";
 import { Footprints, BusFront, TrainFront, Clock3, MapPin } from "lucide-react";
 import { journeyTiming, rankJourneys, BOARDING_BUFFER_SECONDS } from "../utils/journeyTiming";
 import { transitRouteColor } from "../utils/transitRoutes";
@@ -12,7 +13,7 @@ type Option = { tripId: string; finalArrival: number; walkSeconds: number; leave
 const api = import.meta.env.VITE_API_URL;
 const distance = (a: Point, b: Point) => Math.hypot((a[0] - b[0]) * Math.cos(a[1] * Math.PI / 180), a[1] - b[1]);
 const clock = (value: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(value)).replace(/\s/g, "").replace(/\./g, "").toUpperCase();
-export default function TransitJourney({ origin, destination, map, walkingMinutes, onRouteReady }: { onRouteReady?: (coordinates: Point[]) => void; walkingMinutes?: number; origin: Point; destination: Point; map: mapboxgl.Map }) {
+export default function TransitJourney({ origin, destination, map, walkingMinutes, onRouteReady, onLegendChange }: { onLegendChange?: (entries: LegendEntry[]) => void; onRouteReady?: (coordinates: Point[]) => void; walkingMinutes?: number; origin: Point; destination: Point; map: mapboxgl.Map }) {
   const walkCache = useRef(new Map<string, Walk>());
   const [tick, setTick] = useState(Date.now());
 
@@ -97,6 +98,15 @@ export default function TransitJourney({ origin, destination, map, walkingMinute
     onRouteReady?.([...selected.walks.flatMap(walk => walk.geometry.coordinates as Point[]), ...selected.line]);
     return () => {popup.remove();map.off("mousemove",stopSource,hover);map.off("mouseleave",stopSource,leave);ids.forEach(id=>{if(map.getLayer(id))map.removeLayer(id);if(map.getSource(id))map.removeSource(id);});};
   }, [selected,map,onRouteReady]);
+  useEffect(() => {
+    const color = selected ? transitRouteColor(selected.mode === "ion" ? "ion" : "bus", selected.route) : "#64748b";
+    onLegendChange?.(selected ? [
+      { id: "trip-walk", label: "Walk to / from transit", symbol: "walk", color: "#13735a" },
+      { id: "trip-ride", label: `${selected.mode === "ion" ? "ION" : "Bus"} ${selected.route} path`, symbol: "line", color },
+      { id: "trip-stops", label: "Stops on your trip", symbol: selected.mode === "ion" ? "station" : "circle", color },
+    ] : []);
+    return () => onLegendChange?.([]);
+  }, [selected, onLegendChange]);
   return <div className="mt-3 space-y-3"><style>{`.journey-stop-popup .mapboxgl-popup-content{padding:0;background:transparent;box-shadow:none;border-radius:16px}.journey-stop-popup .mapboxgl-popup-tip{border-top-color:white}`}</style>
     <div className="flex items-center justify-between gap-2"><p role="status" className="text-xs text-slate-500">{status}</p><button type="button" onClick={()=>setTick(Date.now())} className="cursor-pointer text-xs font-medium text-[#13735a] underline">Refresh trips</button></div>
     {walkingMinutes !== undefined && options.length > 0 && walkingMinutes < options[0].minutes && <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[#13735a]"><Footprints size={23} /><div><p className="font-semibold">Walking is faster</p><p className="text-sm"><strong>{walkingMinutes} min</strong> · saves {options[0].minutes - walkingMinutes} min</p></div></div>}

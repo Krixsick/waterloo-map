@@ -1,3 +1,4 @@
+import type { LegendEntry } from "../utils/mapLegend";
 import JourneyPlaceField from "./JourneyPlaceField";
 import { useJourneyOrigin } from "../hooks/useJourneyOrigin";
 import { useTransitStops } from "../api/transitApi";
@@ -12,7 +13,7 @@ export type DirectionsDestination = { name: string; coordinates?: [number, numbe
 type Place = { name: string; coordinates: [number, number] };
 const layers = ["campus-building-circles", "residence-building-squares", "child-residence-building-squares"];
 const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
-export default function WalkingRoutes({ map, selectedId, enabled, onEnabled, onConsumeSelection, onExplore, preferredMode = "walk", initialDestination }: { initialDestination?: DirectionsDestination; onExplore: () => void; preferredMode?: "walk" | "transit"; map: mapboxgl.Map; selectedId: string | null; enabled: boolean; onEnabled: (value: boolean) => void; onConsumeSelection: () => void }) {
+export default function WalkingRoutes({ map, selectedId, enabled, onEnabled, onConsumeSelection, onExplore, preferredMode = "walk", initialDestination, onLegendChange, onTransitLegendChange }: { onLegendChange?: (entries: LegendEntry[]) => void; onTransitLegendChange?: (entries: LegendEntry[]) => void; initialDestination?: DirectionsDestination; onExplore: () => void; preferredMode?: "walk" | "transit"; map: mapboxgl.Map; selectedId: string | null; enabled: boolean; onEnabled: (value: boolean) => void; onConsumeSelection: () => void }) {
   const [pickField, setPickField] = useState<"from" | "to" | null>(null);
   const stops = useTransitStops(enabled);
   const places = useMemo(() => [...buildings.features.map(b => ({name:`${b.properties.abbreviation} · ${b.properties.name}`,coordinates:b.geometry.coordinates as [number,number]})), ...(stops.data?.data ?? []).map(stop=>({name:`${stop.name} · Stop ${stop.stopId}`,coordinates:[stop.longitude,stop.latitude] as [number,number]}))], [stops.data]);
@@ -105,6 +106,19 @@ export default function WalkingRoutes({ map, selectedId, enabled, onEnabled, onC
 
   const journeyKey = origin && target ? `${origin.coordinates.join(",")};${target.geometry.coordinates.join(",")}` : null;
   const currentWalk = walkingResult?.key === journeyKey ? walkingResult : null;
+  const hasOrigin = Boolean(origin);
+  const hasDestination = Boolean((destinationId || mapDestination) && target);
+  const hasWalk = mode === "walk" && Boolean(currentWalk) && /^\d+ min ·/.test(message);
+  useEffect(() => {
+    const entries: LegendEntry[] = [];
+    if (enabled) {
+      if (hasOrigin) entries.push({ id: "journey-start", label: "Starting point", symbol: "endpoint", color: "#065f46", text: "A" });
+      if (hasDestination) entries.push({ id: "journey-end", label: "Destination", symbol: "endpoint", color: "#065f46", text: "B" });
+      if (hasWalk) entries.push({ id: "journey-walk", label: "Walking path", symbol: "walk", color: "#13735a" });
+    }
+    onLegendChange?.(entries);
+    return () => onLegendChange?.([]);
+  }, [enabled, hasOrigin, hasDestination, hasWalk, onLegendChange]);
   if (!enabled) return null;
   return <TransitPanel panelRef={panelRef} tab="plan" onExplore={onExplore} onPlan={() => {}} onClose={() => { onEnabled(false); chooseOrigin(null); setDestinationId(null); setMapDestination(null); }}>
     <div className="mt-3 flex gap-2 rounded-full bg-slate-100 p-1">{(["walk", "transit"] as const).map(value => <button type="button" key={value} aria-pressed={mode===value} onClick={()=>setMode(value)} className={`flex flex-1 items-center justify-center gap-2 cursor-pointer rounded-full px-3 py-2 text-sm font-medium ${mode===value ? "bg-white text-[#13735a] shadow-sm" : "text-slate-500"}`}>{value === "walk" ? <><Footprints size={17} />Walk</> : <><BusFront size={17} />Transit</>}</button>)}</div>
@@ -117,7 +131,7 @@ export default function WalkingRoutes({ map, selectedId, enabled, onEnabled, onC
       {pickField && <p role="status" className="rounded-lg bg-emerald-100 px-3 py-2 text-sm text-[#13735a]">Select your {pickField === "from" ? "start" : "destination"} on the map</p>}
     </div>
 
-    {mode === "transit" && origin && (destinationId || mapDestination) && target && <TransitJourney walkingMinutes={currentWalk?.minutes} onRouteReady={fitJourney} origin={origin.coordinates} destination={target.geometry.coordinates as [number, number]} map={map} />}
+    {mode === "transit" && origin && (destinationId || mapDestination) && target && <TransitJourney onLegendChange={onTransitLegendChange} walkingMinutes={currentWalk?.minutes} onRouteReady={fitJourney} origin={origin.coordinates} destination={target.geometry.coordinates as [number, number]} map={map} />}
     {!origin && !locationMessage && <p className="mt-2 text-sm text-slate-500">Choose a starting point to see travel time.</p>}
     {mode === "transit" && !destinationId && !mapDestination && <p className="mt-2 text-sm text-slate-500">Select a destination</p>}
     {mode === "walk" && currentWalk && /^\d+ min ·/.test(message) && <p className="mt-3 text-xs text-slate-500">Leave now · arrive around {currentWalk.arrival}</p>}
