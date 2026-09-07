@@ -12,7 +12,7 @@ export function SideBar({ children, renderMenuPanel }: SideBarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <SidebarProvider className="relative h-svh overflow-hidden">
+    <SidebarProvider className="relative h-dvh min-h-0 overflow-hidden">
       <AppSidebar
         isMenuOpen={isMenuOpen}
         onToggleMenu={() => setIsMenuOpen((current) => !current)}

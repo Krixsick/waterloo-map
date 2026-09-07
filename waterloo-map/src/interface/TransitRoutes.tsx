@@ -1,14 +1,16 @@
 import TransitPanel from "./TransitPanel";
 import { BusFront, LocateFixed, ChevronDown, X } from "lucide-react";
-import { useState, type RefObject } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import type { TransitRoute, TransitRouteDetail, TransitRoutePattern, TransitStop } from "../types/transit";
 import { transitRouteColor } from "../utils/transitRoutes";
 
 const focusStyle = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#135f49]";
 
 export function TransitRouteBar({
-  enabled, routes, selectedRoute, loading, error, partial, onToggle, onSelect, onRetry, onPlanTrip,
+  enabled, routes, selectedRoute, loading, error, partial, onToggle, onSelect, onRetry, onPlanTrip, children, panelRef,
 }: {
+  children?: ReactNode;
+  panelRef?: RefObject<HTMLElement | null>;
   onPlanTrip: () => void;
   enabled: boolean;
   routes: TransitRoute[];
@@ -28,7 +30,7 @@ export function TransitRouteBar({
   );
 
   return (
-    <TransitPanel tab="explore" onExplore={() => {}} onPlan={onPlanTrip} onClose={onToggle}>
+    <TransitPanel panelRef={panelRef} tab="explore" onExplore={() => {}} onPlan={onPlanTrip} onClose={onToggle}>
         <div className="mt-3">
           <details className="group relative">
             <summary id="transit-route-picker" aria-label="Choose a transit route" className={`flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm hover:bg-emerald-50/50 ${focusStyle}`}>
@@ -47,13 +49,13 @@ export function TransitRouteBar({
         {loading && <p role="status" className="mt-2 text-xs text-slate-500">Loading routes…</p>}
         {error && <button type="button" onClick={onRetry} className="mt-2 text-xs text-red-700 underline">Routes unavailable · Retry</button>}
         {partial && !error && <p className="mt-2 text-xs text-slate-500">Some routes are unavailable.</p>}
+        {children}
     </TransitPanel>
   );
 }
 
-export function TransitRouteCard({ route, detail, pattern, loading, error, vehicles, liveUnavailable, panelRef, onPattern, onFit, onClear, onStop, onRetry }: {
+export function TransitRouteCard({ route, detail, pattern, loading, error, vehicles, liveUnavailable, onPattern, onFit, onClear, onStop, onRetry }: {
   route: TransitRoute;
-  panelRef: RefObject<HTMLElement | null>;
   detail: TransitRouteDetail | null;
   pattern: TransitRoutePattern | null;
   loading: boolean;
@@ -69,7 +71,7 @@ export function TransitRouteCard({ route, detail, pattern, loading, error, vehic
   const [showStops, setShowStops] = useState(false);
   const color = transitRouteColor(route.mode, route.routeId);
   return (
-    <section ref={panelRef} aria-label={`Route ${route.routeId} details`} className="absolute left-3 top-[23rem] z-20 max-h-[calc(100svh-24rem)] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg sm:left-5 sm:w-96">
+    <section aria-label={`Route ${route.routeId} details`} className="mt-3 min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
       <header className="flex items-start gap-3 p-4 pb-3">
         <span style={{ backgroundColor: color }} className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl px-2 text-base font-bold text-white">{route.routeId}</span>
         <div className="min-w-0 flex-1">

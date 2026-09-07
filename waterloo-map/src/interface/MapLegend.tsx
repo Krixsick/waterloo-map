@@ -17,12 +17,12 @@ function MarkerSample({ entry }: { entry: LegendEntry }) {
 export default function MapLegend({ options }: { options: LegendOptions }) {
   const [expanded, setExpanded] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const entries = getMapLegend(options);
-  return <aside aria-label="Map legend" className="absolute right-3 top-20 z-40 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white/95 shadow-md backdrop-blur-sm sm:right-5 lg:top-3">
-    <button type="button" aria-expanded={expanded} aria-controls="map-legend-table" onClick={() => setExpanded(value => !value)} className={`flex h-11 cursor-pointer items-center gap-2 rounded-2xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${expanded ? "w-full" : ""}`}>
+  return <aside aria-label="Map legend" className="relative z-40 flex shrink-0 flex-col-reverse rounded-[18px] border border-slate-200 bg-white/95 p-1 shadow-md backdrop-blur-sm sm:absolute sm:right-5 sm:top-20 sm:max-w-[calc(100%-1.5rem)] sm:flex-col sm:rounded-2xl sm:p-0 lg:top-3">
+    <button type="button" aria-expanded={expanded} aria-controls="map-legend-table" onClick={() => setExpanded(value => !value)} className={`flex h-11 cursor-pointer items-center gap-2 rounded-xl px-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:rounded-2xl sm:px-3 ${expanded ? "w-full" : ""}`}>
       <ListFilter size={16} className="text-[#135f49]" aria-hidden="true" />Legend
       <ChevronDown size={14} aria-hidden="true" className={`ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} />
     </button>
-    <div id="map-legend-table" hidden={!expanded} className="w-56 max-w-full border-t border-slate-100">
+    <div id="map-legend-table" hidden={!expanded} className="absolute bottom-[calc(100%+0.5rem)] left-0 w-56 rounded-2xl border border-slate-200 bg-white shadow-md sm:static sm:max-w-full sm:rounded-none sm:border-0 sm:border-t sm:border-slate-100 sm:bg-transparent sm:shadow-none">
       <div className="max-h-[min(55svh,26rem)] overflow-y-auto px-3 pb-3">
         {entries.length ? <table className="w-full border-collapse text-left text-xs text-slate-600">
           <caption className="sr-only">Symbols for the enabled map layers</caption>

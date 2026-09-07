@@ -73,7 +73,7 @@ export default function ParkingMap({ map, onClose, onStatusesChange }: { map: ma
   }, [map, selectedId]);
 
   return (
-    <section ref={panelRef} aria-label="Campus parking" className="absolute left-3 top-36 z-30 flex max-h-[calc(100svh-20rem)] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg sm:left-5">
+    <section ref={panelRef} aria-label="Campus parking" className="map-panel map-panel--compact rounded-2xl border border-slate-200 bg-white shadow-lg">
       <header className="flex shrink-0 items-start gap-3 px-4 pb-3 pt-4">
         <SquareParking size={22} className="mt-0.5 text-[#135f49]" aria-hidden="true" />
         <div className="min-w-0 flex-1"><h2 className="text-base font-semibold text-slate-900">Campus parking</h2><p className="mt-0.5 text-xs text-slate-500">{parkingLots.length} mapped lots · Waterloo local time</p></div>

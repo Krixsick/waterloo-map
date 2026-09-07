@@ -106,7 +106,7 @@ export function SearchBar({ buildings, onSelectBuilding, items = [] }: SearchBar
   return (
     <div
       ref={containerRef}
-      className="absolute left-3 right-3 top-3 z-40 sm:left-5 sm:right-auto sm:w-[25rem]"
+      className="absolute left-[4.75rem] right-3 top-3 z-50 sm:left-5 sm:right-auto sm:w-[25rem]"
     >
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.18)]">
         <form
@@ -119,7 +119,7 @@ export function SearchBar({ buildings, onSelectBuilding, items = [] }: SearchBar
           <button
             type="submit"
             aria-label="Search campus"
-            className="flex size-14 shrink-0 cursor-pointer items-center justify-center text-slate-600 transition-colors hover:text-[#135f49]"
+            className="flex h-14 w-11 shrink-0 cursor-pointer items-center justify-center text-slate-600 transition-colors hover:text-[#135f49] sm:w-14"
           >
             <Search className="size-5.5" strokeWidth={2.2} />
           </button>
@@ -134,11 +134,11 @@ export function SearchBar({ buildings, onSelectBuilding, items = [] }: SearchBar
               setIsOpen(true);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search places, food, transit…"
+            placeholder="Search places…"
             aria-label="Search Waterloo campus"
             aria-controls="campus-search-results"
             aria-expanded={isOpen}
-            className="font-title h-full min-w-0 flex-1 bg-transparent text-base font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-500"
+            className="font-title h-full min-w-0 flex-1 bg-transparent pr-3 text-base font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-500"
           />
 
           {query && (
@@ -158,7 +158,7 @@ export function SearchBar({ buildings, onSelectBuilding, items = [] }: SearchBar
             id="campus-search-results"
             role="listbox"
             aria-label={query ? "Search results" : "Campus places"}
-            className="max-h-[min(25rem,calc(100vh-6rem))] overflow-y-auto border-t border-slate-100 px-2 pb-2"
+            className="absolute left-[-4rem] right-0 top-16 max-h-[min(25rem,calc(100dvh-6rem))] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white px-2 pb-2 shadow-lg sm:static sm:rounded-none sm:border-0 sm:border-t sm:border-slate-100 sm:shadow-none"
           >
             <p className="text-ui-label px-3 pb-1 pt-3 text-slate-500">
               {query ? "Search results" : "Campus places"}

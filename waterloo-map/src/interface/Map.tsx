@@ -1037,7 +1037,7 @@ function Map() {
         />
       )}
     >
-      <div className="relative h-svh w-full overflow-hidden">
+      <div className="map-viewport relative h-dvh w-full overflow-hidden">
         <LoadingScreen isComplete={isMapLoaded} />
 
         {mapInstance && isMapLoaded && (
@@ -1160,14 +1160,14 @@ function Map() {
         />
 
         {!showTransit && !walkingMode && (
-          <div className="absolute left-3 right-32 top-20 z-20 flex items-center gap-2 overflow-x-auto pb-1 sm:left-5 lg:right-auto">
+          <div role="group" aria-label="Map categories" className="absolute left-3 right-3 top-20 z-20 grid grid-cols-4 gap-1.5 pb-1 sm:left-5 sm:right-32 sm:flex sm:gap-2 sm:overflow-x-auto sm:overscroll-x-contain lg:right-auto">
             <button
               type="button"
               onClick={() => {
                 setWalkingMode(false);
                 toggleTransit();
               }}
-              className="flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm"
+              className="flex h-14 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white px-1 text-xs font-medium text-slate-700 shadow-sm sm:h-11 sm:shrink-0 sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:text-sm"
             >
               <BusFront size={18} />
               Transit
@@ -1179,7 +1179,7 @@ function Map() {
                 setWalkingMode(false);
                 toggleEvents();
               }}
-              className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}
+              className={`flex h-14 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border px-1 text-xs font-medium shadow-sm sm:h-11 sm:shrink-0 sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:text-sm ${showEvents ? "border-violet-200 bg-violet-50 text-[#7c3aed]" : "border-slate-200 bg-white text-slate-700"}`}
             >
               <CalendarDays size={18} />
               Events
@@ -1191,7 +1191,7 @@ function Map() {
                 setWalkingMode(false);
                 toggleFood();
               }}
-              className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
+              className={`flex h-14 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border px-1 text-xs font-medium shadow-sm sm:h-11 sm:shrink-0 sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:text-sm ${showFood ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
             >
               <UtensilsCrossed size={18} />
               Food
@@ -1200,7 +1200,7 @@ function Map() {
               type="button"
               aria-pressed={showParking}
               onClick={toggleParking}
-              className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showParking ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
+              className={`flex h-14 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border px-1 text-xs font-medium shadow-sm sm:h-11 sm:shrink-0 sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:text-sm ${showParking ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
             >
               <SquareParking size={18} />
               Parking
@@ -1211,7 +1211,7 @@ function Map() {
           <ParkingMap onStatusesChange={setParkingLegend} map={mapInstance} onClose={() => setShowParking(false)} />
         )}
         {selectedOffCampus && !showTransit && !showEvents && !showParking && !selectedBuildingId && (
-          <section aria-label="Off-campus food details" className="absolute left-3 top-36 z-30 max-h-[calc(100%-10rem)] w-[380px] max-w-[calc(100%-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-lg sm:left-5">
+          <section aria-label="Off-campus food details" className="map-panel rounded-3xl border border-slate-200 bg-white p-3 shadow-lg sm:p-4">
             <div className="mb-3 flex items-center justify-between"><div><h2 className="text-ui-title text-emerald-800">{mappedFood.filter(food => foodMapKey(food) === selectedOffCampus).length > 1 ? "Food at this location" : mappedFood.find(food => foodMapKey(food) === selectedOffCampus)?.name}</h2><span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-ui-meta text-emerald-700">Off campus</span></div><button aria-label="Close food details" className="cursor-pointer rounded-full px-3 py-1 text-xl" onClick={() => setSelectedOffCampus(null)}>×</button></div>
             <p className="mb-4 text-ui-meta text-slate-500">{mappedFood.find(food => foodMapKey(food) === selectedOffCampus)?.location?.replace(/, Unit[^,]*/i, "")}</p>
             {mappedFood.filter(food => foodMapKey(food) === selectedOffCampus).sort((a, b) => Number(foodIsOpen(b)) - Number(foodIsOpen(a))).map(food => <div key={food.id} className="mb-4">
@@ -1233,7 +1233,7 @@ function Map() {
         {showFood && !selectedBuildingId && !selectedOffCampus && (
           <div
             aria-label="Food map filters"
-            className="absolute left-3 top-36 z-30 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:left-5"
+            className="map-panel rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:w-auto"
           >
             <FoodFilters openOnly={foodOpenOnly} onOpenOnly={setFoodOpenOnly} category={foodCategory} onCategory={setFoodCategory} />
             {foodLoading && (
@@ -1283,6 +1283,7 @@ function Map() {
         )}
         {showTransit && !selectedTransit && (
           <TransitRouteBar
+            panelRef={routeCardRef}
             onPlanTrip={() => {
               setDirectionsRequest(null);
               setShowParking(false);
@@ -1309,58 +1310,54 @@ function Map() {
             onRetry={() => {
               void routesQuery.refetch();
             }}
-          />
+          >
+            {selectedRoute && !selectedBuildingId && !selectedEventId && (
+              <TransitRouteCard
+                key={selectedRoute.id}
+                route={selectedRoute}
+                detail={routeDetail}
+                pattern={routePattern}
+                loading={routeDetailQuery.isPending}
+                error={routeDetailQuery.isError}
+                vehicles={visibleTransitVehicles.length}
+                liveUnavailable={
+                  isTransitError ||
+                  isTransitPending ||
+                  Boolean(
+                    transitResponse?.feeds.some(
+                      (feed) =>
+                        feed.mode === selectedRoute.mode &&
+                        (feed.error || feed.isStale),
+                    ),
+                  )
+                }
+                onPattern={(id) => {
+                  setSelectedPatternId(id);
+                  setSelectedTransit(null);
+                  setIs3D(false);
+                }}
+                onFit={() => {
+                  setIs3D(false);
+                  fitSelectedRoute();
+                }}
+                onClear={() => selectRoute(null)}
+                onStop={(stop) => {
+                  setSelectedTransit({ type: "stop", stop });
+                  mapInstance?.easeTo({
+                    center: [stop.longitude, stop.latitude],
+                    zoom: 16,
+                    padding: { top: 250, bottom: 50, left: 20, right: 20 },
+                    retainPadding: false,
+                    duration: 700,
+                  });
+                }}
+                onRetry={() => {
+                  void routeDetailQuery.refetch();
+                }}
+              />
+            )}
+          </TransitRouteBar>
         )}
-        {showTransit &&
-          selectedRoute &&
-          !selectedTransit &&
-          !selectedBuildingId &&
-          !selectedEventId && (
-            <TransitRouteCard
-              key={selectedRoute.id}
-              route={selectedRoute}
-              panelRef={routeCardRef}
-              detail={routeDetail}
-              pattern={routePattern}
-              loading={routeDetailQuery.isPending}
-              error={routeDetailQuery.isError}
-              vehicles={visibleTransitVehicles.length}
-              liveUnavailable={
-                isTransitError ||
-                isTransitPending ||
-                Boolean(
-                  transitResponse?.feeds.some(
-                    (feed) =>
-                      feed.mode === selectedRoute.mode &&
-                      (feed.error || feed.isStale),
-                  ),
-                )
-              }
-              onPattern={(id) => {
-                setSelectedPatternId(id);
-                setSelectedTransit(null);
-                setIs3D(false);
-              }}
-              onFit={() => {
-                setIs3D(false);
-                fitSelectedRoute();
-              }}
-              onClear={() => selectRoute(null)}
-              onStop={(stop) => {
-                setSelectedTransit({ type: "stop", stop });
-                mapInstance?.easeTo({
-                  center: [stop.longitude, stop.latitude],
-                  zoom: 16,
-                  padding: { top: 250, bottom: 50, left: 20, right: 20 },
-                  retainPadding: false,
-                  duration: 700,
-                });
-              }}
-              onRetry={() => {
-                void routeDetailQuery.refetch();
-              }}
-            />
-          )}
 
         {!walkingMode && (
           <BuildingDetailsCard
@@ -1399,7 +1396,7 @@ function Map() {
         {selectedEvent && !eventDetailsExpanded && (
           <section
             aria-label="Selected event preview"
-            className="absolute inset-x-3 top-36 z-30 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg sm:left-5 sm:right-auto sm:w-[22rem]"
+            className="map-panel rounded-2xl border border-slate-200 bg-white p-3 shadow-lg sm:w-[22rem]"
           >
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-medium text-[#7c3aed]">
@@ -1455,21 +1452,23 @@ function Map() {
           onClose={() => setSelectedTransit(null)}
         />
 
-        <MapLegend options={{
-          categories: selectedRoute || showParking ? [] : activeCategories,
-          transit: showTransit ? { modes: activeTransitModes, route: selectedRoute } : undefined,
-          eventCount: showEvents ? visibleMappedEvents.length : 0,
-          food: showFood ? filteredFood.map(food => ({ group: foodMapKey(food), category: food.category, open: foodPreview || foodIsOpen(food) })) : [],
-          parking: showParking ? parkingLegend : [],
-          journey: walkingMode ? [...journeyLegend, ...journeyTransitLegend] : [],
-        }} />
+        <div className="absolute bottom-[max(2rem,env(safe-area-inset-bottom))] left-3 right-[max(0.75rem,env(safe-area-inset-right))] z-40 flex items-end justify-end gap-2 sm:contents">
+          <MapLegend options={{
+            categories: selectedRoute || showParking ? [] : activeCategories,
+            transit: showTransit ? { modes: activeTransitModes, route: selectedRoute } : undefined,
+            eventCount: showEvents ? visibleMappedEvents.length : 0,
+            food: showFood ? filteredFood.map(food => ({ group: foodMapKey(food), category: food.category, open: foodPreview || foodIsOpen(food) })) : [],
+            parking: showParking ? parkingLegend : [],
+            journey: walkingMode ? [...journeyLegend, ...journeyTransitLegend] : [],
+          }} />
 
-        <MapControls
-          is3D={is3D}
-          onReset={resetMap}
-          onToggleView={toggleView}
-          onFlyToMe={flyToMe}
-        />
+          <MapControls
+            is3D={is3D}
+            onReset={resetMap}
+            onToggleView={toggleView}
+            onFlyToMe={flyToMe}
+          />
+        </div>
 
         <div className="h-full w-full" ref={mapContainer} />
       </div>
