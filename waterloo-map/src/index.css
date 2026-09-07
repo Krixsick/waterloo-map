@@ -109,6 +109,9 @@
 }
 
 @theme inline {
+  /* The mobile map layout applies through 699px. */
+  --breakpoint-sm: 43.75rem;
+
   --font-sans: var(--font-title);
   --font-title: var(--font-title);
   --font-label: var(--font-label);
@@ -180,6 +183,58 @@
 }
 
 @layer components {
+  /* Shared map cards leave room for the mobile search, categories and controls. */
+  .map-panel {
+    @apply absolute inset-x-3 top-36 z-30 overflow-y-auto overscroll-contain;
+    max-height: calc(100dvh - 15rem);
+    overflow-wrap: anywhere;
+  }
+
+  .map-panel--compact {
+    max-height: min(55dvh, calc(100dvh - 15rem));
+  }
+
+  @media (min-width: 700px) {
+    .map-panel {
+      left: 1.25rem;
+      right: auto;
+      width: 25rem;
+      max-width: calc(100% - 2.5rem);
+      max-height: calc(100dvh - 10rem);
+    }
+
+    .map-panel--compact {
+      max-height: min(55dvh, calc(100dvh - 15rem));
+    }
+
+    .map-panel--detail {
+      top: 5rem;
+      max-height: calc(100dvh - 5.75rem);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .map-panel--compact {
+      max-height: calc(100dvh - 10rem);
+    }
+  }
+
+  @media (max-height: 500px) {
+    /* Let cards use the category row on short screens; closing reveals it again. */
+    .map-panel {
+      top: 5rem;
+      max-height: calc(100dvh - 11rem);
+    }
+  }
+
+  @media (max-width: 699px) {
+    /* Prevent mobile browsers from zooming the map when a field is focused. */
+    .map-viewport input,
+    .map-viewport select {
+      font-size: 16px;
+    }
+  }
+
   /* ==========================================
      TYPOGRAPHY SYSTEM
 

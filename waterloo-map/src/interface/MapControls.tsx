@@ -48,7 +48,7 @@ function ControlButton({
 }
 
 const controlSurface =
-  "rounded-[18px] border border-slate-200 bg-white/95 p-1 shadow-[0_2px_10px_rgba(15,23,42,0.12)] backdrop-blur-md";
+  "flex items-center rounded-[18px] border border-slate-200 bg-white/95 p-1 shadow-[0_2px_10px_rgba(15,23,42,0.12)] backdrop-blur-md sm:block";
 
 export default function MapControls({
   is3D,
@@ -60,7 +60,7 @@ export default function MapControls({
     <div
       role="group"
       aria-label="Map controls"
-      className="absolute bottom-[max(4rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-10 flex flex-col gap-2 sm:right-5"
+      className="z-20 flex shrink-0 gap-2 sm:absolute sm:bottom-[max(4rem,env(safe-area-inset-bottom))] sm:right-5 sm:flex-col"
     >
       <div className={controlSurface}>
         <ControlButton
@@ -73,7 +73,7 @@ export default function MapControls({
             3D
           </span>
         </ControlButton>
-        <div aria-hidden="true" className="mx-2 my-1 h-px bg-slate-200" />
+        <div aria-hidden="true" className="mx-1 h-6 w-px bg-slate-200 sm:mx-2 sm:my-1 sm:h-px sm:w-auto" />
         <ControlButton label="Reset map and filters" onClick={onReset}>
           <RotateCcw aria-hidden="true" size={20} strokeWidth={1.8} />
         </ControlButton>

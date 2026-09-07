@@ -437,7 +437,7 @@ import {
           role="dialog"
           aria-modal="true"
           aria-label={`${foodName} menu`}
-          className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+          className="flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
           onClick={(event) =>
             event.stopPropagation()
           }
@@ -661,7 +661,7 @@ import {
                 ? isExpanded
                 : undefined
             }
-            className={`flex w-full items-start gap-3 p-4 text-left ${
+            className={`flex w-full items-start gap-2 p-3 text-left sm:gap-3 sm:p-4 ${
               hasExpandableContent
                 ? "cursor-pointer"
                 : "cursor-default"
@@ -680,7 +680,7 @@ import {
             </div>
   
             <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-3">
   <div className="min-w-0 flex-1">
     <p className="text-ui-value text-slate-900">
       {food.name}
@@ -719,13 +719,13 @@ import {
         ({ label, time }) => (
           <div
             key={`${label}-${time}`}
-            className="flex items-center justify-between gap-3"
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
           >
             <span className="text-ui-meta text-slate-500">
               {label}
             </span>
 
-            <span className="text-ui-meta shrink-0 font-medium text-slate-700">
+            <span className="text-ui-meta font-medium text-slate-700">
               {formatDisplayTime(time)}
             </span>
           </div>

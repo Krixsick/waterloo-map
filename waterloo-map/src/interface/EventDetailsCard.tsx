@@ -70,10 +70,10 @@ export default function EventDetailsCard({
   return (
     <section
       aria-label={`${event.name} event details`}
-      className="absolute inset-x-3 top-36 z-30 max-h-[calc(100svh-9.75rem)] overflow-y-auto rounded-lg border border-violet-100 bg-white shadow-2xl sm:left-5 sm:right-auto sm:top-20 sm:max-h-[calc(100svh-5.75rem)] sm:w-[25rem]"
+      className="map-panel map-panel--detail rounded-lg border border-violet-100 bg-white shadow-2xl"
     >
-      <header className="border-b border-slate-200 p-5">
-        <div className="flex items-start gap-4">
+      <header className="border-b border-slate-200 p-3 sm:p-5">
+        <div className="flex items-start gap-2 sm:gap-4">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[#7c3aed]">
             <CalendarDays className="size-6" />
           </span>
@@ -105,7 +105,7 @@ export default function EventDetailsCard({
         )}
       </header>
 
-      <div className="flex justify-center gap-3 border-b border-slate-200 px-3 py-3">
+      <div className="flex flex-wrap justify-center gap-1 border-b border-slate-200 px-2 py-3 sm:gap-3 sm:px-3">
         {(canRecenter || event.mapURL) && (
           <ActionButton
             icon={Navigation}
