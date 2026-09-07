@@ -3,7 +3,7 @@ import mapboxgl from "mapbox-gl";
 import { ArrowLeft, ExternalLink, SquareParking, X } from "lucide-react";
 import { parkingLots, PARKING_FAQ_URL, PARKING_MAP_URL, PARKING_RATES_URL, PARKING_VERIFIED_ON } from "../data/parkingLots";
 import { getParkingStatus, parkingColors } from "../utils/parkingStatus";
-import type { ParkingFilter } from "../types/parking";
+import type { ParkingFilter, ParkingStatus } from "../types/parking";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#135f49]";
 const filters: { value: ParkingFilter; label: string }[] = [
@@ -11,13 +11,17 @@ const filters: { value: ParkingFilter; label: string }[] = [
   { value: "paid", label: "Paid" }, { value: "restricted", label: "Restricted" },
 ];
 
-export default function ParkingMap({ map, onClose }: { map: mapboxgl.Map; onClose: () => void }) {
+export default function ParkingMap({ map, onClose, onStatusesChange }: { map: mapboxgl.Map; onClose: () => void; onStatusesChange?: (statuses: ParkingStatus[]) => void }) {
   const [now, setNow] = useState(() => new Date());
   const [filter, setFilter] = useState<ParkingFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
   const lots = useMemo(() => parkingLots.map((lot) => ({ ...lot, ...getParkingStatus(lot, now) })), [now]);
   const visibleLots = useMemo(() => lots.filter((lot) => filter === "all" || lot.status === filter || (filter === "restricted" && lot.status === "closed")), [lots, filter]);
+  const statusKey = [...new Set(visibleLots.map(lot => lot.status))].sort().join(",");
+  useEffect(() => {
+    onStatusesChange?.(statusKey ? statusKey.split(",") as ParkingStatus[] : []);
+  }, [statusKey, onStatusesChange]);
   const selected = lots.find((lot) => lot.id === selectedId) ?? null;
   const selectLot = useCallback((id: string) => setSelectedId(id), []);
 

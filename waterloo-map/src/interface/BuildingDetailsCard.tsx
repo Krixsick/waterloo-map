@@ -1,3 +1,4 @@
+import { buildingAccess } from "../data/buildingAccess";
 import GraduateHouseInfo, { graduateHouseHours } from "./GraduateHouseInfo";
 import { useState } from "react";
 import { EventSummary } from "./EventsPanel";
@@ -8,7 +9,6 @@ import {
   CalendarDays,
   Clock3,
   ExternalLink,
-  Info,
   LocateFixed,
   MapPin,
   Navigation,
@@ -46,6 +46,7 @@ type BuildingDetailsCardProps = {
   gymError: boolean;
   onClose: () => void;
   onRecenter: () => void;
+  onDirections: () => void;
 };
 
 const occupancyLabels: Record<
@@ -179,14 +180,16 @@ export default function BuildingDetailsCard({
   gymError,
   onClose,
   onRecenter,
+  onDirections,
 }: BuildingDetailsCardProps) {
   const [expandedEventsFor, setExpandedEventsFor] = useState<string | null>(null);
   if (!building) return null;
 
   const {
     properties,
-    geometry,
   } = building;
+
+  const [longitude, latitude] = building.geometry.coordinates;
 
   const category =
     buildingCategoryDetails[
@@ -195,9 +198,6 @@ export default function BuildingDetailsCard({
 
   const CategoryIcon =
     category.icon;
-
-  const [longitude, latitude] =
-    geometry.coordinates;
 
   const isLibrary =
     properties.category ===
@@ -250,30 +250,20 @@ export default function BuildingDetailsCard({
         )
       : [];
 
+  const access = buildingAccess[properties.id];
+  const accessDay = new Intl.DateTimeFormat("en-CA", {weekday:"long", timeZone:"America/Toronto"}).format(new Date());
   const displayHours =
     properties.id === "gh" ? graduateHouseHours() : isGym
       ? gymHours ??
         "Hours unavailable"
-      : properties.liveHours ??
+      : access?.hours[accessDay] ?? properties.liveHours ??
         "Hours unavailable";
 
-  function openDirections() {
-    const destination =
-      encodeURIComponent(
-        `${latitude},${longitude}`,
-      );
-
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
-  }
 
   return (
     <section
       aria-label={`${properties.name} details`}
-      className="absolute inset-x-3 top-20 z-30 max-h-[calc(100svh-5.75rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl sm:left-5 sm:right-auto sm:w-[25rem]"
+      className="absolute inset-x-3 top-36 z-30 max-h-[calc(100svh-9.75rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl sm:left-5 sm:right-auto sm:top-20 sm:max-h-[calc(100svh-5.75rem)] sm:w-[25rem]"
     >
       <header className="border-b border-slate-200 p-5">
         <div className="flex items-start gap-4">
@@ -314,7 +304,7 @@ export default function BuildingDetailsCard({
         <ActionButton
           icon={Navigation}
           label="Directions"
-          onClick={openDirections}
+          onClick={onDirections}
         />
 
         <ActionButton
@@ -349,7 +339,11 @@ export default function BuildingDetailsCard({
               </dd>
             )}
 
-            {!isGym &&
+            {access && <div className="mt-2 space-y-1">
+              <p className="text-ui-meta text-slate-500">{access.note}</p>
+              <a className="text-ui-meta text-emerald-700 underline" href={access.source} target="_blank" rel="noreferrer">Official building hours</a>
+            </div>}
+            {!access && !isGym &&
               properties.timeRemaining && (
                 <p className="text-ui-meta mt-1 text-emerald-700">
                   {
@@ -518,6 +512,10 @@ export default function BuildingDetailsCard({
                 !gym ? (
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Live occupancy is unavailable right now.
+                </dd>
+              ) : gymHours?.trim().toLowerCase() === "closed" ? (
+                <dd className="text-ui-meta mt-2 text-slate-500">
+                  Closed today. Occupancy is hidden during scheduled closures.
                 </dd>
               ) : !gymOccupancy ? (
                 <dd className="text-ui-value mt-1 text-slate-600">
@@ -693,19 +691,6 @@ export default function BuildingDetailsCard({
           </div>
         </div>
 
-        <div className="flex gap-4 py-4">
-          <Info className="mt-0.5 size-5 shrink-0 text-[#13735a]" />
-
-          <div>
-            <dt className="text-ui-label text-slate-500">
-              Location type
-            </dt>
-
-            <dd className="text-ui-value mt-1 text-slate-800">
-              {category.label}
-            </dd>
-          </div>
-        </div>
       </dl>
     </section>
   );

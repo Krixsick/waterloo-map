@@ -20,7 +20,7 @@ const WUSA_FOOD_LOCATIONS: WusaFoodConfig[] = [
     id: "smarty-pants",
     name: "Smarty Pants",
     buildingId: "slc",
-    category: "restaurant",
+    category: "dessert",
     url: "https://wusa.ca/services/food-retail/smarty-pants/",
   },
   {

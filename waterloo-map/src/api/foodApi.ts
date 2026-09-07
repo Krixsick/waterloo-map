@@ -8,6 +8,7 @@ const API_URL =
   );
 
 export type FoodCategory =
+  | "dessert"
   | "restaurant"
   | "cafe"
   | "convenience"
@@ -18,17 +19,21 @@ export type FoodCategory =
 export type FoodInfo = {
   id: string;
   name: string;
-  buildingId: string;
+  buildingId?: string;
+  coordinates?: [number, number];
   category: FoodCategory;
+  categories?: FoodCategory[];
   logo?: string;
 
   location?: string;
   description?: string | string[];
 
   payment?: string[];
+  paymentNote?: string;
 
   hours?: Record<string, string>;
   exceptions?: string[];
+  hoursSource?: {name: string; url: string; checkedAt: string};
 
   url?: string;
 
@@ -61,7 +66,7 @@ async function fetchFood(): Promise<FoodApiResponse> {
 
 export function useFood() {
   return useQuery({
-    queryKey: ["food"],
+    queryKey: ["food", "campus-locations-v2"],
     queryFn: fetchFood,
   });
 }

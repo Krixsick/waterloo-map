@@ -1,4 +1,5 @@
 export type FoodCategory =
+  | "dessert"
   | "restaurant"
   | "cafe"
   | "convenience"
@@ -11,9 +12,11 @@ export type FoodLocation = {
 
   name: string;
 
-  buildingId: string;
+  buildingId?: string;
+  coordinates?: [number, number];
 
   category: FoodCategory;
+  categories?: FoodCategory[];
 
   location?: string;
 
@@ -22,6 +25,7 @@ export type FoodLocation = {
     | string[];
 
   payment?: string[];
+  paymentNote?: string;
 
   hours?: Record<
     string,
@@ -29,6 +33,7 @@ export type FoodLocation = {
   >;
 
   exceptions?: string[];
+  hoursSource?: {name: string; url: string; checkedAt: string};
 
   url?: string;
 

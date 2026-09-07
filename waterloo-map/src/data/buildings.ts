@@ -760,6 +760,36 @@ export const buildings: BuildingsGeoJSON = {
     {
       type: "Feature",
       properties: {
+        id: "ryan-hall", name: "Ryan Hall", abbreviation: "RYN",
+        category: "residence", parentId: "sju",
+        description: "Residence building at St. Jerome's University.",
+      },
+      // Google Maps place coordinates verified September 6, 2026.
+      geometry: {type: "Point", coordinates: [-80.547017, 43.4695939]},
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "siegfried-hall", name: "Siegfried Hall", abbreviation: "SGF",
+        category: "residence", parentId: "sju",
+        description: "Residence building at St. Jerome's University.",
+      },
+      // Google Maps place coordinates verified September 6, 2026.
+      geometry: {type: "Point", coordinates: [-80.5467374, 43.46941]},
+    },
+    {
+      type: "Feature",
+      properties: {
+        id: "jr-finn-hall", name: "J.R. Finn Hall", abbreviation: "JRF",
+        category: "residence", parentId: "sju",
+        description: "Residence building at St. Jerome's University.",
+      },
+      // Google Maps place coordinates verified September 6, 2026.
+      geometry: {type: "Point", coordinates: [-80.5452159, 43.4692433]},
+    },
+    {
+      type: "Feature",
+      properties: {
         id: "st-jeromes-library",
         name: "St. Jerome's University Library",
         abbreviation: "SJU Library",

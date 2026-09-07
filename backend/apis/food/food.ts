@@ -1,3 +1,6 @@
+import { offCampusFood } from "./offCampusFood";
+import { engineeringFood } from "./engineeringFood";
+import { scienceFood } from "./scienceFood";
 import { mathFood } from "./mathFood";
 import { getCollegeFood } from "./collegeFood";
 import { Router } from "express";
@@ -37,8 +40,12 @@ router.get("/", async (_req, res) => {
       ...stJeromesFood,
       ...collegeFood,
       ...mathFood,
+      ...scienceFood,
+      ...engineeringFood,
+      ...offCampusFood,
     };
 
+    if (allFood["smarty-pants"]) allFood["smarty-pants"].category = "dessert";
     res.json(allFood);
   } catch (error) {
     console.error(

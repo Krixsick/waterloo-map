@@ -1,6 +1,8 @@
-import WalkingRoutes from "./WalkingRoutes";
+import FoodFilters from "./FoodFilters";
+import FoodDetailsCard from "./FoodDetailsCard";
+import WalkingRoutes, { type DirectionsDestination } from "./WalkingRoutes";
 import { FOOD_CATEGORY_DETAILS } from "../data/foodCategoryDetails";
-import { FoodMarkers, foodIsOpen } from "./FoodMap";
+import { FoodMarkers, foodIsOpen, foodMapKey } from "./FoodMap";
 import {
   CalendarDays,
   UtensilsCrossed,
@@ -30,6 +32,9 @@ import { SideBar } from "./sidebar/Sidebar";
 import MapFilters from "./MapFilters";
 import MapControls from "./MapControls";
 import ParkingMap from "./ParkingMap";
+import MapLegend from "./MapLegend";
+import type { LegendEntry } from "../utils/mapLegend";
+import type { ParkingStatus } from "../types/parking";
 import { TransitRouteBar, TransitRouteCard } from "./TransitRoutes";
 
 // utility functions
@@ -148,6 +153,9 @@ function Map() {
   const routeCardRef = useRef<HTMLElement | null>(null);
 
   const [showParking, setShowParking] = useState(false);
+  const [parkingLegend, setParkingLegend] = useState<ParkingStatus[]>([]);
+  const [journeyLegend, setJourneyLegend] = useState<LegendEntry[]>([]);
+  const [journeyTransitLegend, setJourneyTransitLegend] = useState<LegendEntry[]>([]);
 
   const [showTransit, setShowTransit] = useState(false);
 
@@ -170,6 +178,8 @@ function Map() {
     "walk",
   );
   const [walkingMode, setWalkingMode] = useState(false);
+  const [directionsRequest, setDirectionsRequest] = useState<{ id: number; destination: DirectionsDestination } | null>(null);
+  const directionsRequestId = useRef(0);
   const [foodFocus, setFoodFocus] = useState<string | null>(null);
   const [showEvents, setShowEvents] = useState(false);
 
@@ -285,29 +295,33 @@ function Map() {
   // FOOD DATA
   // --------------------
 
+  const [selectedOffCampus, setSelectedOffCampus] = useState<string | null>(null);
+  const [foodOpenOnly, setFoodOpenOnly] = useState(true);
   const mappedFood = useMemo(
     () =>
       Object.values(foodData).filter((food) =>
-        buildings.features.some((b) => b.properties.id === food.buildingId),
+        food.coordinates || buildings.features.some((b) => b.properties.id === food.buildingId),
       ),
     [foodData],
   );
   const openFoodCount = mappedFood.filter(foodIsOpen).length;
   const filteredFood = mappedFood.filter(
     (food) =>
-      (foodPreview || foodIsOpen(food)) &&
+      (foodPreview || !foodOpenOnly || foodIsOpen(food)) &&
       (foodCategory === "all" ||
         (foodCategory === "meals"
-          ? !["cafe", "convenience"].includes(food.category)
-          : food.category === foodCategory)),
+          ? (food.categories ?? [food.category]).some(category => !["cafe", "convenience", "dessert"].includes(category))
+          : (food.categories ?? [food.category]).some(category => category === foodCategory))),
   );
   const selectFoodBuilding = useCallback((id: string) => {
     setShowParking(false);
-    setSelectedBuildingId(id);
+    setSelectedOffCampus(id.startsWith("off-campus:") ? id : null);
+    setSelectedBuildingId(id.startsWith("off-campus:") ? null : id);
     setSelectedEventId(null);
     setFoodFocus(id);
   }, []);
   function toggleFood() {
+    setSelectedOffCampus(null);
     setShowParking(false);
     setShowFood((value) => !value);
     setShowEvents(false);
@@ -338,7 +352,7 @@ function Map() {
 
     console.log("matched food:", matchedFood);
 
-    return matchedFood;
+    return matchedFood.sort((a, b) => Number(foodIsOpen(b)) - Number(foodIsOpen(a)));
   }, [foodData, selectedBuilding]);
 
   // --------------------
@@ -504,9 +518,30 @@ function Map() {
     });
   }
 
+  function openDirections(destination: DirectionsDestination) {
+    setDirectionsRequest({ id: ++directionsRequestId.current, destination });
+    setDirectionsMode("walk");
+    setWalkingMode(true);
+    setShowParking(false);
+    setShowFood(false);
+    setShowEvents(false);
+    setShowTransit(false);
+    setSelectedBuildingId(null);
+    setSelectedEventId(null);
+    setSelectedTransit(null);
+    setSelectedRoute(null);
+    setSelectedPatternId(null);
+    setIs3D(false);
+    if (destination.coordinates) {
+      mapInstance?.easeTo({ center: destination.coordinates, zoom: 16, pitch: 0, bearing: 0 });
+    }
+  }
+
   function selectBuilding(building: BuildingFeature) {
     setShowParking(false);
-    setSelectedBuildingId(building.properties.id);
+    setSelectedBuildingId(previous =>
+      ["sju", "uwp"].includes(building.properties.id) && getExpandedParentId(previous) === building.properties.id ? null : building.properties.id,
+    );
 
     setSelectedTransit(null);
     setSelectedEventId(null);
@@ -738,7 +773,7 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-    mapInstance.setMinZoom(showTransit ? 9 : showParking ? 11 : 13);
+    mapInstance.setMinZoom(walkingMode ? 5 : showTransit ? 9 : showParking ? 11 : 13);
     updateTransitRoute(
       mapInstance,
       showTransit ? selectedRoute : null,
@@ -755,6 +790,7 @@ function Map() {
     isMapLoaded,
     showTransit,
     showParking,
+    walkingMode,
     selectedRoute,
     routePattern,
     fitSelectedRoute,
@@ -781,7 +817,9 @@ function Map() {
         ({ id }) => {
           if (!id) return;
 
-          setSelectedBuildingId(id);
+          setSelectedBuildingId(previous =>
+            ["sju", "uwp"].includes(id) && getExpandedParentId(previous) === id ? null : id,
+          );
           setSelectedTransit(null);
           setSelectedEventId(null);
         },
@@ -868,11 +906,12 @@ function Map() {
       return;
     }
 
-    const childFilter = expandedParentId
+    const visibleParentId = !selectedRoute && !showParking && activeCategories.includes("residence") ? expandedParentId : null;
+    const childFilter = visibleParentId
       ? [
           "all",
           ["==", ["get", "category"], "residence"],
-          ["==", ["get", "parentId"], expandedParentId],
+          ["==", ["get", "parentId"], visibleParentId],
         ]
       : [
           "all",
@@ -889,21 +928,21 @@ function Map() {
     }
 
     if (mapInstance.getLayer("selected-residence-group")) {
-      const selectedGroupFilter = expandedParentId
+      const selectedGroupFilter = visibleParentId
         ? [
             "any",
-            ["==", ["get", "id"], expandedParentId],
+            ["==", ["get", "id"], visibleParentId],
             [
               "all",
               ["==", ["get", "category"], "residence"],
-              ["==", ["get", "parentId"], expandedParentId],
+              ["==", ["get", "parentId"], visibleParentId],
             ],
           ]
         : ["==", ["get", "id"], ""];
 
       mapInstance.setFilter("selected-residence-group", selectedGroupFilter);
     }
-  }, [mapInstance, isMapLoaded, expandedParentId]);
+  }, [mapInstance, isMapLoaded, expandedParentId, activeCategories, selectedRoute, showParking]);
 
   // --------------------
   // UPDATE BUILDING SOURCE
@@ -1003,6 +1042,10 @@ function Map() {
 
         {mapInstance && isMapLoaded && (
           <WalkingRoutes
+            onLegendChange={setJourneyLegend}
+            onTransitLegendChange={setJourneyTransitLegend}
+            key={`${directionsRequest?.id ?? "manual"}:${directionsMode}`}
+            initialDestination={directionsRequest?.destination}
             onExplore={() => {
               setWalkingMode(false);
               setShowParking(false);
@@ -1033,19 +1076,19 @@ function Map() {
               name: food.name,
               icon: FOOD_CATEGORY_DETAILS[food.category].icon,
               iconStyles: "bg-emerald-50 text-[#13735a]",
-              subtitle: `${FOOD_CATEGORY_DETAILS[food.category].label} · ${buildings.features.find((b) => b.properties.id === food.buildingId)?.properties.abbreviation ?? food.buildingId.toUpperCase()}`,
-              keywords: `${food.location ?? ""} ${food.description ?? ""} ${food.category === "cafe" ? "coffee cafe café espresso tea" : ""} ${food.category === "convenience" ? "snacks convenience store" : "meals restaurant eat"}`,
+              subtitle: `${FOOD_CATEGORY_DETAILS[food.category].label} · ${buildings.features.find((b) => b.properties.id === food.buildingId)?.properties.abbreviation ?? (food.buildingId?.toUpperCase() ?? "Off campus")}`,
+              keywords: `${food.location ?? ""} ${food.description ?? ""} ${food.categories?.join(" ") ?? ""} ${food.categories?.includes("cafe") ? "coffee" : ""} ${food.category === "cafe" ? "coffee cafe café espresso tea" : ""} ${food.category === "convenience" ? "snacks convenience store" : "meals restaurant eat"}`,
               onSelect: () => {
                 setShowFood(false);
                 setShowTransit(false);
                 setShowEvents(false);
-                selectFoodBuilding(food.buildingId);
+                selectFoodBuilding(foodMapKey(food));
                 const b = buildings.features.find(
                   (b) => b.properties.id === food.buildingId,
                 );
-                if (b)
+                if (b || food.coordinates)
                   mapInstance?.flyTo({
-                    center: b.geometry.coordinates as [number, number],
+                    center: food.coordinates ?? b!.geometry.coordinates as [number, number],
                     zoom: 17,
                   });
               },
@@ -1117,7 +1160,7 @@ function Map() {
         />
 
         {!showTransit && !walkingMode && (
-          <div className="absolute left-3 right-3 top-20 z-20 flex items-center gap-2 overflow-x-auto pb-1 sm:left-5 lg:right-auto">
+          <div className="absolute left-3 right-32 top-20 z-20 flex items-center gap-2 overflow-x-auto pb-1 sm:left-5 lg:right-auto">
             <button
               type="button"
               onClick={() => {
@@ -1165,37 +1208,34 @@ function Map() {
           </div>
         )}
         {showParking && mapInstance && isMapLoaded && (
-          <ParkingMap map={mapInstance} onClose={() => setShowParking(false)} />
+          <ParkingMap onStatusesChange={setParkingLegend} map={mapInstance} onClose={() => setShowParking(false)} />
+        )}
+        {selectedOffCampus && !showTransit && !showEvents && !showParking && !selectedBuildingId && (
+          <section aria-label="Off-campus food details" className="absolute left-3 top-36 z-30 max-h-[calc(100%-10rem)] w-[380px] max-w-[calc(100%-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-lg sm:left-5">
+            <div className="mb-3 flex items-center justify-between"><div><h2 className="text-ui-title text-emerald-800">{mappedFood.filter(food => foodMapKey(food) === selectedOffCampus).length > 1 ? "Food at this location" : mappedFood.find(food => foodMapKey(food) === selectedOffCampus)?.name}</h2><span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-ui-meta text-emerald-700">Off campus</span></div><button aria-label="Close food details" className="cursor-pointer rounded-full px-3 py-1 text-xl" onClick={() => setSelectedOffCampus(null)}>×</button></div>
+            <p className="mb-4 text-ui-meta text-slate-500">{mappedFood.find(food => foodMapKey(food) === selectedOffCampus)?.location?.replace(/, Unit[^,]*/i, "")}</p>
+            {mappedFood.filter(food => foodMapKey(food) === selectedOffCampus).sort((a, b) => Number(foodIsOpen(b)) - Number(foodIsOpen(a))).map(food => <div key={food.id} className="mb-4">
+              {food.location?.match(/Unit[^,]*/i) && <p className="mb-2 text-ui-meta text-slate-500">{food.location.match(/Unit[^,]*/i)?.[0]}</p>}
+              <FoodDetailsCard food={food} defaultExpanded />
+              <a className="mt-2 inline-block text-sm text-emerald-700 underline" href={food.url} target="_blank" rel="noreferrer">Visit website</a>
+            </div>)}
+          </section>
         )}
         {showFood && mapInstance && isMapLoaded && (
           <FoodMarkers
             preview={foodPreview}
             map={mapInstance}
             foods={filteredFood}
+            allFoods={mappedFood}
             onSelect={selectFoodBuilding}
           />
         )}
-        {showFood && !selectedBuildingId && (
+        {showFood && !selectedBuildingId && !selectedOffCampus && (
           <div
             aria-label="Food map filters"
             className="absolute left-3 top-36 z-30 max-w-[calc(100%-1.5rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:left-5"
           >
-            <div className="flex items-center gap-2">
-              <span className="px-2 text-sm text-emerald-800">
-                {foodPreview ? "Preview · all spots shown open" : "Open now"}
-              </span>
-              <select
-                aria-label="Food category"
-                value={foodCategory}
-                onChange={(e) => setFoodCategory(e.target.value)}
-                className="cursor-pointer rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700"
-              >
-                <option value="all">All food</option>
-                <option value="meals">Meals</option>
-                <option value="cafe">Coffee</option>
-                <option value="convenience">Convenience</option>
-              </select>
-            </div>
+            <FoodFilters openOnly={foodOpenOnly} onOpenOnly={setFoodOpenOnly} category={foodCategory} onCategory={setFoodCategory} />
             {foodLoading && (
               <p className="px-3 pt-2 text-xs text-slate-500">
                 Loading food spots…
@@ -1244,6 +1284,7 @@ function Map() {
         {showTransit && !selectedTransit && (
           <TransitRouteBar
             onPlanTrip={() => {
+              setDirectionsRequest(null);
               setShowParking(false);
               setDirectionsMode("transit");
               setWalkingMode(true);
@@ -1328,6 +1369,12 @@ function Map() {
             eventsError={isEventsError}
             onSelectEvent={selectEvent}
             building={selectedBuilding}
+            onDirections={() => {
+              if (selectedBuilding) openDirections({
+                name: selectedBuilding.properties.name,
+                coordinates: selectedBuilding.geometry.coordinates as [number, number],
+              });
+            }}
             foodLocations={selectedBuildingFood}
             libraryOccupancy={selectedLibraryOccupancy}
             libraryOccupancyLoading={
@@ -1385,6 +1432,14 @@ function Map() {
             (event) => event.id === selectedEventId,
           )}
           event={eventDetailsExpanded ? selectedEvent : null}
+          onDirections={() => {
+            if (!selectedEvent) return;
+            const mapped = mappedEvents.find((event) => event.id === selectedEvent.id);
+            openDirections({
+              name: selectedEvent.location || selectedEvent.name,
+              coordinates: mapped ? [mapped.coordinates.longitude, mapped.coordinates.latitude] : undefined,
+            });
+          }}
           onClose={() => setSelectedEventId(null)}
           onRecenter={() => {
             const mapped = mappedEvents.find(
@@ -1399,6 +1454,15 @@ function Map() {
           selection={currentTransitSelection}
           onClose={() => setSelectedTransit(null)}
         />
+
+        <MapLegend options={{
+          categories: selectedRoute || showParking ? [] : activeCategories,
+          transit: showTransit ? { modes: activeTransitModes, route: selectedRoute } : undefined,
+          eventCount: showEvents ? visibleMappedEvents.length : 0,
+          food: showFood ? filteredFood.map(food => ({ group: foodMapKey(food), category: food.category, open: foodPreview || foodIsOpen(food) })) : [],
+          parking: showParking ? parkingLegend : [],
+          journey: walkingMode ? [...journeyLegend, ...journeyTransitLegend] : [],
+        }} />
 
         <MapControls
           is3D={is3D}

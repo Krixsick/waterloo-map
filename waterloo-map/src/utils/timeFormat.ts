@@ -1,6 +1,7 @@
 // Shared display format for clock times and opening-hour ranges.
 export function formatDisplayTime(value: string): string {
   return value
+    .replace(/\bclosed\b/gi, "Closed")
     .replace(/\b(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?(?!\w)/gi,
       (original, hour: string, minute: string | undefined, period: string) => {
         if (Number(hour) < 1 || Number(hour) > 12 || Number(minute ?? 0) > 59) return original;

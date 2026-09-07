@@ -9,7 +9,7 @@ export const mathFood: Record<string, FoodLocation> = {
     id: "math-cnd",
     name: "Math C&D",
     buildingId: "mc",
-    category: "convenience",
+    category: "convenience", categories: ["cafe", "convenience"],
     location: "3rd floor, Mathematics & Computer Building (MC), 200 University Ave. W., Waterloo",
     description: "Student-priced coffee, doughnuts, soups, sandwiches, sushi, patties, and samosas on MC’s third floor.",
     hours: {

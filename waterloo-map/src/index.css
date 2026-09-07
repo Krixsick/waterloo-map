@@ -381,3 +381,6 @@
   outline: 3px solid #0f172a;
   outline-offset: 3px;
 }
+
+/* Mapbox supplies its own font shorthand; all map cards use our UI typography. */
+.mapboxgl-popup-content { font-family: var(--font-title); }
