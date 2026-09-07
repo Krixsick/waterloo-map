@@ -263,7 +263,7 @@ export default function BuildingDetailsCard({
   return (
     <section
       aria-label={`${properties.name} details`}
-      className="absolute inset-x-3 top-20 z-30 max-h-[calc(100svh-5.75rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl sm:left-5 sm:right-auto sm:w-[25rem]"
+      className="absolute inset-x-3 top-36 z-30 max-h-[calc(100svh-9.75rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl sm:left-5 sm:right-auto sm:top-20 sm:max-h-[calc(100svh-5.75rem)] sm:w-[25rem]"
     >
       <header className="border-b border-slate-200 p-5">
         <div className="flex items-start gap-4">
