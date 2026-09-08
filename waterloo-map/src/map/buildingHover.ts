@@ -1,6 +1,7 @@
 import { buildingAccess } from "../data/buildingAccess";
 import { graduateHouseHours } from "../interface/GraduateHouseInfo";
 import { getTimeRemaining } from "../utils/timeUtils";
+import { getGymHoursStatus } from "../utils/gymHours";
 import { formatDisplayTime } from "../utils/timeFormat";
 import mapboxgl from "mapbox-gl";
 import type { BuildingProperties } from "../data/buildings";
@@ -271,66 +272,7 @@ function getGymHoverInfo(
 
   if (!gym) return null;
 
-  const today = getTorontoDayName();
-  const liveHours = gym.hours[today];
-
-  if (!liveHours) return null;
-
-  if (liveHours.trim().toLowerCase() === "closed") {
-    return {
-      liveHours: "Closed",
-      timeRemaining: null,
-      isOpen: false,
-    };
-  }
-
-  const times = liveHours.split("-");
-
-  if (times.length !== 2) {
-    return {
-      liveHours,
-      timeRemaining: null,
-      isOpen: null,
-    };
-  }
-
-  const openMinutes = parseTimeToMinutes(times[0]);
-  const closeMinutes = parseTimeToMinutes(times[1]);
-
-  if (openMinutes === null || closeMinutes === null) {
-    return {
-      liveHours,
-      timeRemaining: null,
-      isOpen: null,
-    };
-  }
-
-  const now = getTorontoMinutesNow();
-
-  const isOpen = now >= openMinutes && now < closeMinutes;
-
-  if (!isOpen) {
-    return {
-      liveHours,
-      timeRemaining: null,
-      isOpen: false,
-    };
-  }
-
-  const remainingMinutes = closeMinutes - now;
-
-  const hours = Math.floor(remainingMinutes / 60);
-
-  const minutes = remainingMinutes % 60;
-
-  const timeRemaining =
-    hours > 0 ? `${hours}h ${minutes}m left` : `${minutes}m left`;
-
-  return {
-    liveHours,
-    timeRemaining,
-    isOpen: true,
-  };
+  return getGymHoursStatus(gym.hours);
 }
 
 function buildHoursSection(
