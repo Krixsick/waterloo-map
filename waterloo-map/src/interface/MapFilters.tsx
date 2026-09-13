@@ -1,4 +1,5 @@
 import {
+  Printer,
   BookOpen,
   SquareParking,
   UtensilsCrossed,
@@ -22,6 +23,8 @@ type MapFiltersProps = {
   activeCategories: BuildingCategory[];
   onToggleCategory: (category: BuildingCategory) => void;
   onResetFilters: () => void;
+  showPrint: boolean;
+  onTogglePrint: () => void;
   showParking: boolean;
   onToggleParking: () => void;
   showTransit: boolean;
@@ -110,6 +113,7 @@ export default function MapFilters({
   activeCategories,
   onToggleCategory,
   onResetFilters,
+  showPrint, onTogglePrint,
   showParking,
   onToggleParking,
   showTransit,
@@ -311,6 +315,7 @@ export default function MapFilters({
           </span>
         </label>
 
+        <label className="mt-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 text-indigo-800"><Printer size={20}/><span className="flex-1">Print locations</span><input type="checkbox" checked={showPrint} onChange={onTogglePrint} className="accent-indigo-700"/></label>
         <label className={`mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 focus-within:ring-2 focus-within:ring-emerald-600 ${showParking ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50"}`}>
           <input type="checkbox" checked={showParking} onChange={onToggleParking} className="sr-only" />
           <SquareParking size={20} aria-hidden="true" />

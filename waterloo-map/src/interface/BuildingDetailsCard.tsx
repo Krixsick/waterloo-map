@@ -1,3 +1,4 @@
+import { getFoodOpenStatus, getWeeklyFoodStatus } from "../utils/timeUtils";
 import { buildingAccess } from "../data/buildingAccess";
 import GraduateHouseInfo, { graduateHouseHours } from "./GraduateHouseInfo";
 import { useState } from "react";
@@ -369,6 +370,8 @@ export default function BuildingDetailsCard({
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Checking how busy it is…
                 </dd>
+              ) : !getFoodOpenStatus(properties.liveHours ?? null).isOpen ? (
+                <dd className="text-ui-meta mt-2 text-slate-500">Occupancy is shown only during confirmed opening hours.</dd>
               ) : occupancyUnavailable ? (
                 <dd className="mt-1">
                   <p className="text-ui-value text-slate-600">
@@ -513,9 +516,9 @@ export default function BuildingDetailsCard({
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Live occupancy is unavailable right now.
                 </dd>
-              ) : gymHours?.trim().toLowerCase() === "closed" ? (
+              ) : !getWeeklyFoodStatus(gym.hours, gymHours ?? null).isOpen ? (
                 <dd className="text-ui-meta mt-2 text-slate-500">
-                  Closed today. Occupancy is hidden during scheduled closures.
+                  Occupancy is shown only during confirmed opening hours.
                 </dd>
               ) : !gymOccupancy ? (
                 <dd className="text-ui-value mt-1 text-slate-600">

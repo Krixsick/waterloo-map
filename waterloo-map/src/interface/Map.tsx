@@ -1,3 +1,5 @@
+import PrintMap from "./PrintMap";
+import { Printer } from "lucide-react";
 import FoodFilters from "./FoodFilters";
 import FoodDetailsCard from "./FoodDetailsCard";
 import WalkingRoutes, { type DirectionsDestination } from "./WalkingRoutes";
@@ -54,7 +56,7 @@ import {
 
 import { addEventLayers, updateEventMarkers } from "../map/eventLayers";
 
-import { getTimeRemaining, getTodaysLibraryHours } from "../utils/timeUtils";
+import { getFoodOpenStatus, getWeeklyFoodStatus, getTimeRemaining, getTodaysLibraryHours } from "../utils/timeUtils";
 
 import { mapEventsToCampus } from "../utils/eventLocations";
 
@@ -152,6 +154,7 @@ function Map() {
   const fittedPatternRef = useRef<string | null>(null);
   const routeCardRef = useRef<HTMLElement | null>(null);
 
+  const [showPrint, setShowPrint] = useState(false);
   const [showParking, setShowParking] = useState(false);
   const [parkingLegend, setParkingLegend] = useState<ParkingStatus[]>([]);
   const [journeyLegend, setJourneyLegend] = useState<LegendEntry[]>([]);
@@ -223,7 +226,7 @@ function Map() {
     data: libraryOccupancyResponse,
     isError: isLibraryOccupancyError,
     isPending: isLibraryOccupancyPending,
-  } = useLibraryOccupancy(supportsLiveLibraryOccupancy);
+  } = useLibraryOccupancy(true);
 
   const {
     refetch: eventsQueryRetry,
@@ -269,6 +272,13 @@ function Map() {
         const libraryInfo = libraryHours[feature.properties.name];
 
         const liveHours = getTodaysLibraryHours(libraryInfo);
+        const occupancy = libraryOccupancyResponse?.locations.find(location => location.name === feature.properties.name);
+        const day = new Intl.DateTimeFormat("en-CA", {weekday:"long", timeZone:"America/Toronto"}).format(new Date());
+        const gym = feature.properties.category === "gym" ? gymInfo?.[feature.properties.abbreviation as "PAC" | "CIF"] : undefined;
+        const liveOccupancyPercent = gym && !isGymError && getWeeklyFoodStatus(gym.hours, gym.hours[day] ?? null).isOpen
+          ? gym.busyness.overall?.percent ?? null
+          : !isLibraryOccupancyError && occupancy?.isAvailable && occupancy.isOpen && getFoodOpenStatus(liveHours).isOpen ? occupancy.percentage : null;
+
 
         return {
           ...feature,
@@ -276,12 +286,13 @@ function Map() {
           properties: {
             ...feature.properties,
             liveHours,
+            liveOccupancyPercent,
             timeRemaining: getTimeRemaining(liveHours),
           },
         };
       }),
     };
-  }, [libraryHours]);
+  }, [libraryHours, gymInfo, isGymError, libraryOccupancyResponse, isLibraryOccupancyError, eventNow]);
 
   const selectedBuilding = useMemo(
     () =>
@@ -314,6 +325,7 @@ function Map() {
           : (food.categories ?? [food.category]).some(category => category === foodCategory))),
   );
   const selectFoodBuilding = useCallback((id: string) => {
+    setShowPrint(false);
     setShowParking(false);
     setSelectedOffCampus(id.startsWith("off-campus:") ? id : null);
     setSelectedBuildingId(id.startsWith("off-campus:") ? null : id);
@@ -322,6 +334,7 @@ function Map() {
   }, []);
   function toggleFood() {
     setSelectedOffCampus(null);
+    setShowPrint(false);
     setShowParking(false);
     setShowFood((value) => !value);
     setShowEvents(false);
@@ -490,6 +503,7 @@ function Map() {
     eventsResponse?.events.find((event) => event.id === selectedEventId) ??
     null;
   function selectEvent(event: WaterlooEvent) {
+    setShowPrint(false);
     setShowParking(false);
     setEventDetailsExpanded(false);
     setSelectedBuildingId(null);
@@ -522,6 +536,7 @@ function Map() {
     setDirectionsRequest({ id: ++directionsRequestId.current, destination });
     setDirectionsMode("walk");
     setWalkingMode(true);
+    setShowPrint(false);
     setShowParking(false);
     setShowFood(false);
     setShowEvents(false);
@@ -538,6 +553,7 @@ function Map() {
   }
 
   function selectBuilding(building: BuildingFeature) {
+    setShowPrint(false);
     setShowParking(false);
     setSelectedBuildingId(previous =>
       ["sju", "uwp"].includes(building.properties.id) && getExpandedParentId(previous) === building.properties.id ? null : building.properties.id,
@@ -571,6 +587,7 @@ function Map() {
   }
 
   function resetFilters() {
+    setShowPrint(false);
     setShowParking(false);
     setWalkingMode(false);
     setShowFood(false);
@@ -589,6 +606,7 @@ function Map() {
   }
 
   function toggleTransit() {
+    setShowPrint(false);
     setShowParking(false);
     setShowFood(false);
     setShowEvents(false);
@@ -602,6 +620,7 @@ function Map() {
   }
 
   function toggleEvents() {
+    setShowPrint(false);
     setShowParking(false);
     setShowFood(false);
     setSelectedEventId(null);
@@ -612,7 +631,12 @@ function Map() {
     setShowEvents((current) => !current);
   }
 
+  function togglePrint() {
+    setShowPrint(value => !value); setShowFood(false); setShowEvents(false); setShowTransit(false); setShowParking(false); setWalkingMode(false); setSelectedBuildingId(null); setSelectedOffCampus(null); setSelectedTransit(null); setSelectedEventId(null); setSelectedRoute(null);
+  }
+
   function toggleParking() {
+    setShowPrint(false);
     setWalkingMode(false);
     setShowParking((current) => !current);
     setShowTransit(false);
@@ -720,6 +744,7 @@ function Map() {
   }
 
   function selectRoute(route: TransitRoute | null) {
+    setShowPrint(false);
     setShowParking(false);
     setSelectedRoute(route);
     setSelectedPatternId(null);
@@ -773,7 +798,7 @@ function Map() {
 
   useEffect(() => {
     if (!mapInstance || !isMapLoaded) return;
-    mapInstance.setMinZoom(walkingMode ? 5 : showTransit ? 9 : showParking ? 11 : 13);
+    mapInstance.setMinZoom(walkingMode ? 5 : showTransit ? 9 : showParking || showPrint ? 11 : 13);
     updateTransitRoute(
       mapInstance,
       showTransit ? selectedRoute : null,
@@ -790,6 +815,7 @@ function Map() {
     isMapLoaded,
     showTransit,
     showParking,
+    showPrint,
     walkingMode,
     selectedRoute,
     routePattern,
@@ -1016,6 +1042,8 @@ function Map() {
           activeCategories={activeCategories}
           onToggleCategory={toggleCategory}
           onResetFilters={resetFilters}
+          showPrint={showPrint}
+          onTogglePrint={togglePrint}
           showParking={showParking}
           onToggleParking={toggleParking}
           showTransit={showTransit}
@@ -1048,7 +1076,8 @@ function Map() {
             initialDestination={directionsRequest?.destination}
             onExplore={() => {
               setWalkingMode(false);
-              setShowParking(false);
+              setShowPrint(false);
+    setShowParking(false);
               setShowTransit(true);
             }}
             preferredMode={directionsMode}
@@ -1056,7 +1085,8 @@ function Map() {
             onEnabled={(value) => {
               setWalkingMode(value);
               if (value) {
-                setShowParking(false);
+                setShowPrint(false);
+    setShowParking(false);
                 setShowFood(false);
                 setShowEvents(false);
                 setShowTransit(false);
@@ -1106,7 +1136,8 @@ function Map() {
               onSelect: () => {
                 setShowFood(false);
                 setShowEvents(false);
-                setShowParking(false);
+                setShowPrint(false);
+    setShowParking(false);
                 setShowTransit(true);
                 setSelectedBuildingId(null);
                 setSelectedEventId(null);
@@ -1126,7 +1157,8 @@ function Map() {
               onSelect: () => {
                 setShowFood(false);
                 setShowEvents(false);
-                setShowParking(false);
+                setShowPrint(false);
+    setShowParking(false);
                 setShowTransit(true);
                 setSelectedBuildingId(null);
                 setSelectedEventId(null);
@@ -1196,6 +1228,7 @@ function Map() {
               <UtensilsCrossed size={18} />
               Food
             </button>
+            <button type="button" aria-pressed={showPrint} onClick={togglePrint} className={`flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm ${showPrint ? "border-indigo-200 bg-indigo-50 text-indigo-800" : "border-slate-200 bg-white text-slate-700"}`}><Printer size={18}/>Print</button>
             <button
               type="button"
               aria-pressed={showParking}
@@ -1207,6 +1240,7 @@ function Map() {
             </button>
           </div>
         )}
+        {showPrint && mapInstance && isMapLoaded && <PrintMap map={mapInstance} onClose={()=>setShowPrint(false)}/>}
         {showParking && mapInstance && isMapLoaded && (
           <ParkingMap onStatusesChange={setParkingLegend} map={mapInstance} onClose={() => setShowParking(false)} />
         )}
@@ -1285,7 +1319,8 @@ function Map() {
           <TransitRouteBar
             onPlanTrip={() => {
               setDirectionsRequest(null);
-              setShowParking(false);
+              setShowPrint(false);
+    setShowParking(false);
               setDirectionsMode("transit");
               setWalkingMode(true);
               setShowTransit(false);

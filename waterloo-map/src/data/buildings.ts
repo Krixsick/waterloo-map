@@ -15,6 +15,7 @@ export type BuildingProperties = {
   description: string;
   parentId?: string;
   liveHours?: string | null;
+  liveOccupancyPercent?: number | null;
   timeRemaining?: string | null;
 };
 

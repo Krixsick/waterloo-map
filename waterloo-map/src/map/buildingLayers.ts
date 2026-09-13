@@ -84,8 +84,8 @@ export function addImportantBuildingLayers(
       "circle-radius": 6,
       "circle-color": buildingColor,
       "circle-opacity": 0.95,
-      "circle-stroke-color": buildingStrokeColor,
-      "circle-stroke-width": 2,
+      "circle-stroke-color": ["case", ["!=", ["get", "liveOccupancyPercent"], null], "#ffea00", buildingStrokeColor],
+      "circle-stroke-width": ["case", ["!=", ["get", "liveOccupancyPercent"], null], 3, 2],
     },
   });
 
@@ -97,7 +97,7 @@ export function addImportantBuildingLayers(
     paint: {
       "circle-radius": 6.5,
       "circle-color": buildingColor,
-      "circle-stroke-color": "#ffffff",
+      "circle-stroke-color": ["case", ["!=", ["get", "liveOccupancyPercent"], null], "#ffea00", "#ffffff"],
       "circle-stroke-width": 3,
       "circle-opacity": 1,
     },

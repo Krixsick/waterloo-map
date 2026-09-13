@@ -426,6 +426,10 @@ function buildPopupHTML(
       </div>
 
       ${buildHoursSection(liveHours, timeRemaining)}
+      ${status?.label === "Open" && typeof properties.liveOccupancyPercent === "number" ? `<div style="display:flex;align-items:center;gap:7px;margin-top:10px;padding:7px 9px;border-radius:9px;background:#fef9c3;color:#a16207;font-size:12px;font-weight:500">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+        Live occupancy · ${Math.round(properties.liveOccupancyPercent)}% full
+      </div>` : ""}
     </div>
   `;
 }
