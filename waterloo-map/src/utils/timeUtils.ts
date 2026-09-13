@@ -218,6 +218,7 @@ function formatMinutesAsTime(
 
 export function getFoodOpenStatus(
   hours: string | null,
+  now = new Date(),
 ): FoodOpenStatus {
   if (!hours) {
     return {
@@ -246,8 +247,8 @@ export function getFoodOpenStatus(
   if (opening || closing) {
     const boundary = parseTimeToMinutes((opening ?? closing)![1]);
     if (boundary !== null) {
-      const isOpen = opening ? getTorontoMinutesNow() >= boundary : getTorontoMinutesNow() < boundary;
-      return { isOpen, status: isOpen ? "Open" : "Closed", timeMessage: opening && !isOpen ? `Opens at ${formatMinutesAsTime(boundary)}` : closing && isOpen ? `${formatDuration(boundary - getTorontoMinutesNow())} left` : null };
+      const isOpen = opening ? getTorontoMinutesNow(now) >= boundary : getTorontoMinutesNow(now) < boundary;
+      return { isOpen, status: isOpen ? "Open" : "Closed", timeMessage: opening && !isOpen ? `Opens at ${formatMinutesAsTime(boundary)}` : closing && isOpen ? `${formatDuration(boundary - getTorontoMinutesNow(now))} left` : null };
     }
   }
   const ranges =
@@ -262,7 +263,7 @@ export function getFoodOpenStatus(
   }
 
   const nowMinutes =
-    getTorontoMinutesNow();
+    getTorontoMinutesNow(now);
 
   const currentRange =
     ranges.find(
@@ -336,5 +337,5 @@ export function getWeeklyFoodStatus(hours: Record<string,string> | undefined, to
     const remaining = spill ? spill.endMinutes-minutes : 1440-minutes+evening!.endMinutes;
     return {isOpen:true,status:"Open",timeMessage:`${formatDuration(remaining)} left`};
   }
-  return getFoodOpenStatus(todayHours);
+  return getFoodOpenStatus(todayHours, now);
 }
