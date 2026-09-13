@@ -269,6 +269,17 @@ export default function MapFilters({
             <Check size={14} strokeWidth={3} />
           </span>
         </label>
+        <label className={`mt-1 flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 outline-none transition focus-within:ring-2 focus-within:ring-indigo-600/40 ${showPrint ? "bg-indigo-50 text-indigo-800" : "text-slate-700 hover:bg-slate-50"}`}>
+          <input type="checkbox" checked={showPrint} onChange={onTogglePrint} className="sr-only" />
+          <Printer size={20} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <span className="font-title block text-sm font-medium">Print locations</span>
+            <span className="text-ui-meta block text-slate-500">Self-serve printers across campus</span>
+          </span>
+          <span aria-hidden="true" className={`flex size-5 items-center justify-center rounded border ${showPrint ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white text-transparent"}`}>
+            <Check size={14} strokeWidth={3} />
+          </span>
+        </label>
       </section>
 
       <section className="border-t border-slate-200 pt-5">
@@ -315,7 +326,6 @@ export default function MapFilters({
           </span>
         </label>
 
-        <label className="mt-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 text-indigo-800"><Printer size={20}/><span className="flex-1">Print locations</span><input type="checkbox" checked={showPrint} onChange={onTogglePrint} className="accent-indigo-700"/></label>
         <label className={`mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2.5 focus-within:ring-2 focus-within:ring-emerald-600 ${showParking ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50"}`}>
           <input type="checkbox" checked={showParking} onChange={onToggleParking} className="sr-only" />
           <SquareParking size={20} aria-hidden="true" />
