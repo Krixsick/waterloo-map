@@ -1,3 +1,5 @@
+import { printLocations, PRINT_SOURCE } from "../data/printLocations";
+import { getFoodOpenStatus, getWeeklyFoodStatus } from "../utils/timeUtils";
 import { buildingAccess } from "../data/buildingAccess";
 import GraduateHouseInfo, { graduateHouseHours } from "./GraduateHouseInfo";
 import { useState } from "react";
@@ -5,6 +7,7 @@ import { EventSummary } from "./EventsPanel";
 import type { WaterlooEvent } from "../types/events";
 import { formatDisplayTime } from "../utils/timeFormat";
 import {
+  Printer,
   Activity,
   CalendarDays,
   Clock3,
@@ -190,6 +193,7 @@ export default function BuildingDetailsCard({
   } = building;
 
   const [longitude, latitude] = building.geometry.coordinates;
+  const printerRooms = printLocations[properties.id] ?? printLocations[({ "dc-building": "dc-library", renison: "lusi-wong-library", sju: "st-jeromes-library" } as Record<string, string>)[properties.id]];
 
   const category =
     buildingCategoryDetails[
@@ -369,6 +373,8 @@ export default function BuildingDetailsCard({
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Checking how busy it is…
                 </dd>
+              ) : !getFoodOpenStatus(properties.liveHours ?? null).isOpen ? (
+                <dd className="text-ui-meta mt-2 text-slate-500">Occupancy is shown only during confirmed opening hours.</dd>
               ) : occupancyUnavailable ? (
                 <dd className="mt-1">
                   <p className="text-ui-value text-slate-600">
@@ -513,9 +519,9 @@ export default function BuildingDetailsCard({
                 <dd className="text-ui-value mt-1 text-slate-600">
                   Live occupancy is unavailable right now.
                 </dd>
-              ) : gymHours?.trim().toLowerCase() === "closed" ? (
+              ) : !getWeeklyFoodStatus(gym.hours, gymHours ?? null).isOpen ? (
                 <dd className="text-ui-meta mt-2 text-slate-500">
-                  Closed today. Occupancy is hidden during scheduled closures.
+                  Occupancy is shown only during confirmed opening hours.
                 </dd>
               ) : !gymOccupancy ? (
                 <dd className="text-ui-value mt-1 text-slate-600">
@@ -637,6 +643,31 @@ export default function BuildingDetailsCard({
                     )}
                 </dd>
               )}
+            </div>
+          </div>
+        )}
+
+        {printerRooms?.length > 0 && (
+          <div className="flex gap-4 py-4">
+            <Printer aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-indigo-700" />
+            <div className="min-w-0 flex-1">
+              <dt className="text-ui-label text-slate-500">Printing</dt>
+              <dd className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+                <p className="text-ui-value text-indigo-800">W Print self-serve</p>
+                <ul className="mt-3 space-y-2">
+                  {printerRooms.map(room => (
+                    <li key={room} className="text-ui-meta flex items-start gap-2 text-slate-700">
+                      <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-indigo-500" />
+                      <span>{room}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-ui-meta mt-3 text-slate-500">Tap your WatCard to release your print job. Access follows building hours.</p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <a href="https://wprint.ca/" target="_blank" rel="noreferrer" className="text-ui-meta inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1.5 text-indigo-800 hover:bg-indigo-200">Upload a document <ExternalLink size={14} /></a>
+                  <a href={PRINT_SOURCE} target="_blank" rel="noreferrer" className="text-ui-meta inline-flex items-center gap-1 text-indigo-700 underline">Print instructions <ExternalLink size={14} /></a>
+                </div>
+              </dd>
             </div>
           </div>
         )}
